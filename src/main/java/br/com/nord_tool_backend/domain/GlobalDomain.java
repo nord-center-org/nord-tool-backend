@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
-@MappedSuperclass
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -14,9 +13,7 @@ public abstract class GlobalDomain implements Serializable{
 
     private static final long serialVersionUID = -1241232446441658L;
 
-    public abstract Long getId();
-
-    public abstract void setId(Long id);
+    private Long id;
 
     public GlobalDomain() {
     }

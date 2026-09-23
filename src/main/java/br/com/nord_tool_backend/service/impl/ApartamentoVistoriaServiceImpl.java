@@ -14,9 +14,9 @@ import br.com.nord_tool_backend.repository.ApartamentoVistoriaHistoricoRepositor
 import br.com.nord_tool_backend.repository.ApartamentoVistoriaRepository;
 import br.com.nord_tool_backend.service.ApartamentoVistoriaService;
 import br.com.nord_tool_backend.service.CacheService;
+import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,20 +27,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ApartamentoVistoriaServiceImpl extends XlsxExtractorHandlerApartamento implements ApartamentoVistoriaService {
     private final Logger log = LogManager.getLogger(ApartamentoVistoriaServiceImpl.class);
 
-    @Autowired
-    private ApartamentoVistoriaRepository apartamentoVistoriaRepository;
+    private final ApartamentoVistoriaRepository apartamentoVistoriaRepository;
 
-    @Autowired
-    public Environment env;
+    public final Environment env;
 
-    @Autowired
-    private CacheService cacheService;
+    private final CacheService cacheService;
 
-    @Autowired
-    private ApartamentoVistoriaHistoricoRepository apartamentoVistoriaHistoricoRepository;
+    private final ApartamentoVistoriaHistoricoRepository apartamentoVistoriaHistoricoRepository;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
