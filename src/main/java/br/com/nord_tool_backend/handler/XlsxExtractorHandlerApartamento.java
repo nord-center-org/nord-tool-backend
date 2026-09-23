@@ -7,6 +7,7 @@ import br.com.nord_tool_backend.domain.enums.StatusVistoriaEnum;
 import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.repository.ApartamentoVistoriaRepository;
 import br.com.nord_tool_backend.utils.StringUtils;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.ss.usermodel.Row;
@@ -23,12 +24,13 @@ import java.util.List;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class XlsxExtractorHandlerApartamento extends StringUtils {
     private static final String ERRO_LINHA_PLANILHA = "Erro ao processar dados da planilha. Linha erro:";
     private static final String ERRO_MONTAGEM_PLANILHA_TO_OBJ = "Erro ao montar dados da planilha para o objeto";
 
-    @Autowired
-    private ApartamentoVistoriaRepository apartamentoVistoriaRepository;
+    // Tornar protected para a subclasse enxergar sem criar um atributo duplicado
+    protected final ApartamentoVistoriaRepository apartamentoVistoriaRepository;
 
     public void init(MultipartFile arquivo) throws Exception {
 

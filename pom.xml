@@ -13,7 +13,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.15</version> <!-- última estável da série 2.7.x -->
+        <version>2.7.15</version>
         <relativePath/>
     </parent>
 
@@ -21,6 +21,17 @@
         <java.version>11</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <!-- Gerenciamento de dependências para sobresscrever a versão legada com warning -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-provider-api</artifactId>
+                <version>3.5.3</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- Spring Boot Web -->
@@ -35,18 +46,17 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- PostgreSQL Driver -->
+        <!-- PostgreSQL Driver (gerenciado pelo parent do Spring Boot) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.6.0</version> <!-- versão estável compatível com Java 11 -->
         </dependency>
 
         <!-- Apache POI para Excel -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.4</version> <!-- versão mais recente estável da série 5.x -->
+            <version>5.2.4</version>
         </dependency>
 
         <!-- Lombok -->
@@ -63,21 +73,20 @@
             <version>1.7.0</version>
         </dependency>
 
-        <!-- Exception -->
+        <!-- Exception / Commons Lang3 (gerenciado pelo parent do Spring Boot) -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.14.0</version>
         </dependency>
 
-        <!-- JUnit 5 -->
+        <!-- JUnit 5 / Spring Boot Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- cache -->
+        <!-- Cache -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
@@ -98,13 +107,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <!-- Repositório Maven Central -->
-    <repositories>
-        <repository>
-            <id>central</id>
-            <url>https://repo.maven.apache.org/maven2</url>
-        </repository>
-    </repositories>
 
 </project>

@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ApartamentoVistoriaServiceImpl extends XlsxExtractorHandlerApartamento implements ApartamentoVistoriaService {
+public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaService {
     private final Logger log = LogManager.getLogger(ApartamentoVistoriaServiceImpl.class);
 
     private final ApartamentoVistoriaRepository apartamentoVistoriaRepository;
@@ -38,6 +38,8 @@ public class ApartamentoVistoriaServiceImpl extends XlsxExtractorHandlerApartame
     private final CacheService cacheService;
 
     private final ApartamentoVistoriaHistoricoRepository apartamentoVistoriaHistoricoRepository;
+
+    private final XlsxExtractorHandlerApartamento xlsxExtractorHandlerApartamento;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -101,7 +103,7 @@ public class ApartamentoVistoriaServiceImpl extends XlsxExtractorHandlerApartame
     @Transactional(rollbackFor = Exception.class)
     public void importarPlanilha(MultipartFile arquivo) throws Exception {
         log.info("Iniciando método para importar planilha de Apartamentos Vistoria");
-        init(arquivo);
+        xlsxExtractorHandlerApartamento.init(arquivo);
         log.info("Iniciando método limpar o cache após importar");
         cacheService.limparTodos();
     }

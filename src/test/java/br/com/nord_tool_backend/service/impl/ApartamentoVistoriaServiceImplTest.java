@@ -6,6 +6,7 @@ import br.com.nord_tool_backend.dto.ApartamentoVistoriaDto;
 import br.com.nord_tool_backend.dto.ApartamentoVistoriaFiltroDto;
 import br.com.nord_tool_backend.dto.InfoGeralApartamentoVistoriaDto;
 import br.com.nord_tool_backend.form.ApartamentoVistoriaForm;
+import br.com.nord_tool_backend.handler.XlsxExtractorHandlerApartamento;
 import br.com.nord_tool_backend.repository.ApartamentoVistoriaHistoricoRepository;
 import br.com.nord_tool_backend.repository.ApartamentoVistoriaRepository;
 import br.com.nord_tool_backend.service.ApartamentoVistoriaService;
@@ -34,8 +35,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class ApartamentoVistoriaServiceImplTest {
 
-    @InjectMocks
-    private ApartamentoVistoriaService apartamentoVistoriaService = new ApartamentoVistoriaServiceImpl();
+    private ApartamentoVistoriaService apartamentoVistoriaService;
 
     @Mock
     private ApartamentoVistoriaRepository apartamentoVistoriaRepository;
@@ -48,6 +48,9 @@ public class ApartamentoVistoriaServiceImplTest {
 
     @Mock
     private CacheService cacheService;
+
+    @Mock
+    private XlsxExtractorHandlerApartamento xlsxExtractorHandlerApartamento;
 
     ApartamentoVistoria apartamentoVistoria = new ApartamentoVistoria();
     ApartamentoVistoriaDto apartamentoVistoriaDto = new ApartamentoVistoriaDto();
@@ -62,6 +65,15 @@ public class ApartamentoVistoriaServiceImplTest {
 
     @BeforeEach
     public void setup(){
+
+        apartamentoVistoriaService = new ApartamentoVistoriaServiceImpl(
+                apartamentoVistoriaRepository,
+                env,
+                cacheService,
+                apartamentoVistoriaHistoricoRepository,
+                xlsxExtractorHandlerApartamento
+        );
+
         apartamentoVistoria = ApartamentoVistoria.builder()
                 .id(1L)
                 .nmApartamentoVistoria("nmApartamentoVistoria")
@@ -201,11 +213,13 @@ public class ApartamentoVistoriaServiceImplTest {
 
     @Test
     void deveImportarApartamentoVistoria() throws Exception {
-        doNothing().when(apartamentoVistoriaRepository).salvarEmLote(anyList());
-        InputStream inputStream = getClass().getClassLoader().getResourceAsStream("apartamento-modelo.xlsx");
-        MockMultipartFile planilhaFile =  new MockMultipartFile("arquivo", "aquivo.xlsx", MediaType.MULTIPART_FORM_DATA_VALUE, inputStream);
+        // Arrange
+        MockMultipartFile planilhaFile = new MockMultipartFile("arquivo", "arquivo.xlsx", MediaType.MULTIPART_FORM_DATA_VALUE, "conteudo".getBytes());
+        doNothing().when(xlsxExtractorHandlerApartamento).init(any());
+        // Act
         apartamentoVistoriaService.importarPlanilha(planilhaFile);
-        verify(apartamentoVistoriaRepository, times(1)).salvarEmLote(anyList());
+        // Assert
+        verify(xlsxExtractorHandlerApartamento, times(1)).init(planilhaFile);
         verify(cacheService, times(1)).limparTodos();
     }
 
