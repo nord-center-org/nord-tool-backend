@@ -28,6 +28,10 @@ public class CronogramaSemanalDto {
     private LocalDateTime dtPrazo;
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime dtFinalizacao;
+    private String nmTag;
+    @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
+    private LocalDateTime dtAgendamento;
+    private Boolean flFixo;
 
     public static CronogramaSemanalDto converterToDto(CronogramaSemanal cronogramaSemanal ) {
         return CronogramaSemanalDto.builder()
@@ -41,6 +45,9 @@ public class CronogramaSemanalDto {
                 .txObservacao(cronogramaSemanal.getTxObservacao())
                 .dtPrazo(cronogramaSemanal.getDtPrazo())
                 .dtFinalizacao(cronogramaSemanal.getDtFinalizacao())
+                .nmTag(cronogramaSemanal.getNmTag())
+                .dtAgendamento(cronogramaSemanal.getDtAgendamento())
+                .flFixo(cronogramaSemanal.getFlFixo())
                 .build();
     }
 }
