@@ -17,7 +17,7 @@ public class DiaSemanaDto{
     private Long idDiaSemana;
     private String nmDiaSemana;
 
-    public static DiaSemanaDto converterToDomain(DiaSemana diaSemana ) {
+    public static DiaSemanaDto converterToDto(DiaSemana diaSemana ) {
         return DiaSemanaDto.builder()
                 .idDiaSemana(diaSemana.getId())
                 .nmDiaSemana(diaSemana.getNmDiaSemana())

@@ -36,7 +36,7 @@ public class ColaboradorRepositoryImpl extends RepositoryJdbcOperationsSql<Colab
     public ColaboradorDto salvarColaborador(Colaborador colaborador) {
         try {
             Colaborador salvo = salvar(querySalvar, colaborador, "id_user");
-            return ColaboradorDto.converterToDomain(buscarPorIdInterno(salvo.getId()));
+            return ColaboradorDto.converterToDto(buscarPorIdInterno(salvo.getId()));
         } catch (Exception ex) {
             throw tratarErro(ERRO_SALVAR, ex);
         }
@@ -46,7 +46,7 @@ public class ColaboradorRepositoryImpl extends RepositoryJdbcOperationsSql<Colab
     public ColaboradorDto alterarColaborador(Colaborador colaborador) {
         try {
             alterar(queryAlterar, colaborador);
-            return ColaboradorDto.converterToDomain(buscarPorIdInterno(colaborador.getId()));
+            return ColaboradorDto.converterToDto(buscarPorIdInterno(colaborador.getId()));
         } catch (Exception ex) {
             throw tratarErro(ERRO_ALTERAR, ex);
         }

@@ -12,8 +12,8 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DashboardControleChavesDto {
-    private Long chavesEmCampo;
-    private Long chavesNoQuadro;
-    private Long chavesEntregues;
+    private Long qtChavesEmCampo;
+    private Long qtChavesNoQuadro;
+    private Long qtChavesEntregues;
     private List<RetiradaControleChavesDto> retiradasRecentes;
 }

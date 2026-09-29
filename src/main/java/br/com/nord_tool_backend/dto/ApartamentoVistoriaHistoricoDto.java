@@ -23,19 +23,19 @@ public class ApartamentoVistoriaHistoricoDto {
     private List<ApartamentoVistoriaHistoricoAlteradoDto> lsApartamentoVistoriaAlterado;
 
     public static ApartamentoVistoriaHistoricoDto converter(
-            List<ApartamentoVistoriaHistoricoConsultaDto> lsApHistoricoConsultaDto) {
+            List<ApartamentoVistoriaHistoricoConsultaDto> lsApartamentoVistoriaHistoricoConsultaDto) {
 
-        ApartamentoVistoriaHistoricoConsultaDto apHistoricoConsultaDto =
-                lsApHistoricoConsultaDto.stream()
+        ApartamentoVistoriaHistoricoConsultaDto apartamentoVistoriaHistoricoConsultaDto =
+                lsApartamentoVistoriaHistoricoConsultaDto.stream()
                         .findFirst()
                         .orElse(null);
 
         return ApartamentoVistoriaHistoricoDto.builder()
-                .nrVersao(apHistoricoConsultaDto.getNrVersao())
-                .dtAlteracao(apHistoricoConsultaDto.getDtAlteracao())
-                .nmUsuario(apHistoricoConsultaDto.getNmUsuario())
+                .nrVersao(apartamentoVistoriaHistoricoConsultaDto.getNrVersao())
+                .dtAlteracao(apartamentoVistoriaHistoricoConsultaDto.getDtAlteracao())
+                .nmUsuario(apartamentoVistoriaHistoricoConsultaDto.getNmUsuario())
                 .lsApartamentoVistoriaAlterado(
-                        lsApHistoricoConsultaDto.stream()
+                        lsApartamentoVistoriaHistoricoConsultaDto.stream()
                                 .map(ApartamentoVistoriaHistoricoAlteradoDto::converter)
                                 .collect(Collectors.toList())
                 )

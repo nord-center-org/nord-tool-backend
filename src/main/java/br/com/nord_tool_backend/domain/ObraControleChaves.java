@@ -5,8 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Builder @Data @AllArgsConstructor @NoArgsConstructor
-public class Permissao extends GlobalDomain {
-    private Long id;
-    private String nmPermissao;
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ObraControleChaves {
+    private String nmApartamentoVistoria;
 }

@@ -15,9 +15,9 @@ public class HealthReadController {
     @GetMapping("/health")
     @Operation(summary = "Testa se aplicação está funcionando normalmente")
     public HealthDto getCliente() {
-        HealthDto health = new HealthDto();
-        health.setMessage("Retornando com sucesso");
-        return health;
+        HealthDto healthDto = new HealthDto();
+        healthDto.setMessage("Retornando com sucesso");
+        return healthDto;
 
     }
 }

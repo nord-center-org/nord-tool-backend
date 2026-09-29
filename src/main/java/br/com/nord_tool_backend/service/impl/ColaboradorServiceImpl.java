@@ -43,13 +43,13 @@ public class ColaboradorServiceImpl implements ColaboradorService {
     @Override
     public ColaboradorDto buscarPorIdColaborador(Long id) {
         Colaborador colaborador = colaboradorRepository.buscarPorIdColaborador(id);
-        return ColaboradorDto.converterToDomain(colaborador);
+        return ColaboradorDto.converterToDto(colaborador);
     }
 
     @Override
     public List<ColaboradorDto> listarColaboradores() {
         return colaboradorRepository.listarColaboradores().stream()
-                .map(ColaboradorDto::converterToDomain)
+                .map(ColaboradorDto::converterToDto)
                 .collect(Collectors.toList());
     }
 }

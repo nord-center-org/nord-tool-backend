@@ -16,7 +16,7 @@ public class InfoGeralApartamentoVistoriaDto {
     private Double pcApartamentoStatusVistoria;
     private Integer nrTotalRegistros;
 
-    public static InfoGeralApartamentoVistoriaDto converterToDomain(InfoGeralApartamentoVistoria infoGeralApartamentoVistoria) {
+    public static InfoGeralApartamentoVistoriaDto converterToDTO(InfoGeralApartamentoVistoria infoGeralApartamentoVistoria) {
         return InfoGeralApartamentoVistoriaDto.builder()
                 .nmStatusVistoria(infoGeralApartamentoVistoria.getNmStatusVistoria())
                 .qtApartamentoStatusVistoria(infoGeralApartamentoVistoria.getQtApartamentoStatusVistoria())

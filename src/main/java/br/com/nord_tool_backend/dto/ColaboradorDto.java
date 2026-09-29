@@ -12,26 +12,26 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ColaboradorDto {
     private Long id;
-    private String nome;
-    private String celular;
+    private String nmColaborador;
+    private String nrCelular;
     private Integer idEmpresa;
-    private String nomeEmpresa;
+    private String nmEmpresa;
     private Integer idCargo;
-    private String nomeCargo;
+    private String nmCargo;
     private Integer idPermissao;
-    private String nomePermissao;
+    private String nmPermissao;
 
-    public static ColaboradorDto converterToDomain(Colaborador colaborador) {
+    public static ColaboradorDto converterToDto(Colaborador colaborador) {
         return ColaboradorDto.builder()
                 .id(colaborador.getId())
-                .nome(colaborador.getNome())
-                .celular(colaborador.getCelular())
+                .nmColaborador(colaborador.getNmColaborador())
+                .nrCelular(colaborador.getNrCelular())
                 .idEmpresa(colaborador.getIdEmpresa())
-                .nomeEmpresa(colaborador.getNomeEmpresa())
+                .nmEmpresa(colaborador.getNmEmpresa())
                 .idCargo(colaborador.getIdCargo())
-                .nomeCargo(colaborador.getNomeCargo())
+                .nmCargo(colaborador.getNmCargo())
                 .idPermissao(colaborador.getIdPermissao())
-                .nomePermissao(colaborador.getNomePermissao())
+                .nmPermissao(colaborador.getNmPermissao())
                 .build();
     }
 }

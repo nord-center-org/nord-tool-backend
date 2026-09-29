@@ -11,9 +11,10 @@ import java.util.List;
 
 public interface ControleChavesService {
     List<ObraControleChavesDto> listarObras();
-    List<ApartamentoControleChavesDto> listarApartamentos(String busca, int limite, int pagina);
-    DashboardControleChavesDto buscarDashboard(int limiteRecentes, String idObra);
-    List<RetiradaControleChavesDto> listarHistorico(String busca, String status, String idObra, int limite, int pagina);
-    RetiradaControleChavesDto criarRetirada(NovaRetiradaControleChavesForm form);
-    RetiradaControleChavesDto receberRetirada(Long id, RecebimentoControleChavesForm form);
+    List<ApartamentoControleChavesDto> listarApartamentos(String nmBusca, int nrQuantidadePorPagina, int nrPagina);
+    DashboardControleChavesDto buscarDashboard(int nrLimiteRecentes, String idObra);
+    List<RetiradaControleChavesDto> listarHistorico(String nmBusca, String nmStatusRequisicao, String idObra,
+                                                     int nrQuantidadePorPagina, int nrPagina);
+    RetiradaControleChavesDto criarRetirada(NovaRetiradaControleChavesForm novaRetiradaControleChavesForm);
+    RetiradaControleChavesDto receberRetirada(Long idRequisicao, RecebimentoControleChavesForm recebimentoControleChavesForm);
 }

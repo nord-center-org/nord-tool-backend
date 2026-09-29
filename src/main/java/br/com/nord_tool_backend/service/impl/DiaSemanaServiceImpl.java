@@ -22,7 +22,7 @@ public class DiaSemanaServiceImpl implements DiaSemanaService {
     public List<DiaSemanaDto> listarDiaSemana(){
         log.info("Iniciando método para listar Dias da Semana");
         List<DiaSemana> lsDiaSemana = diaSemanaRepository.listarDiaSemana();
-        List<DiaSemanaDto> lsDiaSemanaDto = lsDiaSemana.stream().map(DiaSemanaDto::converterToDomain).collect(Collectors.toList());
+        List<DiaSemanaDto> lsDiaSemanaDto = lsDiaSemana.stream().map(DiaSemanaDto::converterToDto).collect(Collectors.toList());
         log.info("Finalizando método que consulta a lista dos Dias da Semana");
         return lsDiaSemanaDto;
     }

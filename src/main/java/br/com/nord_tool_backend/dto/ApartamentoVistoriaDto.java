@@ -30,7 +30,7 @@ public class ApartamentoVistoriaDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy", locale = "pt_BR")
     private LocalDate dtRevistoriaVigente;
 
-    public static ApartamentoVistoriaDto converterToDomain(ApartamentoVistoria apartamentoVistoria ) {
+    public static ApartamentoVistoriaDto converterToDto(ApartamentoVistoria apartamentoVistoria ) {
         return ApartamentoVistoriaDto.builder()
                 .idApartamentoVistoria(apartamentoVistoria.getId())
                 .nmApartamentoVistoria(apartamentoVistoria.getNmApartamentoVistoria())

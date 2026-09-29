@@ -1,21 +1,21 @@
 package br.com.nord_tool_backend.repository;
 
+import br.com.nord_tool_backend.domain.ApartamentoVistoria;
+import br.com.nord_tool_backend.domain.ObraControleChaves;
 import br.com.nord_tool_backend.domain.RequisicaoChave;
-import br.com.nord_tool_backend.dto.ApartamentoControleChavesDto;
-import br.com.nord_tool_backend.dto.ObraControleChavesDto;
-import br.com.nord_tool_backend.form.NovaRetiradaControleChavesForm;
-import br.com.nord_tool_backend.form.RecebimentoControleChavesForm;
+import br.com.nord_tool_backend.domain.RequisicaoChaveConsulta;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 public interface ControleChavesRepository {
-    List<ObraControleChavesDto> listarObras();
-    List<ApartamentoControleChavesDto> listarApartamentos(String busca, int limite, int pagina);
+    List<ObraControleChaves> listarObras();
+    List<ApartamentoVistoria> listarApartamentos();
     Long contarChavesEmCampo();
     Long contarChavesNoQuadro();
     Long contarChavesEntregues();
-    List<RequisicaoChave> listarHistorico(String busca, String status, String idObra, int limite, int pagina);
-    RequisicaoChave buscarPorId(Long id);
-    RequisicaoChave criarRetirada(NovaRetiradaControleChavesForm form);
-    RequisicaoChave receberRetirada(Long id, RecebimentoControleChavesForm form);
+    List<RequisicaoChaveConsulta> listarHistorico();
+    RequisicaoChaveConsulta buscarPorId(Long idRequisicao);
+    Long criarRetirada(RequisicaoChave requisicaoChave);
+    void receberRetirada(Long idRequisicao, Long idUserRecebimento, LocalDateTime dtRecebimento, String nmStatusRequisicao);
 }

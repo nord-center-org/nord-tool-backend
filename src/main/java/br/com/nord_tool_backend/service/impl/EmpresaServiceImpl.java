@@ -14,6 +14,6 @@ public class EmpresaServiceImpl implements EmpresaService {
 
     public List<EmpresaDto> listarEmpresas() {
         return empresaRepository.listarEmpresas().stream()
-                .map(EmpresaDto::converterToDomain).collect(Collectors.toList());
+                .map(EmpresaDto::converterToDto).collect(Collectors.toList());
     }
 }

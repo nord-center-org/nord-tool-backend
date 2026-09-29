@@ -59,7 +59,7 @@ public class ApartamentoVistoriaRepositoryImpl extends RepositoryJdbcOperationsS
         try {
             log.info("Salvando na base de dados um Apartamento Vistoria");
             ApartamentoVistoria apartamentoVistoriaSalvar = salvar(querySalvaApartamentoVistoria, apartamentoVistoria, "id_apartamento_vistoria");
-            return ApartamentoVistoriaDto.converterToDomain(apartamentoVistoriaSalvar);
+            return ApartamentoVistoriaDto.converterToDto(apartamentoVistoriaSalvar);
         } catch (Exception ex) {
             log.error(ExceptionUtils.getMessage(ex));
             throw new ValidacaoException(NordHttpEnum.HTTP_400, StringUtils.getMensagem(ERRO_GENERICO_SALVAR), ex.getMessage());
@@ -71,7 +71,7 @@ public class ApartamentoVistoriaRepositoryImpl extends RepositoryJdbcOperationsS
         try {
             log.info("Alterando na base de dados um Apartamento Vistoria");
             ApartamentoVistoria apartamentoVistoriaAlterar = alterar(queryAlteraApartamentoVistoria, apartamentoVistoria);
-            return ApartamentoVistoriaDto.converterToDomain(apartamentoVistoriaAlterar);
+            return ApartamentoVistoriaDto.converterToDto(apartamentoVistoriaAlterar);
         } catch (Exception ex) {
             log.error(ExceptionUtils.getMessage(ex));
             throw new ValidacaoException(NordHttpEnum.HTTP_400, StringUtils.getMensagem(ERRO_GENERICO_ALTERAR), ex.getMessage());

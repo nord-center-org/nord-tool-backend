@@ -13,12 +13,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Colaborador extends GlobalDomain {
     private Long id;
-    private String nome;
-    private String celular;
+    private String nmColaborador;
+    private String nrCelular;
     private Integer idEmpresa;
-    private String nomeEmpresa;
+    private String nmEmpresa;
     private Integer idCargo;
-    private String nomeCargo;
+    private String nmCargo;
     private Integer idPermissao;
-    private String nomePermissao;
+    private String nmPermissao;
 }

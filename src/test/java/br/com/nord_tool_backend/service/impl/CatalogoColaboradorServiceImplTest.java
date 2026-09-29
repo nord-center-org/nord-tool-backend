@@ -22,8 +22,8 @@ class CatalogoColaboradorServiceImplTest {
     @Test
     void deveListarEmpresas() {
         EmpresaRepository repository = mock(EmpresaRepository.class);
-        when(repository.listarEmpresas()).thenReturn(Collections.singletonList(Empresa.builder().id(1L).nome("Alfa").build()));
-        assertEquals(Collections.singletonList(EmpresaDto.builder().id(1L).nome("Alfa").build()),
+        when(repository.listarEmpresas()).thenReturn(Collections.singletonList(Empresa.builder().id(1L).nmEmpresa("Alfa").build()));
+        assertEquals(Collections.singletonList(EmpresaDto.builder().id(1L).nmEmpresa("Alfa").build()),
                 new EmpresaServiceImpl(repository).listarEmpresas());
         verify(repository).listarEmpresas();
     }
@@ -31,8 +31,8 @@ class CatalogoColaboradorServiceImplTest {
     @Test
     void deveListarCargos() {
         CargoRepository repository = mock(CargoRepository.class);
-        when(repository.listarCargos()).thenReturn(Collections.singletonList(Cargo.builder().id(2L).nome("Analista").build()));
-        assertEquals(Collections.singletonList(CargoDto.builder().id(2L).nome("Analista").build()),
+        when(repository.listarCargos()).thenReturn(Collections.singletonList(Cargo.builder().id(2L).nmCargo("Analista").build()));
+        assertEquals(Collections.singletonList(CargoDto.builder().id(2L).nmCargo("Analista").build()),
                 new CargoServiceImpl(repository).listarCargos());
         verify(repository).listarCargos();
     }
@@ -40,8 +40,8 @@ class CatalogoColaboradorServiceImplTest {
     @Test
     void deveListarPermissoes() {
         PermissaoRepository repository = mock(PermissaoRepository.class);
-        when(repository.listarPermissoes()).thenReturn(Collections.singletonList(Permissao.builder().id(3L).nome("Administrador").build()));
-        assertEquals(Collections.singletonList(PermissaoDto.builder().id(3L).nome("Administrador").build()),
+        when(repository.listarPermissoes()).thenReturn(Collections.singletonList(Permissao.builder().id(3L).nmPermissao("Administrador").build()));
+        assertEquals(Collections.singletonList(PermissaoDto.builder().id(3L).nmPermissao("Administrador").build()),
                 new PermissaoServiceImpl(repository).listarPermissoes());
         verify(repository).listarPermissoes();
     }

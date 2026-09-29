@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @Builder @Data @AllArgsConstructor @NoArgsConstructor
 public class Cargo extends GlobalDomain {
     private Long id;
-    private String nome;
+    private String nmCargo;
 }

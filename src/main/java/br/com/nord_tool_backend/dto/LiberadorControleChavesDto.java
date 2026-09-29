@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class PessoaControleChavesDto {
-    private Long id;
-    private String nome;
-    private String permissao;
+public class LiberadorControleChavesDto {
+    private Long idUserLiberacao;
+    private String nmPessoaLiberador;
+    private String nmPermissaoLiberador;
 }

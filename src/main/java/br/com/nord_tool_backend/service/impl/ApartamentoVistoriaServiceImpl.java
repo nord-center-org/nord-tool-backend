@@ -84,7 +84,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     public ApartamentoVistoriaDto buscarApartamentoVistoria(Long id) {
         log.info("Iniciando método para buscar um Apartamento Vistoria");
         ApartamentoVistoria apartamentoVistoria = apartamentoVistoriaRepository.buscarApartamentoVistoria(id);
-        ApartamentoVistoriaDto apartamentoVistoriaDto = ApartamentoVistoriaDto.converterToDomain(apartamentoVistoria);
+        ApartamentoVistoriaDto apartamentoVistoriaDto = ApartamentoVistoriaDto.converterToDto(apartamentoVistoria);
         log.info("Finalizando método que busca um Apartamento Vistoria");
         return apartamentoVistoriaDto;
     }
@@ -94,7 +94,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     public List<ApartamentoVistoriaDto> listarApartamentoVistoria() {
         log.info("Iniciando método para listar Apartamentos Vistoria");
         List<ApartamentoVistoria> lsApartamentoVistoria = apartamentoVistoriaRepository.listarApartamentoVistoria();
-        List<ApartamentoVistoriaDto> lsApartamentoVistoriaDto = lsApartamentoVistoria.stream().map(ApartamentoVistoriaDto::converterToDomain).collect(Collectors.toList());
+        List<ApartamentoVistoriaDto> lsApartamentoVistoriaDto = lsApartamentoVistoria.stream().map(ApartamentoVistoriaDto::converterToDto).collect(Collectors.toList());
         log.info("Finalizando método que lista Apartamentos Vistoria");
         return lsApartamentoVistoriaDto;
     }
@@ -128,7 +128,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     public List<InfoGeralApartamentoVistoriaDto> listarInfoGeralApartamentoVistoria(String dtiApartamentoVistoria, String dtfApartamentoVistoria){
         log.info("Iniciando método para listar Informações Gerais dos Apartamentos");
         List<InfoGeralApartamentoVistoria> lsInfoGeralApartamentoVistoria =  apartamentoVistoriaRepository.listarInfoGeralApartamentoVistoria(dtiApartamentoVistoria, dtfApartamentoVistoria);
-        List<InfoGeralApartamentoVistoriaDto> lsInfoGeralApartamentoVistoriaDto = lsInfoGeralApartamentoVistoria.stream().map(InfoGeralApartamentoVistoriaDto::converterToDomain).collect(Collectors.toList());
+        List<InfoGeralApartamentoVistoriaDto> lsInfoGeralApartamentoVistoriaDto = lsInfoGeralApartamentoVistoria.stream().map(InfoGeralApartamentoVistoriaDto::converterToDTO).collect(Collectors.toList());
         log.info("Finalizando método para listar Informações Gerais dos Apartamentos");
         return lsInfoGeralApartamentoVistoriaDto;
     }

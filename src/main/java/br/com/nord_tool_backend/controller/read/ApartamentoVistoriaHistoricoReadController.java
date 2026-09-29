@@ -27,7 +27,7 @@ public class ApartamentoVistoriaHistoricoReadController implements BaseResponse 
     @Operation(summary = "Buscar histórico do apartamento")
     @GetMapping("/{idApartamentoVistoria}")
     public ResponseEntity<ApiResponseBody<List<ApartamentoVistoriaHistoricoDto>>> buscarHistoricoApartamentoVistoria(@PathVariable("idApartamentoVistoria") Long idApartamentoVistoria) {
-        List<ApartamentoVistoriaHistoricoDto> lsApVistoriaHistoricoDto = apartamentoVistoriaHistoricoService.buscarHistoricoApartamentoVistoria(idApartamentoVistoria);
-        return ok(lsApVistoriaHistoricoDto);
+        List<ApartamentoVistoriaHistoricoDto> lsApartamentoVistoriaHistoricoDto = apartamentoVistoriaHistoricoService.buscarHistoricoApartamentoVistoria(idApartamentoVistoria);
+        return ok(lsApartamentoVistoriaHistoricoDto);
     }
 }

@@ -53,7 +53,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     public CronogramaSemanalDto buscarPorIdCronogramaSemanal(Long id) {
         log.info("Iniciando método para buscar um Cronograma Semanal por id");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id);
-        CronogramaSemanalDto cronogramaSemanalDto = CronogramaSemanalDto.converterToDomain(cronogramaSemanal);
+        CronogramaSemanalDto cronogramaSemanalDto = CronogramaSemanalDto.converterToDto(cronogramaSemanal);
         log.info("Finalizando método que busca um Cronograma Semanal por id");
         return cronogramaSemanalDto;
     }
@@ -62,7 +62,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     public List<CronogramaSemanalDto> listarCronogramaSemanal() {
         log.info("Iniciando método para listar Cronograma Semanal");
         List<CronogramaSemanal> lsCronogramaSemanal = cronogramaSemanalRepository.listarCronogramaSemanal();
-        List<CronogramaSemanalDto> lsCronogramaSemanalDto = lsCronogramaSemanal.stream().map(CronogramaSemanalDto::converterToDomain).collect(Collectors.toList());
+        List<CronogramaSemanalDto> lsCronogramaSemanalDto = lsCronogramaSemanal.stream().map(CronogramaSemanalDto::converterToDto).collect(Collectors.toList());
         log.info("Finalizando método que lista Cronograma Semanal");
         return lsCronogramaSemanalDto;
     }

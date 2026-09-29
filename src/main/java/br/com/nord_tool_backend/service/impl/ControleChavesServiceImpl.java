@@ -1,117 +1,197 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.domain.ObraControleChaves;
 import br.com.nord_tool_backend.domain.RequisicaoChave;
+import br.com.nord_tool_backend.domain.RequisicaoChaveConsulta;
+import br.com.nord_tool_backend.domain.enums.StatusRequisicaoChaveEnum;
 import br.com.nord_tool_backend.dto.ApartamentoControleChavesDto;
 import br.com.nord_tool_backend.dto.DashboardControleChavesDto;
 import br.com.nord_tool_backend.dto.ObraControleChavesDto;
-import br.com.nord_tool_backend.dto.PessoaControleChavesDto;
 import br.com.nord_tool_backend.dto.RetiradaControleChavesDto;
+import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.NovaRetiradaControleChavesForm;
 import br.com.nord_tool_backend.form.RecebimentoControleChavesForm;
 import br.com.nord_tool_backend.repository.ControleChavesRepository;
 import br.com.nord_tool_backend.service.ControleChavesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ControleChavesServiceImpl implements ControleChavesService {
 
+    private static final String CODIGO_RETIRADA_PREFIXO = "RET-";
+    private static final Pattern PADRAO_NOME_OBRA = Pattern.compile("\\s*[-_]?\\s*[0-9].*$");
+    private static final int QUANTIDADE_POR_PAGINA_PADRAO = 20;
     private final ControleChavesRepository controleChavesRepository;
-    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     @Override
     public List<ObraControleChavesDto> listarObras() {
-        return controleChavesRepository.listarObras();
+        return controleChavesRepository.listarObras().stream()
+                .map(ObraControleChaves::getNmApartamentoVistoria)
+                .map(this::extrairNomeObra)
+                .filter(nmObra -> !nmObra.isBlank())
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .map(ObraControleChavesDto::converterToDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<ApartamentoControleChavesDto> listarApartamentos(String busca, int limite, int pagina) {
-        return controleChavesRepository.listarApartamentos(busca, limite, pagina);
+    public List<ApartamentoControleChavesDto> listarApartamentos(String nmBusca, int nrQuantidadePorPagina, int nrPagina) {
+        return controleChavesRepository.listarApartamentos().stream()
+                .filter(apartamento -> correspondeBusca(apartamento.getNmApartamentoVistoria(), nmBusca))
+                .skip(obterOffset(nrQuantidadePorPagina, nrPagina))
+                .limit(obterQuantidadePorPagina(nrQuantidadePorPagina))
+                .map(ApartamentoControleChavesDto::converterToDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public DashboardControleChavesDto buscarDashboard(int limiteRecentes, String idObra) {
-        Long emCampo = controleChavesRepository.contarChavesEmCampo();
-        Long noQuadro = controleChavesRepository.contarChavesNoQuadro();
-        Long entregues = controleChavesRepository.contarChavesEntregues();
-
-        List<RequisicaoChave> recentesDomain = controleChavesRepository.listarHistorico(null, null, idObra, limiteRecentes > 0 ? limiteRecentes : 5, 0);
-        List<RetiradaControleChavesDto> recentesDto = recentesDomain.stream()
-                .map(this::converterParaDto)
+    public DashboardControleChavesDto buscarDashboard(int nrLimiteRecentes, String idObra) {
+        int nrQuantidadePorPagina = nrLimiteRecentes > 0 ? nrLimiteRecentes : 5;
+        List<RetiradaControleChavesDto> retiradasRecentes = controleChavesRepository.listarHistorico().stream()
+                .filter(requisicao -> correspondeObra(requisicao, idObra))
+                .limit(nrQuantidadePorPagina)
+                .map(this::converterRetiradaParaDto)
                 .collect(Collectors.toList());
 
         return DashboardControleChavesDto.builder()
-                .chavesEmCampo(emCampo)
-                .chavesNoQuadro(noQuadro)
-                .chavesEntregues(entregues)
-                .retiradasRecentes(recentesDto)
+                .qtChavesEmCampo(controleChavesRepository.contarChavesEmCampo())
+                .qtChavesNoQuadro(controleChavesRepository.contarChavesNoQuadro())
+                .qtChavesEntregues(controleChavesRepository.contarChavesEntregues())
+                .retiradasRecentes(retiradasRecentes)
                 .build();
     }
 
     @Override
-    public List<RetiradaControleChavesDto> listarHistorico(String busca, String status, String idObra, int limite, int pagina) {
-        List<RequisicaoChave> historico = controleChavesRepository.listarHistorico(busca, status, idObra, limite, pagina);
-        return historico.stream()
-                .map(this::converterParaDto)
+    public List<RetiradaControleChavesDto> listarHistorico(String nmBusca, String nmStatusRequisicao, String idObra, int nrQuantidadePorPagina, int nrPagina) {
+        final String nmStatusRequisicaoNormalizado = nmStatusRequisicao != null && !nmStatusRequisicao.isBlank() ? validarStatus(nmStatusRequisicao).name() : nmStatusRequisicao;
+
+        return controleChavesRepository.listarHistorico().stream()
+                .filter(requisicao -> correspondeBusca(requisicao.getNmApartamentoVistoria(), nmBusca) || correspondeBusca(requisicao.getNmPessoaRetirante(), nmBusca)
+                        || correspondeBusca(requisicao.getCdRetirada(), nmBusca))
+                .filter(requisicao -> nmStatusRequisicaoNormalizado == null || nmStatusRequisicaoNormalizado.isBlank()
+                        || nmStatusRequisicaoNormalizado.equalsIgnoreCase(requisicao.getNmStatusRequisicao()))
+                .filter(requisicao -> correspondeObra(requisicao, idObra))
+                .skip(obterOffset(nrQuantidadePorPagina, nrPagina))
+                .limit(obterQuantidadePorPagina(nrQuantidadePorPagina))
+                .map(this::converterRetiradaParaDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public RetiradaControleChavesDto criarRetirada(NovaRetiradaControleChavesForm form) {
-        RequisicaoChave criada = controleChavesRepository.criarRetirada(form);
-        return converterParaDto(criada);
+    @Transactional(rollbackFor = Exception.class)
+    public RetiradaControleChavesDto criarRetirada(NovaRetiradaControleChavesForm novaRetiradaControleChavesForm) {
+        if (novaRetiradaControleChavesForm == null
+                || !idValido(novaRetiradaControleChavesForm.getIdApartamentoVistoria())
+                || !idValido(novaRetiradaControleChavesForm.getIdUserRetirada())
+                || !idValido(novaRetiradaControleChavesForm.getIdUserLiberacao())) {
+            throw erroValidacao("Apartamento, retirante e liberador são obrigatórios e devem ser válidos");
+        }
+
+        RequisicaoChave requisicaoChave = novaRetiradaControleChavesForm.converterToDto();
+        requisicaoChave.setCdRetirada(gerarCodigoRetirada());
+        requisicaoChave.setDtRetirada(LocalDateTime.now());
+        requisicaoChave.setNmStatusRequisicao(StatusRequisicaoChaveEnum.ABERTO.name());
+        Long idRequisicao = controleChavesRepository.criarRetirada(requisicaoChave);
+        return converterRetiradaParaDto(controleChavesRepository.buscarPorId(idRequisicao));
     }
 
     @Override
-    public RetiradaControleChavesDto receberRetirada(Long id, RecebimentoControleChavesForm form) {
-        RequisicaoChave recebida = controleChavesRepository.receberRetirada(id, form);
-        return converterParaDto(recebida);
-    }
-
-    private RetiradaControleChavesDto converterParaDto(RequisicaoChave domain) {
-        if (domain == null) return null;
-
-        ApartamentoControleChavesDto ap = ApartamentoControleChavesDto.builder()
-                .id(domain.getIdApartamentoVistoria())
-                .label(domain.getNmApartamentoVistoria())
-                .build();
-
-        PessoaControleChavesDto retirante = PessoaControleChavesDto.builder()
-                .id(domain.getIdUserRetirada())
-                .nome(domain.getNmUserRetirada())
-                .permissao(domain.getNmPermissaoRetirante())
-                .build();
-
-        PessoaControleChavesDto liberador = PessoaControleChavesDto.builder()
-                .id(domain.getIdUserLiberacao())
-                .nome(domain.getNmUserLiberacao())
-                .permissao(domain.getNmPermissaoLiberador())
-                .build();
-
-        PessoaControleChavesDto recebedor = null;
-        if (domain.getIdUserRecebimento() != null) {
-            recebedor = PessoaControleChavesDto.builder()
-                    .id(domain.getIdUserRecebimento())
-                    .nome(domain.getNmUserRecebimento())
-                    .permissao(domain.getNmPermissaoRecebedor())
-                    .build();
+    @Transactional(rollbackFor = Exception.class)
+    public RetiradaControleChavesDto receberRetirada(Long idRequisicao,
+                                                       RecebimentoControleChavesForm recebimentoControleChavesForm) {
+        if (!idValido(idRequisicao) || recebimentoControleChavesForm == null
+                || !idValido(recebimentoControleChavesForm.getIdUserRecebimento())) {
+            throw erroValidacao("Retirada e usuário recebedor são obrigatórios e devem ser válidos");
         }
 
-        return RetiradaControleChavesDto.builder()
-                .id(domain.getId())
-                .codigo(domain.getCdRetirada())
-                .apartamento(ap)
-                .retirante(retirante)
-                .liberador(liberador)
-                .recebedor(recebedor)
-                .dataRetirada(domain.getDtRetirada() != null ? domain.getDtRetirada().format(ISO_FORMATTER) : null)
-                .dataRecebimento(domain.getDtRecebimento() != null ? domain.getDtRecebimento().format(ISO_FORMATTER) : null)
-                .status(domain.getStRequisicao())
-                .build();
+        RequisicaoChaveConsulta atual = controleChavesRepository.buscarPorId(idRequisicao);
+        validarConsistencia(atual);
+        if (validarStatus(atual.getNmStatusRequisicao()) != StatusRequisicaoChaveEnum.ABERTO) {
+            throw erroValidacao("Somente retiradas abertas podem ser recebidas");
+        }
+
+        controleChavesRepository.receberRetirada(idRequisicao, recebimentoControleChavesForm.getIdUserRecebimento(), LocalDateTime.now(),
+                StatusRequisicaoChaveEnum.RECEBIDO.name());
+        RequisicaoChaveConsulta recebida = controleChavesRepository.buscarPorId(idRequisicao);
+        validarConsistencia(recebida);
+        if (recebida.getIdUserRecebimento() == null
+                || !recebida.getIdUserRecebimento().equals(recebimentoControleChavesForm.getIdUserRecebimento())) {
+            throw erroValidacao("A retirada já foi recebida por outro usuário");
+        }
+        return RetiradaControleChavesDto.converterToDto(recebida);
+    }
+
+    private String extrairNomeObra(String nmApartamentoVistoria) {
+        if (nmApartamentoVistoria == null) {
+            return "";
+        }
+        return PADRAO_NOME_OBRA.matcher(nmApartamentoVistoria).replaceFirst("").trim();
+    }
+
+    private boolean correspondeObra(RequisicaoChaveConsulta requisicaoChaveConsulta, String idObra) {
+        return idObra == null || idObra.isBlank()
+                || extrairNomeObra(requisicaoChaveConsulta.getNmApartamentoVistoria()).equalsIgnoreCase(idObra.trim());
+    }
+
+    private boolean correspondeBusca(String nmValor, String nmBusca) {
+        return nmBusca == null || nmBusca.isBlank()
+                || (nmValor != null && nmValor.toLowerCase(Locale.ROOT).contains(nmBusca.trim().toLowerCase(Locale.ROOT)));
+    }
+
+    private int obterQuantidadePorPagina(int nrQuantidadePorPagina) {
+        return nrQuantidadePorPagina > 0 ? nrQuantidadePorPagina : QUANTIDADE_POR_PAGINA_PADRAO;
+    }
+
+    private long obterOffset(int nrQuantidadePorPagina, int nrPagina) {
+        return (long) Math.max(0, nrPagina) * obterQuantidadePorPagina(nrQuantidadePorPagina);
+    }
+
+    private RetiradaControleChavesDto converterRetiradaParaDto(RequisicaoChaveConsulta requisicaoChaveConsulta) {
+        validarConsistencia(requisicaoChaveConsulta);
+        return RetiradaControleChavesDto.converterToDto(requisicaoChaveConsulta);
+    }
+
+    private StatusRequisicaoChaveEnum validarStatus(String nmStatusRequisicao) {
+        try {
+            return StatusRequisicaoChaveEnum.from(nmStatusRequisicao);
+        } catch (IllegalArgumentException ex) {
+            throw erroValidacao("Status de retirada inválido: " + nmStatusRequisicao);
+        }
+    }
+
+    private void validarConsistencia(RequisicaoChaveConsulta requisicaoChaveConsulta) {
+        StatusRequisicaoChaveEnum status = validarStatus(requisicaoChaveConsulta.getNmStatusRequisicao());
+        boolean recebimentoInformado = requisicaoChaveConsulta.getDtRecebimento() != null
+                && requisicaoChaveConsulta.getIdUserRecebimento() != null;
+        boolean recebimentoAusente = requisicaoChaveConsulta.getDtRecebimento() == null
+                && requisicaoChaveConsulta.getIdUserRecebimento() == null;
+
+        if ((status == StatusRequisicaoChaveEnum.ABERTO && !recebimentoAusente)
+                || (status == StatusRequisicaoChaveEnum.RECEBIDO && !recebimentoInformado)) {
+            throw erroValidacao("Status e dados de recebimento da retirada são inconsistentes");
+        }
+    }
+
+    private String gerarCodigoRetirada() {
+        return CODIGO_RETIRADA_PREFIXO + (System.currentTimeMillis() % 1000000);
+    }
+
+    private boolean idValido(Long id) {
+        return id != null && id > 0;
+    }
+
+    private ValidacaoException erroValidacao(String mensagem) {
+        return new ValidacaoException(NordHttpEnum.HTTP_400, mensagem, mensagem);
     }
 }

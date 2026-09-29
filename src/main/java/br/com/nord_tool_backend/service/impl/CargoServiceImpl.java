@@ -14,6 +14,6 @@ public class CargoServiceImpl implements CargoService {
 
     public List<CargoDto> listarCargos() {
         return cargoRepository.listarCargos().stream()
-                .map(CargoDto::converterToDomain).collect(Collectors.toList());
+                .map(CargoDto::converterToDto).collect(Collectors.toList());
     }
 }

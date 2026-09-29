@@ -24,42 +24,42 @@ class ColaboradorServiceImplTest {
     private ColaboradorRepository repository;
 
     private ColaboradorServiceImpl service;
-    private ColaboradorForm form;
+    private ColaboradorForm colaboradorForm;
     private Colaborador colaborador;
     private ColaboradorDto dto;
 
     @BeforeEach
     void setup() {
         service = new ColaboradorServiceImpl(repository);
-        form = ColaboradorForm.builder()
-                .nome("João Silva")
-                .celular("11999999999")
+        colaboradorForm = ColaboradorForm.builder()
+                .nmColaborador("João Silva")
+                .nrCelular("11999999999")
                 .idEmpresa(1)
                 .idCargo(2)
                 .idPermissao(3)
                 .build();
         colaborador = Colaborador.builder()
-                .id(10L).nome("João Silva").celular("11999999999")
-                .idEmpresa(1).nomeEmpresa("Empresa")
-                .idCargo(2).nomeCargo("Cargo")
-                .idPermissao(3).nomePermissao("Permissão").build();
-        dto = ColaboradorDto.converterToDomain(colaborador);
+                .id(10L).nmColaborador("João Silva").nrCelular("11999999999")
+                .idEmpresa(1).nmEmpresa("Empresa")
+                .idCargo(2).nmCargo("Cargo")
+                .idPermissao(3).nmPermissao("Permissão").build();
+        dto = ColaboradorDto.converterToDto(colaborador);
     }
 
     @Test
     void deveSalvarColaborador() {
         when(repository.salvarColaborador(org.mockito.ArgumentMatchers.any())).thenReturn(dto);
-        assertEquals(dto, service.salvarColaborador(form));
+        assertEquals(dto, service.salvarColaborador(colaboradorForm));
         ArgumentCaptor<Colaborador> captor = ArgumentCaptor.forClass(Colaborador.class);
         verify(repository).salvarColaborador(captor.capture());
         assertNull(captor.getValue().getId());
-        assertEquals("João Silva", captor.getValue().getNome());
+        assertEquals("João Silva", captor.getValue().getNmColaborador());
     }
 
     @Test
     void deveAlterarColaboradorComIdDoCaminho() {
         when(repository.alterarColaborador(org.mockito.ArgumentMatchers.any())).thenReturn(dto);
-        assertEquals(dto, service.alterarColaborador(10L, form));
+        assertEquals(dto, service.alterarColaborador(10L, colaboradorForm));
         ArgumentCaptor<Colaborador> captor = ArgumentCaptor.forClass(Colaborador.class);
         verify(repository).alterarColaborador(captor.capture());
         assertEquals(10L, captor.getValue().getId());

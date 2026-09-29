@@ -23,8 +23,8 @@ public class ApartamentoVistoriaHistoricoServiceImpl implements ApartamentoVisto
     @Override
     public List<ApartamentoVistoriaHistoricoDto> buscarHistoricoApartamentoVistoria(Long idApartamentoVistoria) {
         log.info("Iniciando método para buscar historico de alteracoes do apartamento");
-        List<ApartamentoVistoriaHistoricoConsultaDto> lsApHistoricoConsultaDto = apartamentoVistoriaHistoricoRepository.buscarHistorico(idApartamentoVistoria);
-        return lsApHistoricoConsultaDto.stream()
+        List<ApartamentoVistoriaHistoricoConsultaDto> lsApartamentoVistoriaHistoricoConsultaDto = apartamentoVistoriaHistoricoRepository.buscarHistorico(idApartamentoVistoria);
+        return lsApartamentoVistoriaHistoricoConsultaDto.stream()
                 .collect(Collectors.groupingBy(
                         ApartamentoVistoriaHistoricoConsultaDto::getNrVersao,
                         LinkedHashMap::new,

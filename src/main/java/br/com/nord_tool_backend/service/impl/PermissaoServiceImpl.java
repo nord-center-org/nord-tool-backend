@@ -14,6 +14,6 @@ public class PermissaoServiceImpl implements PermissaoService {
 
     public List<PermissaoDto> listarPermissoes() {
         return permissaoRepository.listarPermissoes().stream()
-                .map(PermissaoDto::converterToDomain).collect(Collectors.toList());
+                .map(PermissaoDto::converterToDto).collect(Collectors.toList());
     }
 }

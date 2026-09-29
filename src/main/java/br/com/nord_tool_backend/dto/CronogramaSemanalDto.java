@@ -29,7 +29,7 @@ public class CronogramaSemanalDto {
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime dtFinalizacao;
 
-    public static CronogramaSemanalDto converterToDomain(CronogramaSemanal cronogramaSemanal ) {
+    public static CronogramaSemanalDto converterToDto(CronogramaSemanal cronogramaSemanal ) {
         return CronogramaSemanalDto.builder()
                 .id(cronogramaSemanal.getId())
                 .idDiaSemana(cronogramaSemanal.getIdDiaSemana())

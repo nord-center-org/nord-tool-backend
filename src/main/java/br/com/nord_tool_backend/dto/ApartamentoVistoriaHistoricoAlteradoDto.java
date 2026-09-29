@@ -14,11 +14,12 @@ public class ApartamentoVistoriaHistoricoAlteradoDto {
     private String txAnterior;
     private String txAtual;
 
-    public static ApartamentoVistoriaHistoricoAlteradoDto converter(ApartamentoVistoriaHistoricoConsultaDto apHistoricoConsultaDto) {
+    public static ApartamentoVistoriaHistoricoAlteradoDto converter(
+            ApartamentoVistoriaHistoricoConsultaDto apartamentoVistoriaHistoricoConsultaDto) {
         return ApartamentoVistoriaHistoricoAlteradoDto.builder()
-                .nmAtributo(apHistoricoConsultaDto.getNmAtributo())
-                .txAnterior(apHistoricoConsultaDto.getTxAnterior())
-                .txAtual(apHistoricoConsultaDto.getTxAtual())
+                .nmAtributo(apartamentoVistoriaHistoricoConsultaDto.getNmAtributo())
+                .txAnterior(apartamentoVistoriaHistoricoConsultaDto.getTxAnterior())
+                .txAtual(apartamentoVistoriaHistoricoConsultaDto.getTxAtual())
                 .build();
     }
 }

@@ -18,11 +18,11 @@ import javax.validation.constraints.Size;
 public class ColaboradorForm {
     @NotBlank(message = "Nome é obrigatório")
     @Size(max = 100, message = "Nome deve ter no máximo 100 caracteres")
-    private String nome;
+    private String nmColaborador;
 
     @Size(max = 11, message = "Celular deve ter no máximo 11 dígitos")
     @Pattern(regexp = "\\d{10,11}", message = "Celular deve conter 10 ou 11 dígitos")
-    private String celular;
+    private String nrCelular;
 
     @NotNull(message = "Empresa é obrigatória")
     private Integer idEmpresa;
@@ -36,8 +36,8 @@ public class ColaboradorForm {
     public Colaborador converterToDomain(Long id) {
         return Colaborador.builder()
                 .id(id)
-                .nome(nome)
-                .celular(celular)
+                .nmColaborador(nmColaborador)
+                .nrCelular(nrCelular)
                 .idEmpresa(idEmpresa)
                 .idCargo(idCargo)
                 .idPermissao(idPermissao)

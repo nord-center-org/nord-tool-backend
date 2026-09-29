@@ -23,7 +23,7 @@ public class StatusVistoriaServiceImpl implements StatusVistoriaService {
     public List<StatusVistoriaDto> listarStatusVistoria(){
         log.info("Iniciando método para listar Status Vistoria");
         List<StatusVistoria> lsStatusVistoria = statusVistoriaRepository.listarStatusVistoria();
-        List<StatusVistoriaDto> lsStatusVistoriaDto = lsStatusVistoria.stream().map(StatusVistoriaDto::converterToDomain).collect(Collectors.toList());
+        List<StatusVistoriaDto> lsStatusVistoriaDto = lsStatusVistoria.stream().map(StatusVistoriaDto::converterToDto).collect(Collectors.toList());
         log.info("Finalizando método que consulta a lista de Status Vistoria");
         return lsStatusVistoriaDto;
     }

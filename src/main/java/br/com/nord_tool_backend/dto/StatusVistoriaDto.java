@@ -16,7 +16,7 @@ public class StatusVistoriaDto {
     private Long idStatusVistoria;
     private String nmStatusVistoria;
 
-    public static StatusVistoriaDto converterToDomain(StatusVistoria statusVistoria) {
+    public static StatusVistoriaDto converterToDto(StatusVistoria statusVistoria) {
         return StatusVistoriaDto.builder()
                 .idStatusVistoria(statusVistoria.getId())
                 .nmStatusVistoria(statusVistoria.getNmStatusVistoria())

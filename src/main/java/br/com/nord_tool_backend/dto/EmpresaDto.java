@@ -6,12 +6,18 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Builder @Data @AllArgsConstructor @NoArgsConstructor
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class EmpresaDto {
     private Long id;
-    private String nome;
+    private String nmEmpresa;
 
-    public static EmpresaDto converterToDomain(Empresa empresa) {
-        return EmpresaDto.builder().id(empresa.getId()).nome(empresa.getNome()).build();
+    public static EmpresaDto converterToDto(Empresa empresa) {
+        return EmpresaDto.builder()
+                .id(empresa.getId())
+                .nmEmpresa(empresa.getNmEmpresa())
+                .build();
     }
 }

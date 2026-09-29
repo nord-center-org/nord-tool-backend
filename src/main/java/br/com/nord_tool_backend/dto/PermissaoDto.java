@@ -6,12 +6,18 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Builder @Data @AllArgsConstructor @NoArgsConstructor
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class PermissaoDto {
     private Long id;
-    private String nome;
+    private String nmPermissao;
 
-    public static PermissaoDto converterToDomain(Permissao permissao) {
-        return PermissaoDto.builder().id(permissao.getId()).nome(permissao.getNome()).build();
+    public static PermissaoDto converterToDto(Permissao permissao) {
+        return PermissaoDto.builder()
+                .id(permissao.getId())
+                .nmPermissao(permissao.getNmPermissao())
+                .build();
     }
 }

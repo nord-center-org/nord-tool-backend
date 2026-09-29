@@ -6,12 +6,18 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Builder @Data @AllArgsConstructor @NoArgsConstructor
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class CargoDto {
     private Long id;
-    private String nome;
+    private String nmCargo;
 
-    public static CargoDto converterToDomain(Cargo cargo) {
-        return CargoDto.builder().id(cargo.getId()).nome(cargo.getNome()).build();
+    public static CargoDto converterToDto(Cargo cargo) {
+        return CargoDto.builder()
+                .id(cargo.getId())
+                .nmCargo(cargo.getNmCargo())
+                .build();
     }
 }
