@@ -2,10 +2,10 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
-  aplication:
-    name: "project.artifactId@"
+  application:
+    name: nord-tool-backend
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    active: ${SPRING_PROFILES_ACTIVE:railway}
   data:
     web:
       pageable:
@@ -16,3 +16,16 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:${JDBC_DATABASE_URL:jdbc:postgresql://${PGHOST:${POSTGRES_HOST:${POSTGRES_PRIVATE_HOST:localhost}}}:${PGPORT:${POSTGRES_PORT:5432}}/${PGDATABASE:${POSTGRES_DB:apartamento}}}}}
+    username: ${SPRING_DATASOURCE_USERNAME:${PGUSER:${POSTGRES_USER:user_app_nord}}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${PGPASSWORD:${POSTGRES_PASSWORD:pass_user_nord_local}}}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 1
+      maximum-pool-size: 10
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      auto-commit: false
+      initialization-fail-timeout: 0

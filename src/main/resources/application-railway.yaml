@@ -6,17 +6,18 @@ spring:
     name: nord-tool-backend
 
   datasource:
-    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
-    username: ${PGUSER}
-    password: ${PGPASSWORD}
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:${JDBC_DATABASE_URL:jdbc:postgresql://${PGHOST:${POSTGRES_HOST:${POSTGRES_PRIVATE_HOST:localhost}}}:${PGPORT:${POSTGRES_PORT:5432}}/${PGDATABASE:${POSTGRES_DB:apartamento}}}}}
+    username: ${SPRING_DATASOURCE_USERNAME:${PGUSER:${POSTGRES_USER:user_app_nord}}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${PGPASSWORD:${POSTGRES_PASSWORD:pass_user_nord_local}}}
     driver-class-name: org.postgresql.Driver
 
     hikari:
-      minimum-idle: 5
+      minimum-idle: 1
       maximum-pool-size: 10
       idle-timeout: 300000
       max-lifetime: 1200000
       auto-commit: false
+      initialization-fail-timeout: 0
 
   jpa:
     open-in-view: false
