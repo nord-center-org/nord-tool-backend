@@ -46,10 +46,11 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     }
 
     private void validarOrigemCronogramaSemanal(CronogramaSemanal cronogramaSemanal) {
-        if (cronogramaSemanal.getIdDiaSemana() == null && cronogramaSemanal.getDtAgendamento() == null) {
+        boolean fixo = Boolean.TRUE.equals(cronogramaSemanal.getFlFixo());
+        if (fixo && cronogramaSemanal.getIdDiaSemana() == null) {
             throw new ValidacaoException(NordHttpEnum.HTTP_400,
-                    "Informe o dia da semana (atividade fixa) ou a data/horário do agendamento (demanda pontual).",
-                    "idDiaSemana e dtAgendamento ausentes");
+                    "Atividades fixas precisam de um dia da semana.",
+                    "idDiaSemana ausente para item fixo");
         }
     }
 
