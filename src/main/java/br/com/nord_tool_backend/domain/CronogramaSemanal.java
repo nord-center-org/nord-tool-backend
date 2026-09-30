@@ -24,4 +24,7 @@ public class CronogramaSemanal extends GlobalDomain {
     private String txObservacao;
     private LocalDateTime dtPrazo;
     private LocalDateTime dtFinalizacao;
+    private String nmTag;
+    private LocalDateTime dtAgendamento;
+    private Boolean flFixo;
 }

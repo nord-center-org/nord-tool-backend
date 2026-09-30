@@ -28,6 +28,10 @@ public class CronogramaSemanalForm {
     private LocalDateTime dtPrazo;
     @JsonDeserialize(using = FormatDateTimeDeserializer.class)
     private LocalDateTime dtFinalizacao;
+    private String nmTag;
+    @JsonDeserialize(using = FormatDateTimeDeserializer.class)
+    private LocalDateTime dtAgendamento;
+    private Boolean flFixo;
 
     public CronogramaSemanal converterToDomain() {
         return CronogramaSemanal.builder()
@@ -40,6 +44,9 @@ public class CronogramaSemanalForm {
                 .txObservacao(txObservacao)
                 .dtPrazo(dtPrazo)
                 .dtFinalizacao(dtFinalizacao)
+                .nmTag(nmTag)
+                .dtAgendamento(dtAgendamento)
+                .flFixo(flFixo != null ? flFixo : Boolean.TRUE)
                 .build();
     }
 
