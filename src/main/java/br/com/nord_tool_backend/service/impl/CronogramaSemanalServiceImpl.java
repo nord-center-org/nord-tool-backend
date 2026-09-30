@@ -1,7 +1,9 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.domain.CronogramaSemanal;
 import br.com.nord_tool_backend.dto.CronogramaSemanalDto;
+import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CronogramaSemanalForm;
 import br.com.nord_tool_backend.repository.CronogramaSemanalRepository;
 import br.com.nord_tool_backend.service.CronogramaSemanalService;
@@ -26,6 +28,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     public CronogramaSemanalDto salvarCronogramaSemanal(CronogramaSemanalForm cronogramaSemanalForm) {
         log.info("Iniciando método para salvar um Cronograma Semanal");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalForm.converterToDomain();
+        validarOrigemCronogramaSemanal(cronogramaSemanal);
         CronogramaSemanalDto cronogramaSemanalDto = cronogramaSemanalRepository.salvarCronogramaSemanal(cronogramaSemanal);
         log.info("Finalizando método que salva um Cronograma Semanal");
         return cronogramaSemanalDto;
@@ -36,9 +39,18 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     public CronogramaSemanalDto alterarCronogramaSemanal(CronogramaSemanalForm cronogramaSemanalForm) {
         log.info("Iniciando método para alterar um Cronograma Semanal");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalForm.converterToDomain();
+        validarOrigemCronogramaSemanal(cronogramaSemanal);
         CronogramaSemanalDto cronogramaSemanalDto = cronogramaSemanalRepository.alterarCronogramaSemanal(cronogramaSemanal);
         log.info("Finalizando método que alterar um Cronograma Semanal");
         return cronogramaSemanalDto;
+    }
+
+    private void validarOrigemCronogramaSemanal(CronogramaSemanal cronogramaSemanal) {
+        if (cronogramaSemanal.getIdDiaSemana() == null && cronogramaSemanal.getDtAgendamento() == null) {
+            throw new ValidacaoException(NordHttpEnum.HTTP_400,
+                    "Informe o dia da semana (atividade fixa) ou a data/horário do agendamento (demanda pontual).",
+                    "idDiaSemana e dtAgendamento ausentes");
+        }
     }
 
     @Override
