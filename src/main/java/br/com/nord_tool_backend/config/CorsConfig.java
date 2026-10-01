@@ -14,7 +14,7 @@ public class CorsConfig implements WebMvcConfigurer {
                         "http://localhost:5173",
                         "https://nordtoolfrontend-develop.up.railway.app"
                 )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
