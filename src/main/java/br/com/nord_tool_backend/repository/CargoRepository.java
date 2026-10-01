@@ -5,4 +5,7 @@ import java.util.List;
 
 public interface CargoRepository {
     List<Cargo> listarCargos();
+    Cargo salvarCargo(Cargo cargo);
+    Cargo alterarCargo(Cargo cargo);
+    void deletarCargo(Long id);
 }

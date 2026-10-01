@@ -1,10 +1,12 @@
 package br.com.nord_tool_backend.service.impl;
 
 import br.com.nord_tool_backend.dto.EmpresaDto;
+import br.com.nord_tool_backend.form.EmpresaForm;
 import br.com.nord_tool_backend.repository.EmpresaRepository;
 import br.com.nord_tool_backend.service.EmpresaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,5 +17,23 @@ public class EmpresaServiceImpl implements EmpresaService {
     public List<EmpresaDto> listarEmpresas() {
         return empresaRepository.listarEmpresas().stream()
                 .map(EmpresaDto::converterToDto).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public EmpresaDto salvarEmpresa(EmpresaForm empresaForm) {
+        return EmpresaDto.converterToDto(empresaRepository.salvarEmpresa(empresaForm.converterToDomain(null)));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public EmpresaDto alterarEmpresa(Long id, EmpresaForm empresaForm) {
+        return EmpresaDto.converterToDto(empresaRepository.alterarEmpresa(empresaForm.converterToDomain(id)));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deletarEmpresa(Long id) {
+        empresaRepository.deletarEmpresa(id);
     }
 }

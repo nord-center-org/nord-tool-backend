@@ -10,6 +10,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -17,13 +18,47 @@ import java.util.List;
 @PropertySource("classpath:query/permissao.properties")
 public class PermissaoRepositoryImpl extends RepositoryJdbcOperationsSql<Permissao> implements PermissaoRepository {
     @Value("${SPS.PERMISSAO.LISTAR}") private String queryListar;
+    @Value("${SPI.PERMISSAO.INSERIR}") private String queryInserir;
+    @Value("${SPU.PERMISSAO.ALTERAR}") private String queryAlterar;
+    @Value("${SPD.PERMISSAO.DELETAR}") private String queryDeletar;
 
     public List<Permissao> listarPermissoes() {
         try {
             return buscarTodos(queryListar, BeanPropertyRowMapper.newInstance(Permissao.class));
         } catch (Exception ex) {
-            log.error("Erro ao listar permissões", ex);
-            throw new ValidacaoException(NordHttpEnum.HTTP_400, "Erro ao listar permissões", ExceptionUtils.getMessage(ex));
+            throw tratarErro("Erro ao listar permissões", ex);
         }
+    }
+
+    @Override
+    public Permissao salvarPermissao(Permissao permissao) {
+        try {
+            return salvar(queryInserir, permissao, "id_permissao");
+        } catch (Exception ex) {
+            throw tratarErro("Erro ao salvar permissão", ex);
+        }
+    }
+
+    @Override
+    public Permissao alterarPermissao(Permissao permissao) {
+        try {
+            return alterar(queryAlterar, permissao);
+        } catch (Exception ex) {
+            throw tratarErro("Erro ao alterar permissão", ex);
+        }
+    }
+
+    @Override
+    public void deletarPermissao(Long id) {
+        try {
+            deletar(queryDeletar, new MapSqlParameterSource("id", id));
+        } catch (Exception ex) {
+            throw tratarErro("Erro ao deletar permissão", ex);
+        }
+    }
+
+    private ValidacaoException tratarErro(String mensagem, Exception ex) {
+        log.error(mensagem, ex);
+        return new ValidacaoException(NordHttpEnum.HTTP_400, mensagem, ExceptionUtils.getMessage(ex));
     }
 }
