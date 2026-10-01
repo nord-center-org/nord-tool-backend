@@ -143,6 +143,7 @@ class ControleChavesServiceImplTest {
                 consulta(15L, "RET-15", "Obra Alfa 101", "Maria", "ABERTO", DT_RETIRADA, null, null));
         NovaRetiradaControleChavesForm novaRetiradaControleChavesForm =
                 NovaRetiradaControleChavesForm.builder()
+                        .nmTipoItem("APARTAMENTO")
                         .idApartamentoVistoria(101L)
                         .idUserRetirada(7L)
                         .idUserLiberacao(8L)
@@ -159,6 +160,60 @@ class ControleChavesServiceImplTest {
                         && "ABERTO".equals(requisicao.getNmStatusRequisicao())
                         && requisicao.getCdRetirada().startsWith("RET-")
                         && requisicao.getDtRetirada() != null));
+    }
+
+    @Test
+    void deveCriarRetiradaDeFerramenta() {
+        when(controleChavesRepository.criarRetirada(any())).thenReturn(16L);
+        when(controleChavesRepository.buscarPorId(16L)).thenReturn(
+                RequisicaoChaveConsulta.builder()
+                        .idRequisicao(16L)
+                        .cdRetirada("RET-16")
+                        .dtRetirada(DT_RETIRADA)
+                        .idFerramenta(5L)
+                        .nmFerramenta("Furadeira")
+                        .nmTipoItem("FERRAMENTA")
+                        .idUserRetirada(7L)
+                        .nmPessoaRetirante("Maria")
+                        .idUserLiberacao(8L)
+                        .nmPessoaLiberador("João")
+                        .nmStatusRequisicao("ABERTO")
+                        .build());
+        NovaRetiradaControleChavesForm novaRetiradaControleChavesForm =
+                NovaRetiradaControleChavesForm.builder()
+                        .nmTipoItem("FERRAMENTA")
+                        .idFerramenta(5L)
+                        .idUserRetirada(7L)
+                        .idUserLiberacao(8L)
+                        .build();
+
+        RetiradaControleChavesDto retirada = controleChavesService.criarRetirada(novaRetiradaControleChavesForm);
+
+        assertEquals(16L, retirada.getIdRequisicao());
+        assertNull(retirada.getApartamentoControleChavesDto());
+        assertNotNull(retirada.getFerramentaControleChavesDto());
+        assertEquals("Furadeira", retirada.getFerramentaControleChavesDto().getNmFerramenta());
+        verify(controleChavesRepository).criarRetirada(org.mockito.ArgumentMatchers.argThat(requisicao ->
+                requisicao.getIdFerramenta().equals(5L)
+                        && requisicao.getIdApartamentoVistoria() == null
+                        && "FERRAMENTA".equals(requisicao.getNmTipoItem())));
+    }
+
+    @Test
+    void deveRejeitarRetiradaComTipoApartamentoEIdFerramentaPreenchido() {
+        NovaRetiradaControleChavesForm novaRetiradaControleChavesForm =
+                NovaRetiradaControleChavesForm.builder()
+                        .nmTipoItem("APARTAMENTO")
+                        .idApartamentoVistoria(101L)
+                        .idFerramenta(5L)
+                        .idUserRetirada(7L)
+                        .idUserLiberacao(8L)
+                        .build();
+
+        assertThrows(ValidacaoException.class,
+                () -> controleChavesService.criarRetirada(novaRetiradaControleChavesForm));
+
+        verifyNoInteractions(controleChavesRepository);
     }
 
     @Test
