@@ -49,7 +49,7 @@ public class CronogramaSemanalRepositoryImpl extends RepositoryJdbcOperationsSql
         try {
             log.info("Salvando na base de dados um Cronograma Semanal");
             CronogramaSemanal cronogramaSemanalSalvar = salvar(querySalvaCronogramaSemanal, cronogramaSemanal, "id_cronograma_semanal");
-            return CronogramaSemanalDto.converterToDto(cronogramaSemanalSalvar);
+            return CronogramaSemanalDto.converterToDto(buscarPorIdCronogramaSemanal(cronogramaSemanalSalvar.getId()));
         } catch (Exception ex) {
             log.error(ExceptionUtils.getMessage(ex));
             throw new ValidacaoException(NordHttpEnum.HTTP_400, StringUtils.getMensagem(ERRO_GENERICO_SALVAR), ex.getMessage());
@@ -61,7 +61,7 @@ public class CronogramaSemanalRepositoryImpl extends RepositoryJdbcOperationsSql
         try {
             log.info("Alterando na base de dados um Cronograma Semanal");
             CronogramaSemanal cronogramaSemanalAlterar = alterar(queryAlteraCronogramaSemanal, cronogramaSemanal);
-            return CronogramaSemanalDto.converterToDto(cronogramaSemanalAlterar);
+            return CronogramaSemanalDto.converterToDto(buscarPorIdCronogramaSemanal(cronogramaSemanalAlterar.getId()));
         } catch (Exception ex) {
             log.error(ExceptionUtils.getMessage(ex));
             throw new ValidacaoException(NordHttpEnum.HTTP_400, StringUtils.getMensagem(ERRO_GENERICO_ALTERAR), ex.getMessage());
