@@ -10,6 +10,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -17,13 +18,47 @@ import java.util.List;
 @PropertySource("classpath:query/empresa.properties")
 public class EmpresaRepositoryImpl extends RepositoryJdbcOperationsSql<Empresa> implements EmpresaRepository {
     @Value("${SPS.EMPRESA.LISTAR}") private String queryListar;
+    @Value("${SPI.EMPRESA.INSERIR}") private String queryInserir;
+    @Value("${SPU.EMPRESA.ALTERAR}") private String queryAlterar;
+    @Value("${SPD.EMPRESA.DELETAR}") private String queryDeletar;
 
     public List<Empresa> listarEmpresas() {
         try {
             return buscarTodos(queryListar, BeanPropertyRowMapper.newInstance(Empresa.class));
         } catch (Exception ex) {
-            log.error("Erro ao listar empresas", ex);
-            throw new ValidacaoException(NordHttpEnum.HTTP_400, "Erro ao listar empresas", ExceptionUtils.getMessage(ex));
+            throw tratarErro("Erro ao listar empresas", ex);
         }
+    }
+
+    @Override
+    public Empresa salvarEmpresa(Empresa empresa) {
+        try {
+            return salvar(queryInserir, empresa, "id_empresa");
+        } catch (Exception ex) {
+            throw tratarErro("Erro ao salvar empresa", ex);
+        }
+    }
+
+    @Override
+    public Empresa alterarEmpresa(Empresa empresa) {
+        try {
+            return alterar(queryAlterar, empresa);
+        } catch (Exception ex) {
+            throw tratarErro("Erro ao alterar empresa", ex);
+        }
+    }
+
+    @Override
+    public void deletarEmpresa(Long id) {
+        try {
+            deletar(queryDeletar, new MapSqlParameterSource("id", id));
+        } catch (Exception ex) {
+            throw tratarErro("Erro ao deletar empresa", ex);
+        }
+    }
+
+    private ValidacaoException tratarErro(String mensagem, Exception ex) {
+        log.error(mensagem, ex);
+        return new ValidacaoException(NordHttpEnum.HTTP_400, mensagem, ExceptionUtils.getMessage(ex));
     }
 }

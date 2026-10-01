@@ -5,4 +5,7 @@ import java.util.List;
 
 public interface PermissaoRepository {
     List<Permissao> listarPermissoes();
+    Permissao salvarPermissao(Permissao permissao);
+    Permissao alterarPermissao(Permissao permissao);
+    void deletarPermissao(Long id);
 }

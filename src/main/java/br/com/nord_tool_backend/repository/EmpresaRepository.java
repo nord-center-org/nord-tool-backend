@@ -5,4 +5,7 @@ import java.util.List;
 
 public interface EmpresaRepository {
     List<Empresa> listarEmpresas();
+    Empresa salvarEmpresa(Empresa empresa);
+    Empresa alterarEmpresa(Empresa empresa);
+    void deletarEmpresa(Long id);
 }
