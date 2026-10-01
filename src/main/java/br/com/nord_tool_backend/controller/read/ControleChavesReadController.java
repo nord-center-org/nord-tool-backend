@@ -4,6 +4,7 @@ import br.com.nord_tool_backend.controller.response.ApiResponseBody;
 import br.com.nord_tool_backend.controller.response.BaseResponse;
 import br.com.nord_tool_backend.dto.ApartamentoControleChavesDto;
 import br.com.nord_tool_backend.dto.DashboardControleChavesDto;
+import br.com.nord_tool_backend.dto.FerramentaControleChavesDto;
 import br.com.nord_tool_backend.dto.ObraControleChavesDto;
 import br.com.nord_tool_backend.dto.RetiradaControleChavesDto;
 import br.com.nord_tool_backend.service.ControleChavesService;
@@ -39,6 +40,15 @@ public class ControleChavesReadController implements BaseResponse {
             @RequestParam(value = "limite", required = false, defaultValue = "20") int nrQuantidadePorPagina,
             @RequestParam(value = "pagina", required = false, defaultValue = "0") int nrPagina) {
         return ok(controleChavesService.listarApartamentos(nmBusca, nrQuantidadePorPagina, nrPagina));
+    }
+
+    @Operation(summary = "Listar ferramentas para seleção no controle de chaves")
+    @GetMapping("/ferramentas")
+    public ResponseEntity<ApiResponseBody<List<FerramentaControleChavesDto>>> listarFerramentas(
+            @RequestParam(value = "busca", required = false, defaultValue = "") String nmBusca,
+            @RequestParam(value = "limite", required = false, defaultValue = "20") int nrQuantidadePorPagina,
+            @RequestParam(value = "pagina", required = false, defaultValue = "0") int nrPagina) {
+        return ok(controleChavesService.listarFerramentas(nmBusca, nrQuantidadePorPagina, nrPagina));
     }
 
     @Operation(summary = "Buscar indicadores e retiradas recentes do dashboard")

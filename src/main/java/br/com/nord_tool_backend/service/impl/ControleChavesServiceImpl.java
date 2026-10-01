@@ -5,8 +5,10 @@ import br.com.nord_tool_backend.domain.ObraControleChaves;
 import br.com.nord_tool_backend.domain.RequisicaoChave;
 import br.com.nord_tool_backend.domain.RequisicaoChaveConsulta;
 import br.com.nord_tool_backend.domain.enums.StatusRequisicaoChaveEnum;
+import br.com.nord_tool_backend.domain.enums.TipoItemControleChavesEnum;
 import br.com.nord_tool_backend.dto.ApartamentoControleChavesDto;
 import br.com.nord_tool_backend.dto.DashboardControleChavesDto;
+import br.com.nord_tool_backend.dto.FerramentaControleChavesDto;
 import br.com.nord_tool_backend.dto.ObraControleChavesDto;
 import br.com.nord_tool_backend.dto.RetiradaControleChavesDto;
 import br.com.nord_tool_backend.excepetion.ValidacaoException;
@@ -56,6 +58,16 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     }
 
     @Override
+    public List<FerramentaControleChavesDto> listarFerramentas(String nmBusca, int nrQuantidadePorPagina, int nrPagina) {
+        return controleChavesRepository.listarFerramentas().stream()
+                .filter(ferramenta -> correspondeBusca(ferramenta.getNmFerramenta(), nmBusca))
+                .skip(obterOffset(nrQuantidadePorPagina, nrPagina))
+                .limit(obterQuantidadePorPagina(nrQuantidadePorPagina))
+                .map(FerramentaControleChavesDto::converterToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public DashboardControleChavesDto buscarDashboard(int nrLimiteRecentes, String idObra) {
         int nrQuantidadePorPagina = nrLimiteRecentes > 0 ? nrLimiteRecentes : 5;
         List<RetiradaControleChavesDto> retiradasRecentes = controleChavesRepository.listarHistorico().stream()
@@ -77,8 +89,8 @@ public class ControleChavesServiceImpl implements ControleChavesService {
         final String nmStatusRequisicaoNormalizado = nmStatusRequisicao != null && !nmStatusRequisicao.isBlank() ? validarStatus(nmStatusRequisicao).name() : nmStatusRequisicao;
 
         return controleChavesRepository.listarHistorico().stream()
-                .filter(requisicao -> correspondeBusca(requisicao.getNmApartamentoVistoria(), nmBusca) || correspondeBusca(requisicao.getNmPessoaRetirante(), nmBusca)
-                        || correspondeBusca(requisicao.getCdRetirada(), nmBusca))
+                .filter(requisicao -> correspondeBusca(requisicao.getNmApartamentoVistoria(), nmBusca) || correspondeBusca(requisicao.getNmFerramenta(), nmBusca)
+                        || correspondeBusca(requisicao.getNmPessoaRetirante(), nmBusca) || correspondeBusca(requisicao.getCdRetirada(), nmBusca))
                 .filter(requisicao -> nmStatusRequisicaoNormalizado == null || nmStatusRequisicaoNormalizado.isBlank()
                         || nmStatusRequisicaoNormalizado.equalsIgnoreCase(requisicao.getNmStatusRequisicao()))
                 .filter(requisicao -> correspondeObra(requisicao, idObra))
@@ -92,11 +104,11 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     @Transactional(rollbackFor = Exception.class)
     public RetiradaControleChavesDto criarRetirada(NovaRetiradaControleChavesForm novaRetiradaControleChavesForm) {
         if (novaRetiradaControleChavesForm == null
-                || !idValido(novaRetiradaControleChavesForm.getIdApartamentoVistoria())
                 || !idValido(novaRetiradaControleChavesForm.getIdUserRetirada())
                 || !idValido(novaRetiradaControleChavesForm.getIdUserLiberacao())) {
-            throw erroValidacao("Apartamento, retirante e liberador são obrigatórios e devem ser válidos");
+            throw erroValidacao("Retirante e liberador são obrigatórios e devem ser válidos");
         }
+        validarItemRetirada(novaRetiradaControleChavesForm);
 
         RequisicaoChave requisicaoChave = novaRetiradaControleChavesForm.converterToDto();
         requisicaoChave.setCdRetirada(gerarCodigoRetirada());
@@ -160,6 +172,25 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     private RetiradaControleChavesDto converterRetiradaParaDto(RequisicaoChaveConsulta requisicaoChaveConsulta) {
         validarConsistencia(requisicaoChaveConsulta);
         return RetiradaControleChavesDto.converterToDto(requisicaoChaveConsulta);
+    }
+
+    private void validarItemRetirada(NovaRetiradaControleChavesForm novaRetiradaControleChavesForm) {
+        TipoItemControleChavesEnum tipoItem;
+        try {
+            tipoItem = TipoItemControleChavesEnum.from(novaRetiradaControleChavesForm.getNmTipoItem());
+        } catch (IllegalArgumentException ex) {
+            throw erroValidacao("Tipo do item inválido: " + novaRetiradaControleChavesForm.getNmTipoItem());
+        }
+
+        boolean temApartamento = idValido(novaRetiradaControleChavesForm.getIdApartamentoVistoria());
+        boolean temFerramenta = idValido(novaRetiradaControleChavesForm.getIdFerramenta());
+
+        if (tipoItem == TipoItemControleChavesEnum.APARTAMENTO && (!temApartamento || temFerramenta)) {
+            throw erroValidacao("Informe apenas o apartamento para uma retirada do tipo Apartamento");
+        }
+        if (tipoItem == TipoItemControleChavesEnum.FERRAMENTA && (!temFerramenta || temApartamento)) {
+            throw erroValidacao("Informe apenas a ferramenta para uma retirada do tipo Ferramenta");
+        }
     }
 
     private StatusRequisicaoChaveEnum validarStatus(String nmStatusRequisicao) {

@@ -19,6 +19,9 @@ public class RequisicaoChaveConsulta {
     private LocalDateTime dtRecebimento;
     private Long idApartamentoVistoria;
     private String nmApartamentoVistoria;
+    private Long idFerramenta;
+    private String nmFerramenta;
+    private String nmTipoItem;
     private Long idUserRetirada;
     private String nmPessoaRetirante;
     private String nmPermissaoRetirante;
