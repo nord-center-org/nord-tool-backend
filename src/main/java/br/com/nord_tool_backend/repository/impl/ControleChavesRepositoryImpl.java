@@ -2,6 +2,7 @@ package br.com.nord_tool_backend.repository.impl;
 
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.domain.ApartamentoVistoria;
+import br.com.nord_tool_backend.domain.Ferramenta;
 import br.com.nord_tool_backend.domain.ObraControleChaves;
 import br.com.nord_tool_backend.domain.RequisicaoChave;
 import br.com.nord_tool_backend.domain.RequisicaoChaveConsulta;
@@ -29,6 +30,9 @@ public class ControleChavesRepositoryImpl extends RepositoryJdbcOperationsSql<Re
 
     @Value("${SPS.CONTROLE_CHAVES.LISTAR_APARTAMENTOS}")
     private String queryListarApartamentos;
+
+    @Value("${SPS.CONTROLE_CHAVES.LISTAR_FERRAMENTAS}")
+    private String queryListarFerramentas;
 
     @Value("${SPS.CONTROLE_CHAVES.COUNT_EM_CAMPO}")
     private String queryCountEmCampo;
@@ -66,6 +70,15 @@ public class ControleChavesRepositoryImpl extends RepositoryJdbcOperationsSql<Re
             return buscarTodos(queryListarApartamentos, BeanPropertyRowMapper.newInstance(ApartamentoVistoria.class));
         } catch (Exception ex) {
             throw tratarErro("Erro ao listar apartamentos para controle de chaves", ex);
+        }
+    }
+
+    @Override
+    public List<Ferramenta> listarFerramentas() {
+        try {
+            return buscarTodos(queryListarFerramentas, BeanPropertyRowMapper.newInstance(Ferramenta.class));
+        } catch (Exception ex) {
+            throw tratarErro("Erro ao listar ferramentas para controle de chaves", ex);
         }
     }
 

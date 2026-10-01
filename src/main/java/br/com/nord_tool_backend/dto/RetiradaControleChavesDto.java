@@ -15,7 +15,9 @@ import java.time.format.DateTimeFormatter;
 public class RetiradaControleChavesDto {
     private Long idRequisicao;
     private String cdCodigoRetirada;
+    private String nmTipoItem;
     private ApartamentoControleChavesDto apartamentoControleChavesDto;
+    private FerramentaControleChavesDto ferramentaControleChavesDto;
     private RetiranteControleChavesDto retiranteControleChavesDto;
     private LiberadorControleChavesDto liberadorControleChavesDto;
     private RecebedorControleChavesDto recebedorControleChavesDto;
@@ -26,10 +28,17 @@ public class RetiradaControleChavesDto {
     public static RetiradaControleChavesDto converterToDto(RequisicaoChaveConsulta requisicaoChaveConsulta) {
         if (requisicaoChaveConsulta == null) return null;
 
-        ApartamentoControleChavesDto apartamentoControleChavesDto = ApartamentoControleChavesDto.builder()
-                .idApartamentoVistoria(requisicaoChaveConsulta.getIdApartamentoVistoria())
-                .nmApartamentoVistoria(requisicaoChaveConsulta.getNmApartamentoVistoria())
-                .build();
+        ApartamentoControleChavesDto apartamentoControleChavesDto = requisicaoChaveConsulta.getIdApartamentoVistoria() == null ? null
+                : ApartamentoControleChavesDto.builder()
+                    .idApartamentoVistoria(requisicaoChaveConsulta.getIdApartamentoVistoria())
+                    .nmApartamentoVistoria(requisicaoChaveConsulta.getNmApartamentoVistoria())
+                    .build();
+
+        FerramentaControleChavesDto ferramentaControleChavesDto = requisicaoChaveConsulta.getIdFerramenta() == null ? null
+                : FerramentaControleChavesDto.builder()
+                    .idFerramenta(requisicaoChaveConsulta.getIdFerramenta())
+                    .nmFerramenta(requisicaoChaveConsulta.getNmFerramenta())
+                    .build();
 
         RetiranteControleChavesDto retiranteControleChavesDto = RetiranteControleChavesDto.builder()
                 .idUserRetirada(requisicaoChaveConsulta.getIdUserRetirada())
@@ -55,7 +64,9 @@ public class RetiradaControleChavesDto {
         return RetiradaControleChavesDto.builder()
                 .idRequisicao(requisicaoChaveConsulta.getIdRequisicao())
                 .cdCodigoRetirada(requisicaoChaveConsulta.getCdRetirada())
+                .nmTipoItem(requisicaoChaveConsulta.getNmTipoItem())
                 .apartamentoControleChavesDto(apartamentoControleChavesDto)
+                .ferramentaControleChavesDto(ferramentaControleChavesDto)
                 .retiranteControleChavesDto(retiranteControleChavesDto)
                 .liberadorControleChavesDto(liberadorControleChavesDto)
                 .recebedorControleChavesDto(recebedorControleChavesDto)

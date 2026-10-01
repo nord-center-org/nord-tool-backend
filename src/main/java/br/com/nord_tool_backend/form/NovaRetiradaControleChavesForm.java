@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
 
@@ -14,9 +15,14 @@ import javax.validation.constraints.Positive;
 @AllArgsConstructor
 @NoArgsConstructor
 public class NovaRetiradaControleChavesForm {
-    @NotNull
+    @NotBlank
+    private String nmTipoItem;
+
     @Positive
     private Long idApartamentoVistoria;
+
+    @Positive
+    private Long idFerramenta;
 
     @NotNull
     @Positive
@@ -29,6 +35,8 @@ public class NovaRetiradaControleChavesForm {
     public RequisicaoChave converterToDto() {
         return RequisicaoChave.builder()
                 .idApartamentoVistoria(idApartamentoVistoria)
+                .idFerramenta(idFerramenta)
+                .nmTipoItem(nmTipoItem)
                 .idUserRetirada(idUserRetirada)
                 .idUserLiberacao(idUserLiberacao)
                 .build();
