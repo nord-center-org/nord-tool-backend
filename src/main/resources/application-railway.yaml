@@ -19,7 +19,3 @@ spring:
       auto-commit: false
       initialization-fail-timeout: 0
 
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: none
