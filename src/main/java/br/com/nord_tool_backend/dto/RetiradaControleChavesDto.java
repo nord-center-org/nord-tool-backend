@@ -64,7 +64,7 @@ public class RetiradaControleChavesDto {
         return RetiradaControleChavesDto.builder()
                 .idRequisicao(requisicaoChaveConsulta.getIdRequisicao())
                 .cdCodigoRetirada(requisicaoChaveConsulta.getCdRetirada())
-                .nmTipoItem(requisicaoChaveConsulta.getNmTipoItem())
+                .nmTipoItem(requisicaoChaveConsulta.getCdTipoItemRequisicao())
                 .apartamentoControleChavesDto(apartamentoControleChavesDto)
                 .ferramentaControleChavesDto(ferramentaControleChavesDto)
                 .retiranteControleChavesDto(retiranteControleChavesDto)

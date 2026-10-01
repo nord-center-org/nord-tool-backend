@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class Ferramenta extends GlobalDomain {
     private Long id;
     private String nmFerramenta;
-    private String nmCategoria;
-    private String cdPatrimonio;
-    private Boolean flAtivo;
+    private String nmFerramentaCategoria;
+    private String cdFerramentaPatrimonio;
+    private Boolean inFerramentaAtivo;
 }

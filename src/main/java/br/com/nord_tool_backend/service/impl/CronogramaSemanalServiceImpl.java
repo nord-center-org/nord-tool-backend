@@ -46,7 +46,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     }
 
     private void validarOrigemCronogramaSemanal(CronogramaSemanal cronogramaSemanal) {
-        boolean fixo = Boolean.TRUE.equals(cronogramaSemanal.getFlFixo());
+        boolean fixo = Boolean.TRUE.equals(cronogramaSemanal.getInCronogramaFixo());
         if (fixo && cronogramaSemanal.getIdDiaSemana() == null) {
             throw new ValidacaoException(NordHttpEnum.HTTP_400,
                     "Atividades fixas precisam de um dia da semana.",

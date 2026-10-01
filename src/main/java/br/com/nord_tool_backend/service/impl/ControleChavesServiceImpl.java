@@ -110,7 +110,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
         }
         validarItemRetirada(novaRetiradaControleChavesForm);
 
-        RequisicaoChave requisicaoChave = novaRetiradaControleChavesForm.converterToDto();
+        RequisicaoChave requisicaoChave = novaRetiradaControleChavesForm.converterToDomain();
         requisicaoChave.setCdRetirada(gerarCodigoRetirada());
         requisicaoChave.setDtRetirada(LocalDateTime.now());
         requisicaoChave.setNmStatusRequisicao(StatusRequisicaoChaveEnum.ABERTO.name());

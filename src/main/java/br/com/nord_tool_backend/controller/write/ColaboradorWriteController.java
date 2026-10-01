@@ -21,7 +21,7 @@ import javax.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/colaboradores")
+@RequestMapping("/api/v1/nord-tool/colaboradores")
 @Tag(name = "Colaboradores", description = "Endpoints para criar, alterar e deletar colaboradores")
 public class ColaboradorWriteController implements BaseResponse {
     private final ColaboradorService colaboradorService;

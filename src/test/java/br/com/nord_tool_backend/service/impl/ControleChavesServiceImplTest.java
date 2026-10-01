@@ -172,7 +172,7 @@ class ControleChavesServiceImplTest {
                         .dtRetirada(DT_RETIRADA)
                         .idFerramenta(5L)
                         .nmFerramenta("Furadeira")
-                        .nmTipoItem("FERRAMENTA")
+                        .cdTipoItemRequisicao("FERRAMENTA")
                         .idUserRetirada(7L)
                         .nmPessoaRetirante("Maria")
                         .idUserLiberacao(8L)
@@ -196,7 +196,7 @@ class ControleChavesServiceImplTest {
         verify(controleChavesRepository).criarRetirada(org.mockito.ArgumentMatchers.argThat(requisicao ->
                 requisicao.getIdFerramenta().equals(5L)
                         && requisicao.getIdApartamentoVistoria() == null
-                        && "FERRAMENTA".equals(requisicao.getNmTipoItem())));
+                        && "FERRAMENTA".equals(requisicao.getCdTipoItemRequisicao())));
     }
 
     @Test

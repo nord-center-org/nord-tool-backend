@@ -40,14 +40,14 @@ public class CronogramaSemanalDto {
                 .nmDiaSemana(cronogramaSemanal.getNmDiaSemana())
                 .nmCronogramaSemanal(cronogramaSemanal.getNmCronogramaSemanal())
                 .nmHorario(cronogramaSemanal.getNmHorario())
-                .nmCategoria(cronogramaSemanal.getNmCategoria())
+                .nmCategoria(cronogramaSemanal.getNmCronogramaCategoria())
                 .nmStatusCronograma(cronogramaSemanal.getNmStatusCronograma())
                 .txObservacao(cronogramaSemanal.getTxObservacao())
                 .dtPrazo(cronogramaSemanal.getDtPrazo())
                 .dtFinalizacao(cronogramaSemanal.getDtFinalizacao())
                 .nmTag(cronogramaSemanal.getNmTag())
                 .dtAgendamento(cronogramaSemanal.getDtAgendamento())
-                .flFixo(cronogramaSemanal.getFlFixo())
+                .flFixo(cronogramaSemanal.getInCronogramaFixo())
                 .build();
     }
 }

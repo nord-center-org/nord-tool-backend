@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController @RequiredArgsConstructor
-@RequestMapping("/api/cargos")
+@RequestMapping("/api/v1/nord-tool/cargos")
 public class CargoReadController implements BaseResponse {
     private final CargoService cargoService;
 

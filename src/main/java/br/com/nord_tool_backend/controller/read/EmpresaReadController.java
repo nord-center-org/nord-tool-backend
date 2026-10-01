@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController @RequiredArgsConstructor
-@RequestMapping("/api/empresas")
+@RequestMapping("/api/v1/nord-tool/empresas")
 public class EmpresaReadController implements BaseResponse {
     private final EmpresaService empresaService;
 

@@ -21,7 +21,7 @@ import javax.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/ferramentas")
+@RequestMapping("/api/v1/nord-tool/ferramentas")
 @Tag(name = "Ferramentas", description = "Endpoints para criar, alterar e deletar ferramentas")
 public class FerramentaWriteController implements BaseResponse {
     private final FerramentaService ferramentaService;

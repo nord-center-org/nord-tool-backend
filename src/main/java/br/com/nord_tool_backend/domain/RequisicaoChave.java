@@ -20,7 +20,7 @@ public class RequisicaoChave extends GlobalDomain {
     private LocalDateTime dtRecebimento;
     private Long idApartamentoVistoria;
     private Long idFerramenta;
-    private String nmTipoItem;
+    private String cdTipoItemRequisicao;
     private Long idUserRetirada;
     private Long idUserLiberacao;
     private Long idUserRecebimento;

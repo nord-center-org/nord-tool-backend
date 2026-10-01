@@ -19,7 +19,7 @@ import javax.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/permissoes")
+@RequestMapping("/api/v1/nord-tool/permissoes")
 public class PermissaoWriteController implements BaseResponse {
     private final PermissaoService permissaoService;
 
