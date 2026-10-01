@@ -19,12 +19,12 @@ public class CronogramaSemanal extends GlobalDomain {
     private String nmDiaSemana;
     private String nmCronogramaSemanal;
     private String nmHorario;
-    private String nmCategoria;
+    private String nmCronogramaCategoria;
     private String nmStatusCronograma;
     private String txObservacao;
     private LocalDateTime dtPrazo;
     private LocalDateTime dtFinalizacao;
     private String nmTag;
     private LocalDateTime dtAgendamento;
-    private Boolean flFixo;
+    private Boolean inCronogramaFixo;
 }

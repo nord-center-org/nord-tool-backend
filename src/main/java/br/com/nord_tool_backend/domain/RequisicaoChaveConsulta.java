@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/** Read projection for key withdrawal queries that join users and apartments. */
 @Builder
 @Data
 @AllArgsConstructor
@@ -21,7 +20,7 @@ public class RequisicaoChaveConsulta {
     private String nmApartamentoVistoria;
     private Long idFerramenta;
     private String nmFerramenta;
-    private String nmTipoItem;
+    private String cdTipoItemRequisicao;
     private Long idUserRetirada;
     private String nmPessoaRetirante;
     private String nmPermissaoRetirante;

@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/colaboradores")
+@RequestMapping("/api/v1/nord-tool/colaboradores")
 @Tag(name = "Colaboradores", description = "Endpoints para buscar e listar colaboradores")
 public class ColaboradorReadController implements BaseResponse {
     private final ColaboradorService colaboradorService;

@@ -19,7 +19,7 @@ import javax.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/cargos")
+@RequestMapping("/api/v1/nord-tool/cargos")
 public class CargoWriteController implements BaseResponse {
     private final CargoService cargoService;
 

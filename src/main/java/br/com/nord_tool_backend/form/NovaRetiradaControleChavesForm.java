@@ -32,11 +32,11 @@ public class NovaRetiradaControleChavesForm {
     @Positive
     private Long idUserLiberacao;
 
-    public RequisicaoChave converterToDto() {
+    public RequisicaoChave converterToDomain() {
         return RequisicaoChave.builder()
                 .idApartamentoVistoria(idApartamentoVistoria)
                 .idFerramenta(idFerramenta)
-                .nmTipoItem(nmTipoItem)
+                .cdTipoItemRequisicao(nmTipoItem)
                 .idUserRetirada(idUserRetirada)
                 .idUserLiberacao(idUserLiberacao)
                 .build();

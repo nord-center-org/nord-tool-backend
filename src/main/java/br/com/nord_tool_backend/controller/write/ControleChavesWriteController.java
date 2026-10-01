@@ -21,7 +21,7 @@ import javax.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping({"/api/controle-chaves", "/api/v1/nord-tool/controle-chaves"})
+@RequestMapping("/api/v1/nord-tool/controleChaves")
 @Tag(name = "Controle de Chaves", description = "Endpoints para registrar retiradas e recebimentos de chaves")
 public class ControleChavesWriteController implements BaseResponse {
 

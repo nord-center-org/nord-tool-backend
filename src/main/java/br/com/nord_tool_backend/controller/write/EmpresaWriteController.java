@@ -19,7 +19,7 @@ import javax.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/empresas")
+@RequestMapping("/api/v1/nord-tool/empresas")
 public class EmpresaWriteController implements BaseResponse {
     private final EmpresaService empresaService;
 

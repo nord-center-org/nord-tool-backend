@@ -21,9 +21,9 @@ public class FerramentaDto {
         return FerramentaDto.builder()
                 .id(ferramenta.getId())
                 .nmFerramenta(ferramenta.getNmFerramenta())
-                .nmCategoria(ferramenta.getNmCategoria())
-                .cdPatrimonio(ferramenta.getCdPatrimonio())
-                .flAtivo(ferramenta.getFlAtivo())
+                .nmCategoria(ferramenta.getNmFerramentaCategoria())
+                .cdPatrimonio(ferramenta.getCdFerramentaPatrimonio())
+                .flAtivo(ferramenta.getInFerramentaAtivo())
                 .build();
     }
 }

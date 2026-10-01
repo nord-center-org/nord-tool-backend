@@ -21,7 +21,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping({"/api/controle-chaves", "/api/v1/nord-tool/controle-chaves"})
+@RequestMapping("/api/v1/nord-tool/controleChaves")
 @Tag(name = "Controle de Chaves", description = "Endpoints para consultar o controle de chaves")
 public class ControleChavesReadController implements BaseResponse {
 

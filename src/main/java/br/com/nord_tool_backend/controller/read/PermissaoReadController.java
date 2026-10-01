@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController @RequiredArgsConstructor
-@RequestMapping("/api/permissoes")
+@RequestMapping("/api/v1/nord-tool/permissoes")
 public class PermissaoReadController implements BaseResponse {
     private final PermissaoService permissaoService;
 

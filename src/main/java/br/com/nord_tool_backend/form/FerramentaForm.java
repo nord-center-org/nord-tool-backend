@@ -30,9 +30,9 @@ public class FerramentaForm {
         return Ferramenta.builder()
                 .id(id)
                 .nmFerramenta(nmFerramenta)
-                .nmCategoria(nmCategoria)
-                .cdPatrimonio(cdPatrimonio)
-                .flAtivo(flAtivo != null ? flAtivo : Boolean.TRUE)
+                .nmFerramentaCategoria(nmCategoria)
+                .cdFerramentaPatrimonio(cdPatrimonio)
+                .inFerramentaAtivo(flAtivo != null ? flAtivo : Boolean.TRUE)
                 .build();
     }
 }

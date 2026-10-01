@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/ferramentas")
+@RequestMapping("/api/v1/nord-tool/ferramentas")
 @Tag(name = "Ferramentas", description = "Endpoints para buscar e listar ferramentas")
 public class FerramentaReadController implements BaseResponse {
     private final FerramentaService ferramentaService;

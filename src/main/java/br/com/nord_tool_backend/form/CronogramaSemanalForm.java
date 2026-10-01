@@ -39,14 +39,14 @@ public class CronogramaSemanalForm {
                 .idDiaSemana(idDiaSemana)
                 .nmCronogramaSemanal(nmCronogramaSemanal)
                 .nmHorario(nmHorario)
-                .nmCategoria(nmCategoria)
+                .nmCronogramaCategoria(nmCategoria)
                 .nmStatusCronograma(nmStatusCronograma)
                 .txObservacao(txObservacao)
                 .dtPrazo(dtPrazo)
                 .dtFinalizacao(dtFinalizacao)
                 .nmTag(nmTag)
                 .dtAgendamento(dtAgendamento)
-                .flFixo(flFixo != null ? flFixo : Boolean.TRUE)
+                .inCronogramaFixo(flFixo != null ? flFixo : Boolean.TRUE)
                 .build();
     }
 
