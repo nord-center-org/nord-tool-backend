@@ -28,3 +28,6 @@ nord-tool:
     email: ${NORD_ADMIN_EMAIL:}
     name: ${NORD_ADMIN_NAME:}
     password: ${NORD_ADMIN_PASSWORD:}
+  storage:
+    # Provedor de arquivos: POSTGRES (provisório). Definitivo ainda a decidir (Drive/S3).
+    provider: ${NORD_STORAGE_PROVIDER:POSTGRES}

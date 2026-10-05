@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS usuario (
   dh_criacao         TIMESTAMP NOT NULL DEFAULT now()
 );
 
+-- A busca de login ignora caixa; o índice evita dois e-mails que só diferem na caixa.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_email_lower ON usuario (LOWER(nm_email));
+
 INSERT INTO perfil (cd_perfil, nm_perfil) VALUES ('ADMIN','Administrador')
   ON CONFLICT (cd_perfil) DO NOTHING;
 
