@@ -11,6 +11,7 @@ import br.com.nord_tool_backend.repository.ApartamentoVistoriaHistoricoRepositor
 import br.com.nord_tool_backend.repository.ApartamentoVistoriaRepository;
 import br.com.nord_tool_backend.service.ApartamentoVistoriaService;
 import br.com.nord_tool_backend.service.CacheService;
+import br.com.nord_tool_backend.service.TermoReprovaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,6 +53,9 @@ public class ApartamentoVistoriaServiceImplTest {
     @Mock
     private XlsxExtractorHandlerApartamento xlsxExtractorHandlerApartamento;
 
+    @Mock
+    private TermoReprovaService termoReprovaService;
+
     ApartamentoVistoria apartamentoVistoria = new ApartamentoVistoria();
     ApartamentoVistoriaDto apartamentoVistoriaDto = new ApartamentoVistoriaDto();
     List<ApartamentoVistoriaDto> lsApartamentoVistoriaDto = new ArrayList<>();
@@ -71,7 +75,8 @@ public class ApartamentoVistoriaServiceImplTest {
                 env,
                 cacheService,
                 apartamentoVistoriaHistoricoRepository,
-                xlsxExtractorHandlerApartamento
+                xlsxExtractorHandlerApartamento,
+                termoReprovaService
         );
 
         apartamentoVistoria = ApartamentoVistoria.builder()
@@ -193,6 +198,7 @@ public class ApartamentoVistoriaServiceImplTest {
     void deveDeletarApartamentoVistoria(){
         doNothing().when(apartamentoVistoriaRepository).deletarApartamentoVistoria(anyLong());
         apartamentoVistoriaService.deletarApartamentoVistoria(anyLong());
+        verify(termoReprovaService, times(1)).apagarPorApartamento(anyLong());
         verify(apartamentoVistoriaRepository, times(1)).deletarApartamentoVistoria(anyLong());
         verify(cacheService, times(1)).limparTodos();
     }

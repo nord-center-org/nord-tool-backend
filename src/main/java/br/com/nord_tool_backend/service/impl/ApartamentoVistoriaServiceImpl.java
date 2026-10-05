@@ -14,6 +14,7 @@ import br.com.nord_tool_backend.repository.ApartamentoVistoriaHistoricoRepositor
 import br.com.nord_tool_backend.repository.ApartamentoVistoriaRepository;
 import br.com.nord_tool_backend.service.ApartamentoVistoriaService;
 import br.com.nord_tool_backend.service.CacheService;
+import br.com.nord_tool_backend.service.TermoReprovaService;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -40,6 +41,8 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     private final ApartamentoVistoriaHistoricoRepository apartamentoVistoriaHistoricoRepository;
 
     private final XlsxExtractorHandlerApartamento xlsxExtractorHandlerApartamento;
+
+    private final TermoReprovaService termoReprovaService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -74,6 +77,8 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     @Transactional(rollbackFor = Exception.class)
     public void deletarApartamentoVistoria(Long id) {
         log.info("Iniciando método para deletar um Apartamento Vistoria");
+        // O ON DELETE CASCADE do banco não apaga os arquivos armazenados: remove termos/fotos antes.
+        termoReprovaService.apagarPorApartamento(id);
         this.apartamentoVistoriaRepository.deletarApartamentoVistoria(id);
         log.info("Iniciando método limpar o cache após deletar");
         cacheService.limparTodos();
