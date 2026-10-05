@@ -21,3 +21,8 @@ spring:
       idle-timeout: 300000 # Maximo que uma conexao pode ficar ociosa esperando o tempo de fechar
       max-lifetime: 1200000 # Tempo máximo de vida de uma conexão.
       auto-commit: false # Desligar o commit automatico
+
+nord-tool:
+  security:
+    enabled: ${NORD_SECURITY_ENABLED:true}
+    allow-ephemeral-secret: true

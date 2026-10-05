@@ -16,3 +16,15 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+
+nord-tool:
+  security:
+    # Chave de liga/desliga: false mantém a API aberta (publicar backend antes do frontend)
+    enabled: ${NORD_SECURITY_ENABLED:false}
+    jwt-secret: ${NORD_JWT_SECRET:}
+    inactivity-minutes: ${NORD_INACTIVITY_MINUTES:30}
+  admin:
+    # Bootstrap do primeiro ADMIN (só roda com a tabela usuario vazia). Remover as variáveis depois.
+    email: ${NORD_ADMIN_EMAIL:}
+    name: ${NORD_ADMIN_NAME:}
+    password: ${NORD_ADMIN_PASSWORD:}
