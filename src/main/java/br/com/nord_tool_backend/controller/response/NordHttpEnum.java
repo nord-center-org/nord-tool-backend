@@ -12,6 +12,7 @@ public enum NordHttpEnum {
     HTTP_400(HttpStatus.BAD_REQUEST, ApiResponseMessageUtils.RESPONSE_400),
     HTTP_401(HttpStatus.UNAUTHORIZED, ApiResponseMessageUtils.RESPONSE_401),
     HTTP_404(HttpStatus.NOT_FOUND, ApiResponseMessageUtils.RESPONSE_404),
+    HTTP_409(HttpStatus.CONFLICT, ApiResponseMessageUtils.RESPONSE_409),
     HTTP_500(HttpStatus.INTERNAL_SERVER_ERROR, ApiResponseMessageUtils.RESPONSE_500);
 
     private final HttpStatus status;

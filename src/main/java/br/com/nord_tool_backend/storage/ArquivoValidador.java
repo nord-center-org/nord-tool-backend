@@ -47,6 +47,25 @@ public final class ArquivoValidador {
         throw erro("O arquivo deve ser um PDF ou uma imagem JPEG/PNG");
     }
 
+    /**
+     * Comprovante da Caixinha: somente PDF, por assinatura `%PDF-` no início e `%%EOF` nos últimos 1024 bytes
+     * (a mesma checagem do Lugia). O limite de tamanho é configurável.
+     */
+    public static String validarComprovantePdf(String nome, byte[] bytes, int maxBytes) {
+        validarNome(nome);
+        validarTamanho(bytes, maxBytes, "O comprovante deve ter no máximo " + (maxBytes / (1024 * 1024)) + " MB");
+        if (!comecaCom(bytes, '%', 'P', 'D', 'F', '-') || !terminaComEof(bytes)) {
+            throw erro("O comprovante deve ser um PDF válido");
+        }
+        return PDF;
+    }
+
+    private static boolean terminaComEof(byte[] bytes) {
+        int inicio = Math.max(0, bytes.length - 1024);
+        String cauda = new String(bytes, inicio, bytes.length - inicio, java.nio.charset.StandardCharsets.ISO_8859_1);
+        return cauda.contains("%%EOF");
+    }
+
     /** Nome com no máximo 180 caracteres e sem caracteres de controle. */
     public static void validarNome(String nome) {
         if (nome == null || nome.trim().isEmpty()) {
