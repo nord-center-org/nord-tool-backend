@@ -30,4 +30,13 @@ public class ApartamentoVistoria extends GlobalDomain implements Serializable{
     private String txObservacaoRevistoria;
     private LocalDate dtRevistoriaVigente;
 
+    // Último termo de reprova (agregado da listagem; não é gravado em apartamento_vistoria)
+    private boolean inTermoAnexado;
+    private Integer qtTermos;
+    private Integer nrUltimoTermo;
+    private String nmSituacaoTermo;
+    private Integer qtFotosTermo;
+    private Integer nrPaginasTermo;
+    private Integer nrPaginasComFoto;
+
 }

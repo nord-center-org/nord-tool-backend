@@ -7,11 +7,13 @@ import br.com.nord_tool_backend.domain.enums.SituacaoTermoEnum;
 import br.com.nord_tool_backend.dto.TermoFotoDto;
 import br.com.nord_tool_backend.dto.TermoReprovaDto;
 import br.com.nord_tool_backend.dto.TermoReprovaResumoDto;
+import br.com.nord_tool_backend.dto.TermoReprovaResumoGeralDto;
 import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.OrdemFotoForm;
 import br.com.nord_tool_backend.form.SituacaoTermoForm;
 import br.com.nord_tool_backend.repository.TermoFotoRepository;
 import br.com.nord_tool_backend.repository.TermoReprovaRepository;
+import br.com.nord_tool_backend.service.CacheService;
 import br.com.nord_tool_backend.service.TermoReprovaService;
 import br.com.nord_tool_backend.storage.ArmazenamentoArquivoService;
 import br.com.nord_tool_backend.storage.ArquivoDownload;
@@ -41,8 +43,25 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     private final TermoReprovaRepository termoRepository;
     private final TermoFotoRepository fotoRepository;
     private final ArmazenamentoArquivoService armazenamento;
+    // A listagem de apartamentos traz os dados do último termo: qualquer alteração invalida o cache.
+    private final CacheService cacheService;
 
     // ---------- termos ----------
+
+    @Override
+    @Transactional(readOnly = true)
+    public TermoReprovaResumoGeralDto resumoGeral() {
+        TermoReprovaResumoGeralDto resumo = termoRepository.resumoGeral();
+        int total = valor(resumo.getTotalApartamentosComReprova());
+        double percentual = total == 0 ? 0.0
+                : Math.round(valor(resumo.getConcluidos()) * 1000.0 / total) / 10.0;
+        resumo.setPercentualConcluido(percentual);
+        return resumo;
+    }
+
+    private static int valor(Integer numero) {
+        return numero == null ? 0 : numero;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -72,6 +91,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
         novo.setIdArquivo(armazenamento.salvar(nomeArquivo, contentType, pdf));
         novo.setNrPaginas(nrPaginas);
         Long id = termoRepository.inserir(novo).getId();
+        cacheService.limparTodos();
         return montar(termo(id), new ArrayList<>());
     }
 
@@ -97,6 +117,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
         }
         termoRepository.atualizarArquivo(idTermo, novoArquivo, nrPaginas);
         arquivosParaApagar.forEach(armazenamento::apagar);
+        cacheService.limparTodos();
 
         List<String> avisos = new ArrayList<>();
         if (removidas > 0) {
@@ -118,6 +139,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
         String observacao = form.getObservacao() == null || form.getObservacao().trim().isEmpty()
                 ? null : form.getObservacao().trim();
         termoRepository.atualizarSituacao(idTermo, situacao.name(), observacao);
+        cacheService.limparTodos();
         return montar(termo(idTermo), new ArrayList<>());
     }
 
@@ -128,6 +150,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
         List<TermoFoto> fotos = fotoRepository.listarPorTermo(idTermo);
         // Primeiro as linhas (o cascade remove as fotos), depois os arquivos que elas referenciam.
         termoRepository.deletar(idTermo);
+        cacheService.limparTodos();
         armazenamento.apagar(termo.getIdArquivo());
         for (TermoFoto foto : fotos) {
             armazenamento.apagar(foto.getIdArquivoImagem());
@@ -168,6 +191,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
         foto.setIdArquivoImagem(armazenamento.salvar(nomeImagem, tipoImagem, imagem));
         foto.setIdArquivoMiniatura(armazenamento.salvar("miniatura-" + nomeImagem, tipoMiniatura, miniatura));
         Long id = fotoRepository.inserir(foto).getId();
+        cacheService.limparTodos();
         return toDto(foto(id));
     }
 
@@ -197,6 +221,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
             foto.setIdArquivoMiniatura(armazenamento.salvar("miniatura-" + nomeImagem, tipoMiniatura, miniatura));
         }
         fotoRepository.atualizar(foto);
+        cacheService.limparTodos();
         arquivosParaApagar.forEach(armazenamento::apagar);
         return toDto(foto(idFoto));
     }
@@ -206,6 +231,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     public void excluirFoto(Long idFoto) {
         TermoFoto foto = foto(idFoto);
         fotoRepository.deletar(idFoto);
+        cacheService.limparTodos();
         armazenamento.apagar(foto.getIdArquivoImagem());
         armazenamento.apagar(foto.getIdArquivoMiniatura());
     }

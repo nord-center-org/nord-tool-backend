@@ -4,6 +4,7 @@ import br.com.nord_tool_backend.controller.read.TermoReprovaReadController;
 import br.com.nord_tool_backend.controller.write.TermoReprovaWriteController;
 import br.com.nord_tool_backend.dto.TermoReprovaDto;
 import br.com.nord_tool_backend.dto.TermoReprovaResumoDto;
+import br.com.nord_tool_backend.dto.TermoReprovaResumoGeralDto;
 import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
@@ -171,5 +172,25 @@ class TermoReprovaControllerTest {
 
         verify(service).deletar(7L);
         verify(service).excluirFoto(5L);
+    }
+
+    @Test
+    void resumoGeralTemRotaPropriaESuperaOBuscarPorId() throws Exception {
+        when(service.resumoGeral()).thenReturn(new TermoReprovaResumoGeralDto(10, 7, 3, 4, 2, 1, 40.0));
+
+        mvc.perform(get(BASE + "/termos-reprova/resumo").header("Authorization", auth()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.body.totalApartamentosComReprova").value(10))
+                .andExpect(jsonPath("$.body.comTermo").value(7))
+                .andExpect(jsonPath("$.body.semTermo").value(3))
+                .andExpect(jsonPath("$.body.concluidos").value(4))
+                .andExpect(jsonPath("$.body.emAndamento").value(2))
+                .andExpect(jsonPath("$.body.pendentes").value(1))
+                .andExpect(jsonPath("$.body.percentualConcluido").value(40.0));
+    }
+
+    @Test
+    void resumoGeralExigeToken() throws Exception {
+        mvc.perform(get(BASE + "/termos-reprova/resumo")).andExpect(status().isUnauthorized());
     }
 }
