@@ -9,6 +9,7 @@ public final class ArquivoValidador {
     public static final int MAX_PDF_BYTES = 15 * 1024 * 1024;
     public static final int MAX_IMAGEM_BYTES = 5 * 1024 * 1024;
     public static final int MAX_NOME = 180;
+    public static final int MAX_CONTRATO_BYTES = 15 * 1024 * 1024;
 
     public static final String PDF = "application/pdf";
     public static final String JPEG = "image/jpeg";
@@ -34,6 +35,16 @@ public final class ArquivoValidador {
         if (comecaCom(bytes, 0xFF, 0xD8, 0xFF)) return JPEG;
         if (comecaCom(bytes, 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A)) return PNG;
         throw erro("A imagem deve ser JPEG ou PNG");
+    }
+
+    /** Contrato/comprovante: PDF ou imagem JPEG/PNG de até 15 MB. Devolve o content-type detectado pelo conteúdo. */
+    public static String validarContrato(String nome, byte[] bytes) {
+        validarNome(nome);
+        validarTamanho(bytes, MAX_CONTRATO_BYTES, "O arquivo deve ter no máximo 15 MB");
+        if (comecaCom(bytes, '%', 'P', 'D', 'F')) return PDF;
+        if (comecaCom(bytes, 0xFF, 0xD8, 0xFF)) return JPEG;
+        if (comecaCom(bytes, 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A)) return PNG;
+        throw erro("O arquivo deve ser um PDF ou uma imagem JPEG/PNG");
     }
 
     /** Nome com no máximo 180 caracteres e sem caracteres de controle. */

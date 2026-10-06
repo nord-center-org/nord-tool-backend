@@ -66,4 +66,20 @@ class ArquivoValidadorTest {
         assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarNome(null));
         assertDoesNotThrow(() -> ArquivoValidador.validarNome("Relatório de reprova (1º).pdf"));
     }
+
+    @Test
+    void contratoAceitaPdfEImagemAte15Mb() {
+        assertEquals("application/pdf", ArquivoValidador.validarContrato("c.pdf", comPrefixo(100, PDF)));
+        assertEquals("image/jpeg", ArquivoValidador.validarContrato("c.jpg", comPrefixo(100, JPEG)));
+        assertEquals("image/png", ArquivoValidador.validarContrato("c.png", comPrefixo(100, PNG)));
+        assertDoesNotThrow(() -> ArquivoValidador.validarContrato("c.jpg", comPrefixo(ArquivoValidador.MAX_CONTRATO_BYTES, JPEG)));
+    }
+
+    @Test
+    void contratoRecusaOutrosTiposVazioEAcimaDe15Mb() {
+        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarContrato("c.txt", comPrefixo(100, 'G', 'I', 'F')));
+        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarContrato("c.pdf", new byte[0]));
+        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarContrato("c.pdf", comPrefixo(ArquivoValidador.MAX_CONTRATO_BYTES + 1, PDF)));
+        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarContrato("a\nb.pdf", comPrefixo(100, PDF)));
+    }
 }
