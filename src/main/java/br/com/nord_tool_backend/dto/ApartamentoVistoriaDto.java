@@ -30,6 +30,16 @@ public class ApartamentoVistoriaDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy", locale = "pt_BR")
     private LocalDate dtRevistoriaVigente;
 
+    /** Dados do ÚLTIMO termo de reprova do apartamento (agregados, sem bytes). */
+    private boolean inTermoAnexado;
+    private Integer qtTermos;
+    private Integer nrUltimoTermo;
+    /** PENDENTE | EM_ANDAMENTO | CONCLUIDO (nulo quando não há termo). */
+    private String nmSituacaoTermo;
+    private Integer qtFotosTermo;
+    private Integer nrPaginasTermo;
+    private Integer nrPaginasComFoto;
+
     public static ApartamentoVistoriaDto converterToDto(ApartamentoVistoria apartamentoVistoria ) {
         return ApartamentoVistoriaDto.builder()
                 .idApartamentoVistoria(apartamentoVistoria.getId())
@@ -43,6 +53,13 @@ public class ApartamentoVistoriaDto {
                 .inMarcarRevistoria(apartamentoVistoria.isInMarcarRevistoria())
                 .txObservacaoRevistoria(apartamentoVistoria.getTxObservacaoRevistoria())
                 .dtRevistoriaVigente(apartamentoVistoria.getDtRevistoriaVigente())
+                .inTermoAnexado(apartamentoVistoria.isInTermoAnexado())
+                .qtTermos(apartamentoVistoria.getQtTermos())
+                .nrUltimoTermo(apartamentoVistoria.getNrUltimoTermo())
+                .nmSituacaoTermo(apartamentoVistoria.getNmSituacaoTermo())
+                .qtFotosTermo(apartamentoVistoria.getQtFotosTermo())
+                .nrPaginasTermo(apartamentoVistoria.getNrPaginasTermo())
+                .nrPaginasComFoto(apartamentoVistoria.getNrPaginasComFoto())
                 .build();
     }
 }

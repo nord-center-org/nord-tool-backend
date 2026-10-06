@@ -5,6 +5,7 @@ import br.com.nord_tool_backend.controller.response.ArquivoResponse;
 import br.com.nord_tool_backend.controller.response.BaseResponse;
 import br.com.nord_tool_backend.dto.TermoReprovaDto;
 import br.com.nord_tool_backend.dto.TermoReprovaResumoDto;
+import br.com.nord_tool_backend.dto.TermoReprovaResumoGeralDto;
 import br.com.nord_tool_backend.service.TermoReprovaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +31,12 @@ public class TermoReprovaReadController implements BaseResponse {
     @GetMapping("/{idApartamento}/termos-reprova")
     public ResponseEntity<ApiResponseBody<List<TermoReprovaResumoDto>>> listar(@PathVariable Long idApartamento) {
         return ok(termoReprovaService.listarPorApartamento(idApartamento));
+    }
+
+    @Operation(summary = "Totais do controle de finalização do DAT (dashboard)")
+    @GetMapping("/termos-reprova/resumo")
+    public ResponseEntity<ApiResponseBody<TermoReprovaResumoGeralDto>> resumo() {
+        return ok(termoReprovaService.resumoGeral());
     }
 
     @Operation(summary = "Metadados do termo e suas fotos (sem bytes)")

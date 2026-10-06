@@ -2,6 +2,7 @@ package br.com.nord_tool_backend.repository.impl;
 
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.domain.TermoReprova;
+import br.com.nord_tool_backend.dto.TermoReprovaResumoGeralDto;
 import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.repository.RepositoryJdbcOperationsSql;
 import br.com.nord_tool_backend.repository.TermoReprovaRepository;
@@ -29,6 +30,7 @@ public class TermoReprovaRepositoryImpl extends RepositoryJdbcOperationsSql<Term
     @Value("${SPU.TERMO_REPROVA.ATUALIZAR_ARQUIVO}") private String queryAtualizarArquivo;
     @Value("${SPU.TERMO_REPROVA.ATUALIZAR_SITUACAO}") private String queryAtualizarSituacao;
     @Value("${SPD.TERMO_REPROVA.DELETAR}") private String queryDeletar;
+    @Value("${SPS.TERMO_REPROVA.RESUMO_GERAL}") private String queryResumoGeral;
 
     @Override
     public boolean apartamentoExiste(Long idApartamento) {
@@ -117,6 +119,16 @@ public class TermoReprovaRepositoryImpl extends RepositoryJdbcOperationsSql<Term
             deletar(queryDeletar, new MapSqlParameterSource("id", id));
         } catch (Exception ex) {
             throw tratarErro("Erro ao excluir termo de reprova", ex);
+        }
+    }
+
+    @Override
+    public TermoReprovaResumoGeralDto resumoGeral() {
+        try {
+            return buscarPorId(queryResumoGeral, new MapSqlParameterSource(),
+                    BeanPropertyRowMapper.newInstance(TermoReprovaResumoGeralDto.class));
+        } catch (Exception ex) {
+            throw tratarErro("Erro ao calcular o resumo dos termos de reprova", ex);
         }
     }
 

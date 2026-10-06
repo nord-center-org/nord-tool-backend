@@ -3,6 +3,8 @@ package br.com.nord_tool_backend.service.impl;
 import br.com.nord_tool_backend.domain.TermoFoto;
 import br.com.nord_tool_backend.domain.TermoReprova;
 import br.com.nord_tool_backend.dto.TermoFotoDto;
+import br.com.nord_tool_backend.dto.TermoReprovaResumoGeralDto;
+import br.com.nord_tool_backend.service.CacheService;
 import br.com.nord_tool_backend.dto.TermoReprovaDto;
 import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.OrdemFotoForm;
@@ -37,6 +39,7 @@ class TermoReprovaServiceImplTest {
     private TermoReprovaRepository termoRepository;
     private TermoFotoRepository fotoRepository;
     private ArmazenamentoArquivoService armazenamento;
+    private CacheService cacheService;
     private TermoReprovaServiceImpl service;
 
     @BeforeEach
@@ -44,7 +47,8 @@ class TermoReprovaServiceImplTest {
         termoRepository = mock(TermoReprovaRepository.class);
         fotoRepository = mock(TermoFotoRepository.class);
         armazenamento = mock(ArmazenamentoArquivoService.class);
-        service = new TermoReprovaServiceImpl(termoRepository, fotoRepository, armazenamento);
+        cacheService = mock(CacheService.class);
+        service = new TermoReprovaServiceImpl(termoRepository, fotoRepository, armazenamento, cacheService);
     }
 
     private TermoReprova termo(long id, int paginas, String situacao) {
@@ -375,5 +379,93 @@ class TermoReprovaServiceImplTest {
         when(fotoRepository.listarPorTermo(1L)).thenReturn(List.of());
 
         assertThrows(ValidacaoException.class, () -> service.ordenarFotos(1L, List.of(new OrdemFotoForm())));
+    }
+
+    // ---------- resumo geral (dashboard) e cache ----------
+
+    private TermoReprovaResumoGeralDto resumo(int total, int com, int sem, int concl, int andamento, int pend) {
+        return new TermoReprovaResumoGeralDto(total, com, sem, concl, andamento, pend, null);
+    }
+
+    @Test
+    void resumoCalculaOPercentualConcluidoComUmaCasaDecimal() {
+        when(termoRepository.resumoGeral()).thenReturn(resumo(3, 2, 1, 1, 0, 1));
+
+        TermoReprovaResumoGeralDto r = service.resumoGeral();
+
+        assertEquals(33.3, r.getPercentualConcluido());
+        assertEquals(3, r.getTotalApartamentosComReprova());
+        assertEquals(1, r.getSemTermo());
+    }
+
+    @Test
+    void resumoSemApartamentosTemPercentualZero() {
+        when(termoRepository.resumoGeral()).thenReturn(resumo(0, 0, 0, 0, 0, 0));
+
+        assertEquals(0.0, service.resumoGeral().getPercentualConcluido());
+    }
+
+    @Test
+    void resumoTodosConcluidosEh100() {
+        when(termoRepository.resumoGeral()).thenReturn(resumo(4, 4, 0, 4, 0, 0));
+
+        assertEquals(100.0, service.resumoGeral().getPercentualConcluido());
+    }
+
+    @Test
+    void resumoArredondaParaCima() {
+        when(termoRepository.resumoGeral()).thenReturn(resumo(3, 3, 0, 2, 1, 0));
+
+        assertEquals(66.7, service.resumoGeral().getPercentualConcluido());
+    }
+
+    @Test
+    void alteracoesInvalidamOCacheDaListagemDeApartamentos() {
+        // situação
+        termoExiste(termo(1L, 3, "PENDENTE"));
+        SituacaoTermoForm form = new SituacaoTermoForm();
+        form.setSituacao("EM_ANDAMENTO");
+        service.atualizarSituacao(1L, form);
+        verify(cacheService, times(1)).limparTodos();
+
+        // excluir termo
+        when(fotoRepository.listarPorTermo(1L)).thenReturn(new ArrayList<>());
+        service.deletar(1L);
+        verify(cacheService, times(2)).limparTodos();
+
+        // excluir foto
+        when(fotoRepository.buscarPorId(5L)).thenReturn(Optional.of(foto(5, 1, 1, 501, 502)));
+        service.excluirFoto(5L);
+        verify(cacheService, times(3)).limparTodos();
+    }
+
+    @Test
+    void criarETrocarPdfInvalidamOCache() {
+        when(termoRepository.apartamentoExiste(10L)).thenReturn(true);
+        when(termoRepository.proximoNumero(10L)).thenReturn(1);
+        when(armazenamento.salvar(anyString(), anyString(), any())).thenReturn(55L);
+        when(termoRepository.inserir(any())).thenAnswer(inv -> {
+            TermoReprova tr = inv.getArgument(0);
+            tr.setId(7L);
+            return tr;
+        });
+        termoExiste(termo(7L, 2, "PENDENTE"));
+
+        service.criar(10L, "a.pdf", PDF, 2);
+        verify(cacheService, times(1)).limparTodos();
+
+        when(fotoRepository.listarPorTermo(7L)).thenReturn(new ArrayList<>());
+        service.trocarArquivo(7L, "b.pdf", PDF, 3);
+        verify(cacheService, times(2)).limparTodos();
+    }
+
+    @Test
+    void consultasNaoInvalidamOCache() {
+        termoExiste(termo(1L, 3, "PENDENTE"));
+        when(fotoRepository.listarPorTermo(1L)).thenReturn(new ArrayList<>());
+
+        service.buscar(1L);
+
+        verifyNoInteractions(cacheService);
     }
 }

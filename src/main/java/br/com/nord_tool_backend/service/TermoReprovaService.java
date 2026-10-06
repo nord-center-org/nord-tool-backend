@@ -3,6 +3,7 @@ package br.com.nord_tool_backend.service;
 import br.com.nord_tool_backend.dto.TermoFotoDto;
 import br.com.nord_tool_backend.dto.TermoReprovaDto;
 import br.com.nord_tool_backend.dto.TermoReprovaResumoDto;
+import br.com.nord_tool_backend.dto.TermoReprovaResumoGeralDto;
 import br.com.nord_tool_backend.form.OrdemFotoForm;
 import br.com.nord_tool_backend.form.SituacaoTermoForm;
 import br.com.nord_tool_backend.storage.ArquivoDownload;
@@ -12,6 +13,9 @@ import java.util.List;
 public interface TermoReprovaService {
 
     List<TermoReprovaResumoDto> listarPorApartamento(Long idApartamento);
+
+    /** Totais do "Controle de finalização do DAT" (apartamentos reprovados ou com termo). */
+    TermoReprovaResumoGeralDto resumoGeral();
 
     TermoReprovaDto buscar(Long idTermo);
 
