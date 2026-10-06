@@ -27,6 +27,11 @@ public final class ArquivoResponse {
         return montar(download, ifNoneMatch, CACHE_IMAGEM);
     }
 
+    /** Documentos sensíveis (contratos): nunca ficam em cache. */
+    public static ResponseEntity<byte[]> semCache(ArquivoDownload download) {
+        return montar(download, null, "no-store");
+    }
+
     static String etag(long versao) {
         return "\"" + versao + "\"";
     }
