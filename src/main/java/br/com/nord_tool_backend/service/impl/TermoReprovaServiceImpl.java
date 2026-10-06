@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TermoReprovaServiceImpl implements TermoReprovaService {
 
-    static final int MAX_PAGINAS = 40;
+    static final int MAX_PAGINAS = 80;
     static final int MAX_LEGENDA = 240;
     static final String MSG_CONCLUIR_SEM_FOTO = "Anexe ao menos uma foto antes de concluir o termo.";
     private static final DateTimeFormatter FORMATO = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
