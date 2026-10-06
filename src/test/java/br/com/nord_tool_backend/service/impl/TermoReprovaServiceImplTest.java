@@ -122,7 +122,7 @@ class TermoReprovaServiceImplTest {
         when(termoRepository.apartamentoExiste(10L)).thenReturn(true);
 
         assertThrows(ValidacaoException.class, () -> service.criar(10L, "a.pdf", PDF, 0));
-        assertThrows(ValidacaoException.class, () -> service.criar(10L, "a.pdf", PDF, 41));
+        assertThrows(ValidacaoException.class, () -> service.criar(10L, "a.pdf", PDF, 81));
         assertThrows(ValidacaoException.class, () -> service.criar(10L, "a.pdf", JPEG, 3));
         verify(armazenamento, never()).salvar(anyString(), anyString(), any());
         verify(termoRepository, never()).inserir(any());
