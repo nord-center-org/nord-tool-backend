@@ -9,6 +9,19 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
+server:
+  # O contrato de erro é do GlobalExceptionHandler; a página de erro padrão nunca expõe detalhes.
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+
+logging:
+  pattern:
+    # idCorrelacao vem do CorrelacaoFilter (header X-Request-Id) e aparece também nas respostas de erro.
+    level: "%5p [%X{idCorrelacao:-}]"
+
 nord-tool:
   cors:
     # Origens do frontend autorizadas; cada perfil define a sua lista (sem padrão aberto).

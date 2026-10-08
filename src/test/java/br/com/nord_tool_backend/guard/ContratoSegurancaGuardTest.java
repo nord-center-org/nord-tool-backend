@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.guard;
 
+import br.com.nord_tool_backend.config.CorrelacaoFilter;
 import br.com.nord_tool_backend.controller.read.AuthReadController;
 import br.com.nord_tool_backend.controller.read.HealthReadController;
 import br.com.nord_tool_backend.controller.write.AuthWriteController;
@@ -36,29 +37,34 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Guarda de segurança (exceção prevista em steering/nord-tool-backend/testing.md): contrato HTTP de
- * autenticação — 401 sem token ou com token inválido/expirado, rotas públicas, identidade vinda do token
- * e corpo de erro sem detalhes internos. Regras de negócio ficam nos *ServiceImplTest.
+ * autenticação e autorização — 401 sem token ou com token inválido/expirado, 403 sem permissão do módulo,
+ * rotas públicas, identidade vinda do token, idCorrelacao e corpo de erro sem detalhes internos. Regras de negócio ficam nos *ServiceImplTest.
  */
 class ContratoSegurancaGuardTest {
 
     private static final String SEGREDO = "segredo-de-teste-com-mais-de-32-bytes!!";
     private static final String ROTA_PROTEGIDA = "/api/v1/nord-tool/apartamentoVistoria";
+    private static final String ROTA_FINANCEIRO = "/api/v1/nord-tool/financeiro/guarda";
 
     /** Rota qualquer, protegida, para provar o 401/200. */
     @RestController
     static class RotaProtegida {
         @GetMapping(ROTA_PROTEGIDA)
         String listar() { return "ok"; }
+
+        @GetMapping(ROTA_FINANCEIRO)
+        String financeiro() { return "ok"; }
     }
 
     @Nested
     @WebMvcTest(controllers = {RotaProtegida.class, HealthReadController.class, AuthReadController.class, AuthWriteController.class})
-    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class})
+    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class, CorrelacaoFilter.class})
     @TestPropertySource(properties = {"nord-tool.security.enabled=true", "nord-tool.security.jwt-secret=" + SEGREDO})
     class Ligada {
         @Autowired MockMvc mvc;
@@ -99,6 +105,32 @@ class ContratoSegurancaGuardTest {
             String forjado = outraChave.gerar(1L, "a@b.com", "ADMIN", List.of("*:ESCRITA"), Instant.now());
             mvc.perform(get(ROTA_PROTEGIDA).header("Authorization", "Bearer " + forjado))
                     .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        void semPermissaoDoModuloRetorna403ComCorpoPadrao() throws Exception {
+            String semFinanceiro = jwt.gerar(1L, "a@b.com", "OPERADOR", List.of("CASAMENTO:ESCRITA"), Instant.now());
+            semDetalhesInternos(mvc.perform(get(ROTA_FINANCEIRO).header("Authorization", "Bearer " + semFinanceiro)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.nrStatus").value(403))
+                    .andExpect(jsonPath("$.cdErro").value("ACESSO_NEGADO"));
+        }
+
+        @Test
+        void erroDevolveOIdDeCorrelacaoRecebido() throws Exception {
+            mvc.perform(get(ROTA_PROTEGIDA).header(CorrelacaoFilter.HEADER, "guarda-correlacao-123"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(header().string(CorrelacaoFilter.HEADER, "guarda-correlacao-123"))
+                    .andExpect(jsonPath("$.idCorrelacao").value("guarda-correlacao-123"))
+                    .andExpect(jsonPath("$.cdErro").value("NAO_AUTENTICADO"));
+        }
+
+        @Test
+        void idDeCorrelacaoInseguroEhSubstituido() throws Exception {
+            mvc.perform(get(ROTA_PROTEGIDA).header(CorrelacaoFilter.HEADER, "<script>"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(header().string(CorrelacaoFilter.HEADER, not(containsString("<"))))
+                    .andExpect(jsonPath("$.idCorrelacao").isNotEmpty());
         }
 
         @Test
@@ -143,7 +175,7 @@ class ContratoSegurancaGuardTest {
     /** Modo de transição até o frontend ter login (fase F6 do plano remove este modo). */
     @Nested
     @WebMvcTest(controllers = {RotaProtegida.class})
-    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class})
+    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class, CorrelacaoFilter.class})
     @TestPropertySource(properties = {"nord-tool.security.enabled=false"})
     class Desligada {
         @Autowired MockMvc mvc;

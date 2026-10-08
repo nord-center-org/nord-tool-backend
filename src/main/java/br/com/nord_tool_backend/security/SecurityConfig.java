@@ -3,8 +3,6 @@ package br.com.nord_tool_backend.security;
 import br.com.nord_tool_backend.controller.response.ApiResponseBody;
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -35,16 +33,17 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityProperties props,
-                                                   JwtAuthenticationFilter jwtFilter, Environment env) throws Exception {
+                                                   JwtAuthenticationFilter jwtFilter, Environment env,
+                                                   ObjectMapper mapper) throws Exception {
         http.csrf().disable()
                 .cors().and()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling()
                 .authenticationEntryPoint((req, res, ex) ->
-                        escreverErro(res, HttpServletResponse.SC_UNAUTHORIZED, NordHttpEnum.HTTP_401, "Autenticação necessária"))
+                        escreverErro(mapper, res, NordHttpEnum.HTTP_401, "NAO_AUTENTICADO", "Autenticação necessária"))
                 .accessDeniedHandler((req, res, ex) ->
-                        escreverErro(res, HttpServletResponse.SC_FORBIDDEN, NordHttpEnum.HTTP_401, "Acesso negado"));
+                        escreverErro(mapper, res, NordHttpEnum.HTTP_403, "ACESSO_NEGADO", "Acesso negado"));
 
         if (!props.isEnabled()) {
             // Segurança desligada: comportamento anterior (tudo liberado).
@@ -68,13 +67,11 @@ public class SecurityConfig {
         return http.build();
     }
 
-    private static void escreverErro(HttpServletResponse res, int status, NordHttpEnum tipo, String mensagem)
-            throws java.io.IOException {
-        ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule())
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        res.setStatus(status);
+    private static void escreverErro(ObjectMapper mapper, HttpServletResponse res, NordHttpEnum tipo, String cdErro,
+                                     String mensagem) throws java.io.IOException {
+        res.setStatus(tipo.getStatus().value());
         res.setContentType(MediaType.APPLICATION_JSON_VALUE);
         res.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        res.getWriter().write(mapper.writeValueAsString(new ApiResponseBody<String>(tipo, mensagem, null)));
+        res.getWriter().write(mapper.writeValueAsString(ApiResponseBody.erro(tipo, cdErro, mensagem)));
     }
 }
