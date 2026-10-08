@@ -19,3 +19,8 @@ spring:
       auto-commit: false
       initialization-fail-timeout: 0
 
+nord-tool:
+  cors:
+    # Lista separada por vírgula. O padrão mantém o frontend publicado hoje até NORD_CORS_ORIGINS ser definida.
+    allowed-origins: ${NORD_CORS_ORIGINS:https://nordtoolfrontend-develop.up.railway.app}
+
