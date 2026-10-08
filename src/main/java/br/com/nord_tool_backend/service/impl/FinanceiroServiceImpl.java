@@ -19,6 +19,7 @@ import br.com.nord_tool_backend.form.FinanceiroCategoriaForm;
 import br.com.nord_tool_backend.form.FinanceiroLancamentoForm;
 import br.com.nord_tool_backend.form.FinanceiroPessoaForm;
 import br.com.nord_tool_backend.form.FinanceiroRealizadoForm;
+import br.com.nord_tool_backend.repository.FinanceiroProjecaoRepository;
 import br.com.nord_tool_backend.repository.FinanceiroRepository;
 import br.com.nord_tool_backend.service.FinanceiroService;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,10 +44,16 @@ public class FinanceiroServiceImpl implements FinanceiroService {
     static final String MSG_CONFLITO = "O lançamento mudou. Sincronize e tente novamente.";
     static final int MAX_PARCELAS = 120;
 
-    private final FinanceiroRepository repository;
+    private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
 
-    public FinanceiroServiceImpl(FinanceiroRepository repository) {
+    private final FinanceiroRepository repository;
+    private final FinanceiroProjecaoRepository projecaoRepository;
+    private final Clock clock;
+
+    public FinanceiroServiceImpl(FinanceiroRepository repository, FinanceiroProjecaoRepository projecaoRepository, Clock clock) {
         this.repository = repository;
+        this.projecaoRepository = projecaoRepository;
+        this.clock = clock;
     }
 
     // ---------- listagem e resumo ----------
@@ -86,9 +96,10 @@ public class FinanceiroServiceImpl implements FinanceiroService {
             return jaCriados(requisicao, parcelas);
         }
 
-        validarCategoria(form.getIdCategoria(), null);
+        FinanceiroCategoria categoria = validarCategoria(form.getIdCategoria(), null);
         validarPessoa(form.getIdPessoa(), null);
         LocalDate competenciaBase = competencia(form);
+        for (int i = 0; i < parcelas; i++) exigirMesAberto(competenciaBase.plusMonths(i));
 
         List<FinanceiroLancamentoDto> criados = new ArrayList<>();
         for (int i = 0; i < parcelas; i++) {
@@ -105,6 +116,7 @@ public class FinanceiroServiceImpl implements FinanceiroService {
                     // Corrida: outra requisição com o mesmo UUID acabou de gravar.
                     .orElseGet(() -> repository.buscarLancamentoPorRequisicao(l.getCdRequisicao()).orElseThrow(() ->
                             new ValidacaoException(NordHttpEnum.HTTP_400, "Não foi possível salvar o lançamento", null)));
+            registrarLeitura(categoria, id, l.getVlLancamento(), idUsuario);
             criados.add(FinanceiroLancamentoDto.de(lancamento(id)));
         }
         return criados;
@@ -127,15 +139,18 @@ public class FinanceiroServiceImpl implements FinanceiroService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public FinanceiroLancamentoDto alterar(Long id, FinanceiroLancamentoForm form) {
+    public FinanceiroLancamentoDto alterar(Long id, FinanceiroLancamentoForm form, Long idUsuario) {
         int versao = versaoObrigatoria(form.getNrVersao());
         FinanceiroLancamento atual = lancamento(id);
-        validarCategoria(form.getIdCategoria(), atual.getIdCategoria());
+        FinanceiroCategoria categoria = validarCategoria(form.getIdCategoria(), atual.getIdCategoria());
         validarPessoa(form.getIdPessoa(), atual.getIdPessoa());
         FinanceiroLancamento novo = converter(form);
         novo.setId(id);
         novo.setDtCompetencia(competencia(form));
+        exigirMesAberto(atual.getDtCompetencia());
+        exigirMesAberto(novo.getDtCompetencia());
         if (repository.alterarLancamento(novo, versao) == 0) throw conflito();
+        registrarLeitura(categoria, id, novo.getVlLancamento(), idUsuario);
         return FinanceiroLancamentoDto.de(lancamento(id));
     }
 
@@ -143,7 +158,7 @@ public class FinanceiroServiceImpl implements FinanceiroService {
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroLancamentoDto marcarRealizado(Long id, FinanceiroRealizadoForm form) {
         int versao = versaoObrigatoria(form.getNrVersao());
-        lancamento(id);
+        exigirMesAberto(lancamento(id).getDtCompetencia());
         if (repository.marcarRealizado(id, Boolean.TRUE.equals(form.getInRealizado()), versao) == 0) throw conflito();
         return FinanceiroLancamentoDto.de(lancamento(id));
     }
@@ -152,7 +167,7 @@ public class FinanceiroServiceImpl implements FinanceiroService {
     @Transactional(rollbackFor = Exception.class)
     public void excluir(Long id, Integer nrVersao) {
         int versao = versaoObrigatoria(nrVersao);
-        lancamento(id);
+        exigirMesAberto(lancamento(id).getDtCompetencia());
         if (repository.deletarLancamento(id, versao) == 0) throw conflito();
     }
 
@@ -293,7 +308,7 @@ public class FinanceiroServiceImpl implements FinanceiroService {
     }
 
     /** A categoria deve existir, estar ativa (manter a já associada é permitido) e aceitar lançamento digitado. */
-    private void validarCategoria(Long idCategoria, Long idAtual) {
+    private FinanceiroCategoria validarCategoria(Long idCategoria, Long idAtual) {
         FinanceiroCategoria c = repository.buscarCategoria(idCategoria)
                 .orElseThrow(() -> invalido("Categoria não encontrada"));
         boolean mesma = idAtual != null && idAtual.equals(idCategoria);
@@ -301,6 +316,22 @@ public class FinanceiroServiceImpl implements FinanceiroService {
         if (TipoProjecaoEnum.SALDO_ANTERIOR.name().equals(c.getCdProjecao())) {
             throw invalido("O saldo anterior é calculado pelo sistema e não aceita lançamentos");
         }
+        return c;
+    }
+
+    /** Lançamentos de um mês fechado ficam travados; é preciso reabrir o mês para mexer neles. */
+    private void exigirMesAberto(LocalDate competencia) {
+        boolean fechado = projecaoRepository.buscarMes(competencia.withDayOfMonth(1))
+                .map(m -> Boolean.TRUE.equals(m.getInFechado())).orElse(false);
+        if (fechado) {
+            throw invalido("O mês de " + FinanceiroProjecaoServiceImpl.rotulo(YearMonth.from(competencia)) + " está fechado. Reabra o mês para alterar lançamentos.");
+        }
+    }
+
+    /** Cada atualização do valor de uma fatura vira uma leitura do dia: é a evolução que mede o ritmo de gasto. */
+    private void registrarLeitura(FinanceiroCategoria categoria, Long idLancamento, BigDecimal valor, Long idUsuario) {
+        if (!TipoProjecaoEnum.RITMO_FATURA.name().equals(categoria.getCdProjecao())) return;
+        projecaoRepository.registrarLeitura(idLancamento, LocalDate.now(clock.withZone(FUSO)), valor, idUsuario);
     }
 
     /** A pessoa deve existir e estar ativa (manter a já associada ao lançamento é permitido). */

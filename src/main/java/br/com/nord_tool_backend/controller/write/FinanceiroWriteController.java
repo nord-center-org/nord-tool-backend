@@ -47,8 +47,9 @@ public class FinanceiroWriteController implements FinanceiroResponse {
     @Operation(summary = "Edita um lançamento; exige nrVersao (divergente → 409)")
     @PutMapping("/lancamentos/{id}")
     public ResponseEntity<ApiResponseBody<FinanceiroLancamentoDto>> alterar(
-            @PathVariable Long id, @Valid @RequestBody FinanceiroLancamentoForm form) {
-        return ok(service.alterar(id, form));
+            @PathVariable Long id, @Valid @RequestBody FinanceiroLancamentoForm form,
+            @AuthenticationPrincipal UsuarioAutenticado usuario) {
+        return ok(service.alterar(id, form, usuario == null ? null : usuario.getId()));
     }
 
     @Operation(summary = "Marca como recebido/pago (ou volta para previsto); exige nrVersao (divergente → 409)")
