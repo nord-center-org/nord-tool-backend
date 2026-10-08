@@ -2,7 +2,7 @@
 Java 11 · Spring Boot 2.7 · Spring JDBC (NamedParameterJdbcTemplate) · PostgreSQL · Spring Security (JWT) · Docker
 
 ## **Módulos da API** (prefixo `/api/v1/nord-tool`)
-Apartamentos (vistorias, termos de reprova e fotos) · Controle de chaves · Cronograma semanal · Casamento · Caixinha · Autenticação.
+Apartamentos (vistorias, termos de reprova e fotos) · Controle de chaves · Cronograma semanal · Casamento · Caixinha · Financeiro · Autenticação.
 A documentação interativa (Swagger) fica em `/swagger-ui.html` no profile `local`.
 
 ## **Rodando localmente**
@@ -18,7 +18,7 @@ O profile padrão é `local` (`SPRING_PROFILES_ACTIVE`). A senha que aparece em 
 
 ## **Banco de dados (repositório `nord-tool-scripts-sql`)**
 O esquema vive no repositório de scripts, em `DDL/NN.*_ddl.sql` e `DML/NN.*_dml.sql`, na ordem do `filelist.txt`
-(apartamentos → controle de chaves → login/arquivos/termos de reprova → casamento → limite de 80 páginas → Caixinha).
+(apartamentos → controle de chaves → login/arquivos/termos de reprova → casamento → limite de 80 páginas → Caixinha → Financeiro).
 Os scripts são idempotentes e a pipeline "SQL Dev" aplica tudo no `develop`. **Aplique os scripts antes de publicar o backend
 que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais, fora do `filelist.txt`).
 
@@ -39,6 +39,10 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 1. Defina `NORD_JWT_SECRET` e `NORD_ADMIN_*`, publique e confira no log "Usuário ADMIN inicial criado".
 2. Entre pelo frontend e confirme o login; então defina `NORD_SECURITY_ENABLED=true`.
 3. **Remova `NORD_ADMIN_PASSWORD`** (e as demais `NORD_ADMIN_*`) depois do primeiro login.
+
+## **Financeiro**
+`/api/v1/nord-tool/financeiro`: lançamentos (extrato com filtros por mês, período, pessoa, categoria, tipo, situação e texto; criação idempotente por `cdRequisicao`, parcelamento mensal com `qtParcelas`, controle de versão por `nrVersao`), pessoas (de quem é o lançamento) e categorias. Respostas saem com `Cache-Control: no-store`.
+Os testes de repositório contra o banco real (`FinanceiroRepositoryImplDbTest`) só rodam com `NORD_TEST_DATABASE_URL` (ex.: `jdbc:postgresql://localhost:5432/nordtest?currentSchema=nord_tool`, usuário/senha em `NORD_TEST_DATABASE_USER`/`NORD_TEST_DATABASE_PASSWORD`) apontando para um banco **de teste** com os scripts aplicados; nunca use produção.
 
 ## **Segurança**
 Com `NORD_SECURITY_ENABLED=true` toda rota exige `Authorization: Bearer <token>`; só `POST /auth/login` e `GET /nord-tool/health`
