@@ -25,8 +25,8 @@ public interface FinanceiroService {
      */
     List<FinanceiroLancamentoDto> criar(FinanceiroLancamentoForm form, Long idUsuario);
 
-    /** Edita; versão divergente → 409. */
-    FinanceiroLancamentoDto alterar(Long id, FinanceiroLancamentoForm form);
+    /** Edita; versão divergente → 409. Mês fechado → 400. {@code idUsuario} registra a leitura se for fatura. */
+    FinanceiroLancamentoDto alterar(Long id, FinanceiroLancamentoForm form, Long idUsuario);
 
     /** Marca como recebido/pago ou volta para previsto; versão divergente → 409. */
     FinanceiroLancamentoDto marcarRealizado(Long id, FinanceiroRealizadoForm form);

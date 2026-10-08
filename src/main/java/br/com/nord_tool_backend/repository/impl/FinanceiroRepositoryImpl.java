@@ -157,7 +157,8 @@ public class FinanceiroRepositoryImpl implements FinanceiroRepository {
                         .addValue("inRealizado", Boolean.TRUE.equals(l.getInRealizado()))
                         .addValue("nrParcela", l.getNrParcela())
                         .addValue("qtParcela", l.getQtParcela())
-                        .addValue("idUsuarioCriacao", l.getIdUsuarioCriacao()), Long.class)
+                        .addValue("idUsuarioCriacao", l.getIdUsuarioCriacao())
+                        .addValue("idRecorrencia", l.getIdRecorrencia()), Long.class)
                         .stream().findFirst());
     }
 

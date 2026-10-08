@@ -13,13 +13,18 @@ import br.com.nord_tool_backend.form.FinanceiroCategoriaForm;
 import br.com.nord_tool_backend.form.FinanceiroLancamentoForm;
 import br.com.nord_tool_backend.form.FinanceiroPessoaForm;
 import br.com.nord_tool_backend.form.FinanceiroRealizadoForm;
+import br.com.nord_tool_backend.domain.FinanceiroMes;
+import br.com.nord_tool_backend.repository.FinanceiroProjecaoRepository;
 import br.com.nord_tool_backend.repository.FinanceiroRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -47,12 +52,23 @@ class FinanceiroServiceImplTest {
     private static final String UUID1 = "11111111-1111-1111-1111-111111111111";
 
     private FinanceiroRepository repository;
+    private FinanceiroProjecaoRepository projecaoRepository;
     private FinanceiroServiceImpl service;
 
     @BeforeEach
     void setUp() {
         repository = mock(FinanceiroRepository.class);
-        service = new FinanceiroServiceImpl(repository);
+        projecaoRepository = mock(FinanceiroProjecaoRepository.class);
+        // 08/10/2026 12:00 em São Paulo
+        Clock relogio = Clock.fixed(Instant.parse("2026-10-08T15:00:00Z"), ZoneId.of("UTC"));
+        service = new FinanceiroServiceImpl(repository, projecaoRepository, relogio);
+    }
+
+    private void fechado(LocalDate competencia) {
+        FinanceiroMes mes = new FinanceiroMes();
+        mes.setDtCompetencia(competencia);
+        mes.setInFechado(true);
+        when(projecaoRepository.buscarMes(competencia)).thenReturn(Optional.of(mes));
     }
 
     private FinanceiroPessoa pessoa(long id, String nome, boolean ativa) {
@@ -280,7 +296,7 @@ class FinanceiroServiceImplTest {
         FinanceiroLancamentoForm f = form(null);
         f.setNrVersao(2);
 
-        assertEquals(5L, service.alterar(5L, f).getIdLancamento());
+        assertEquals(5L, service.alterar(5L, f, 9L).getIdLancamento());
 
         ArgumentCaptor<FinanceiroLancamento> captor = ArgumentCaptor.forClass(FinanceiroLancamento.class);
         verify(repository).alterarLancamento(captor.capture(), eq(2));
@@ -301,14 +317,14 @@ class FinanceiroServiceImplTest {
         r.setInRealizado(true);
         r.setNrVersao(1);
 
-        esperaErro(NordHttpEnum.HTTP_409, () -> service.alterar(5L, f));
+        esperaErro(NordHttpEnum.HTTP_409, () -> service.alterar(5L, f, 9L));
         esperaErro(NordHttpEnum.HTTP_409, () -> service.marcarRealizado(5L, r));
         esperaErro(NordHttpEnum.HTTP_409, () -> service.excluir(5L, 1));
     }
 
     @Test
     void edicaoEExclusaoExigemNrVersao() {
-        esperaErro(NordHttpEnum.HTTP_400, () -> service.alterar(5L, form(null)));
+        esperaErro(NordHttpEnum.HTTP_400, () -> service.alterar(5L, form(null), 9L));
         esperaErro(NordHttpEnum.HTTP_400, () -> service.excluir(5L, null));
         verify(repository, never()).alterarLancamento(any(), anyInt());
         verify(repository, never()).deletarLancamento(anyLong(), anyInt());
@@ -334,7 +350,7 @@ class FinanceiroServiceImplTest {
         FinanceiroLancamentoForm f = form(null);
         f.setNrVersao(1);
 
-        assertEquals(5L, service.alterar(5L, f).getIdLancamento());
+        assertEquals(5L, service.alterar(5L, f, 9L).getIdLancamento());
     }
 
     @Test
@@ -358,6 +374,90 @@ class FinanceiroServiceImplTest {
         service.excluir(5L, 4);
 
         verify(repository).deletarLancamento(5L, 4);
+    }
+
+    // ---------- mês fechado e leituras da fatura ----------
+
+    @Test
+    void mesFechadoTravaCriacaoEdicaoMarcacaoEExclusao() {
+        cadastrosAtivos();
+        fechado(LocalDate.of(2026, 10, 1));
+        when(repository.buscarLancamentoPorRequisicao(anyString())).thenReturn(Optional.empty());
+        when(repository.buscarLancamento(5L)).thenReturn(Optional.of(lancamento(5, 1)));
+        FinanceiroLancamentoForm f = form(UUID1);
+        f.setNrVersao(1);
+        FinanceiroRealizadoForm r = new FinanceiroRealizadoForm();
+        r.setInRealizado(true);
+        r.setNrVersao(1);
+
+        esperaErro(NordHttpEnum.HTTP_400, () -> service.criar(f, 9L));
+        esperaErro(NordHttpEnum.HTTP_400, () -> service.alterar(5L, f, 9L));
+        esperaErro(NordHttpEnum.HTTP_400, () -> service.marcarRealizado(5L, r));
+        esperaErro(NordHttpEnum.HTTP_400, () -> service.excluir(5L, 1));
+
+        verify(repository, never()).inserirLancamento(any());
+        verify(repository, never()).alterarLancamento(any(), anyInt());
+        verify(repository, never()).marcarRealizado(anyLong(), anyBoolean(), anyInt());
+        verify(repository, never()).deletarLancamento(anyLong(), anyInt());
+    }
+
+    @Test
+    void parcelaEmMesFechadoImpedeACriacaoInteira() {
+        cadastrosAtivos();
+        fechado(LocalDate.of(2026, 12, 1));
+        when(repository.buscarLancamentoPorRequisicao(anyString())).thenReturn(Optional.empty());
+        FinanceiroLancamentoForm f = form(UUID1);
+        f.setQtParcelas(3);
+
+        esperaErro(NordHttpEnum.HTTP_400, () -> service.criar(f, 9L));
+
+        verify(repository, never()).inserirLancamento(any());
+    }
+
+    @Test
+    void mudarOLancamentoParaUmMesFechadoEhRecusado() {
+        cadastrosAtivos();
+        when(repository.buscarLancamento(5L)).thenReturn(Optional.of(lancamento(5, 1)));
+        fechado(LocalDate.of(2026, 9, 1));
+        FinanceiroLancamentoForm f = form(null);
+        f.setNrVersao(1);
+        f.setDtLancamento(LocalDate.of(2026, 9, 20));
+
+        esperaErro(NordHttpEnum.HTTP_400, () -> service.alterar(5L, f, 9L));
+        verify(repository, never()).alterarLancamento(any(), anyInt());
+    }
+
+    @Test
+    void atualizarAFaturaRegistraALeituraDoDia() {
+        FinanceiroCategoria fatura = categoria(1, "Fatura", "SAIDA", "RITMO_FATURA", true);
+        when(repository.buscarCategoria(1L)).thenReturn(Optional.of(fatura));
+        when(repository.buscarPessoa(1L)).thenReturn(Optional.of(pessoa(1, "Nick", true)));
+        when(repository.buscarLancamentoPorRequisicao(UUID1)).thenReturn(Optional.empty());
+        when(repository.inserirLancamento(any())).thenReturn(Optional.of(5L));
+        when(repository.buscarLancamento(5L)).thenReturn(Optional.of(lancamento(5, 1)));
+        when(repository.alterarLancamento(any(), eq(1))).thenReturn(1);
+
+        service.criar(form(UUID1), 9L);
+        FinanceiroLancamentoForm edicao = form(null);
+        edicao.setNrVersao(1);
+        edicao.setVlLancamento(new BigDecimal("1800.00"));
+        service.alterar(5L, edicao, 9L);
+
+        verify(projecaoRepository).registrarLeitura(5L, LocalDate.of(2026, 10, 8), new BigDecimal("1500.00"), 9L);
+        verify(projecaoRepository).registrarLeitura(5L, LocalDate.of(2026, 10, 8), new BigDecimal("1800.00"), 9L);
+    }
+
+    @Test
+    void outrasCategoriasNaoGeramLeitura() {
+        when(repository.buscarCategoria(1L)).thenReturn(Optional.of(categoria(1, "Luz", "SAIDA", "VARIAVEL_MEDIA", true)));
+        when(repository.buscarPessoa(1L)).thenReturn(Optional.of(pessoa(1, "Nick", true)));
+        when(repository.buscarLancamentoPorRequisicao(UUID1)).thenReturn(Optional.empty());
+        when(repository.inserirLancamento(any())).thenReturn(Optional.of(5L));
+        when(repository.buscarLancamento(5L)).thenReturn(Optional.of(lancamento(5, 1)));
+
+        service.criar(form(UUID1), 9L);
+
+        verify(projecaoRepository, never()).registrarLeitura(any(), any(), any(), any());
     }
 
     // ---------- listagem e resumo ----------

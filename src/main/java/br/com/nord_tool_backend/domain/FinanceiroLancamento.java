@@ -23,6 +23,8 @@ public class FinanceiroLancamento extends GlobalDomain {
     private String dsLancamento;
     private BigDecimal vlLancamento;
     private Boolean inRealizado;
+    /** Preenchido nos lançamentos gerados por uma recorrência. */
+    private Long idRecorrencia;
     private Integer nrParcela;
     private Integer qtParcela;
     private Long idUsuarioCriacao;
