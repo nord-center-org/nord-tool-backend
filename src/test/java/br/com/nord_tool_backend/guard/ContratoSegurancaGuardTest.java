@@ -6,6 +6,7 @@ import br.com.nord_tool_backend.controller.write.AuthWriteController;
 import br.com.nord_tool_backend.dto.LoginResponseDto;
 import br.com.nord_tool_backend.dto.UsuarioDto;
 import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
+import br.com.nord_tool_backend.security.AcessoModulo;
 import br.com.nord_tool_backend.security.JwtAuthenticationFilter;
 import br.com.nord_tool_backend.security.JwtService;
 import br.com.nord_tool_backend.security.SecurityConfig;
@@ -57,7 +58,7 @@ class ContratoSegurancaGuardTest {
 
     @Nested
     @WebMvcTest(controllers = {RotaProtegida.class, HealthReadController.class, AuthReadController.class, AuthWriteController.class})
-    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class})
+    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class})
     @TestPropertySource(properties = {"nord-tool.security.enabled=true", "nord-tool.security.jwt-secret=" + SEGREDO})
     class Ligada {
         @Autowired MockMvc mvc;
@@ -142,7 +143,7 @@ class ContratoSegurancaGuardTest {
     /** Modo de transição até o frontend ter login (fase F6 do plano remove este modo). */
     @Nested
     @WebMvcTest(controllers = {RotaProtegida.class})
-    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class})
+    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class})
     @TestPropertySource(properties = {"nord-tool.security.enabled=false"})
     class Desligada {
         @Autowired MockMvc mvc;

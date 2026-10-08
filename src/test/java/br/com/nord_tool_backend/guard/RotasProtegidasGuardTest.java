@@ -1,6 +1,7 @@
 package br.com.nord_tool_backend.guard;
 
 import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
+import br.com.nord_tool_backend.security.AcessoModulo;
 import br.com.nord_tool_backend.security.JwtAuthenticationFilter;
 import br.com.nord_tool_backend.security.JwtService;
 import br.com.nord_tool_backend.security.SecurityConfig;
@@ -39,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Se alguém criar uma rota nova, ela entra na varredura automaticamente.
  */
 @WebMvcTest(controllers = RotasProtegidasGuardTest.Rota.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class})
 @TestPropertySource(properties = {"nord-tool.security.enabled=true", "nord-tool.security.jwt-secret=segredo-de-teste-com-mais-de-32-bytes!!"})
 class RotasProtegidasGuardTest {
 

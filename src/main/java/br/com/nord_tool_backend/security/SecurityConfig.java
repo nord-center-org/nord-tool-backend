@@ -59,6 +59,11 @@ public class SecurityConfig {
         if (env.acceptsProfiles(Profiles.of("local"))) {
             http.authorizeRequests().antMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
         }
+        // Financeiro: dados pessoais. LEITURA do módulo consulta, ESCRITA altera ("*" vale para todos os módulos).
+        // Regra por URL, na cadeia de filtros: recusa com 403 antes de ler o corpo ou validar qualquer coisa.
+        http.authorizeRequests()
+                .antMatchers(HttpMethod.GET, API + "/financeiro/**").access("@acessoModulo.leitura(authentication, 'FINANCEIRO')")
+                .antMatchers(API + "/financeiro/**").access("@acessoModulo.escrita(authentication, 'FINANCEIRO')");
         http.authorizeRequests().anyRequest().authenticated();
         return http.build();
     }

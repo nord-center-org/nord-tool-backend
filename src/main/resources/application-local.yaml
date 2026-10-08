@@ -23,6 +23,8 @@ spring:
       auto-commit: false # Desligar o commit automatico
 
 nord-tool:
+  cors:
+    allowed-origins: ${NORD_CORS_ORIGINS:http://localhost:5173}
   security:
     enabled: ${NORD_SECURITY_ENABLED:true}
     allow-ephemeral-secret: true
