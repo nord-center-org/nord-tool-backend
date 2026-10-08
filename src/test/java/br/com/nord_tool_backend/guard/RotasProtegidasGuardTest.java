@@ -1,6 +1,11 @@
-package br.com.nord_tool_backend.security;
+package br.com.nord_tool_backend.guard;
 
 import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
+import br.com.nord_tool_backend.security.AcessoModulo;
+import br.com.nord_tool_backend.security.JwtAuthenticationFilter;
+import br.com.nord_tool_backend.security.JwtService;
+import br.com.nord_tool_backend.security.SecurityConfig;
+import br.com.nord_tool_backend.security.SecurityProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -34,10 +39,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * arquivos, fotos e PDFs) e exige 401 sem token. Só login e health podem ser públicos.
  * Se alguém criar uma rota nova, ela entra na varredura automaticamente.
  */
-@WebMvcTest(controllers = VarreduraRotasSemTokenTest.Rota.class)
+@WebMvcTest(controllers = RotasProtegidasGuardTest.Rota.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class})
 @TestPropertySource(properties = {"nord-tool.security.enabled=true", "nord-tool.security.jwt-secret=segredo-de-teste-com-mais-de-32-bytes!!"})
-class VarreduraRotasSemTokenTest {
+class RotasProtegidasGuardTest {
 
     @RestController
     static class Rota {
