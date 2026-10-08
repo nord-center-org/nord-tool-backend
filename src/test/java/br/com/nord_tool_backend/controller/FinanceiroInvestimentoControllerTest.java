@@ -7,6 +7,7 @@ import br.com.nord_tool_backend.dto.FinanceiroAtivoDto;
 import br.com.nord_tool_backend.dto.FinanceiroInvestimentoDto;
 import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
+import br.com.nord_tool_backend.security.AcessoModulo;
 import br.com.nord_tool_backend.security.JwtAuthenticationFilter;
 import br.com.nord_tool_backend.security.JwtService;
 import br.com.nord_tool_backend.security.SecurityConfig;
@@ -39,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {FinanceiroInvestimentoReadController.class, FinanceiroInvestimentoWriteController.class})
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class})
 @TestPropertySource(properties = {"nord-tool.security.enabled=true", "nord-tool.security.jwt-secret=segredo-de-teste-com-mais-de-32-bytes!!"})
 class FinanceiroInvestimentoControllerTest {
 

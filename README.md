@@ -34,6 +34,8 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 | `NORD_ADMIN_EMAIL` `NORD_ADMIN_NAME` `NORD_ADMIN_PASSWORD` | cria o primeiro ADMIN **somente** com a tabela `usuario` vazia | — |
 | `NORD_STORAGE_PROVIDER` | provedor de arquivos (`POSTGRES`, provisório) | `POSTGRES` |
 | `nord-tool.caixinha.max-comprovante-bytes` | limite do PDF de comprovante da Caixinha | 5 MB |
+| `NORD_COTACAO_TOKEN` | token da brapi.dev (plano gratuito) para a cotação dos fundos; sem ele só alguns tickers respondem. Nunca é exposto pela API | — |
+| `NORD_COTACAO_URL` `NORD_COTACAO_TTL_SEGUNDOS` `NORD_COTACAO_TIMEOUT_SEGUNDOS` | provedor de cotação, cache (evita estourar o limite gratuito) e timeout | `https://brapi.dev/api` · `60` · `5` |
 
 ### Primeiro acesso em produção (Railway)
 1. Defina `NORD_JWT_SECRET` e `NORD_ADMIN_*`, publique e confira no log "Usuário ADMIN inicial criado".
@@ -42,12 +44,22 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 
 ## **Financeiro**
 `/api/v1/nord-tool/financeiro`: lançamentos (extrato com filtros por mês, período, pessoa, categoria, tipo, situação e texto; criação idempotente por `cdRequisicao`, parcelamento mensal com `qtParcelas`, controle de versão por `nrVersao`), pessoas (de quem é o lançamento) e categorias. A **conta do mês** (`GET /financeiro/mes/{yyyy-MM}`) substitui a planilha de fechamento: saldo anterior (do mês anterior fechado), entradas e saídas reais ou projetadas por categoria (média dos meses anteriores, valor fixo das recorrências ou ritmo de gasto da fatura do cartão), saldo final e a folga em relação à meta de saldo (verde/vermelho). `POST /mes/{yyyy-MM}/fechar` grava o saldo real, trava os lançamentos do mês e gera os fixos do mês seguinte; `/reabrir` desfaz (só o último mês fechado). Recorrências em `/recorrencias` e parâmetros (meta, meses da média, dia de fechamento da fatura) em `/configuracao`. Respostas saem com `Cache-Control: no-store`.
-Os testes contra o banco real (`FinanceiroRepositoryImplDbTest` e `FinanceiroContaDoMesDbTest`) só rodam com `NORD_TEST_DATABASE_URL` (ex.: `jdbc:postgresql://localhost:5432/nordtest?currentSchema=nord_tool`, usuário/senha em `NORD_TEST_DATABASE_USER`/`NORD_TEST_DATABASE_PASSWORD`) apontando para um banco **de teste** com os scripts aplicados; nunca use produção.
+**Investimentos** (`/financeiro/investimentos`): fundos imobiliários por pessoa, compras/vendas (preço médio; venda acima das cotas é recusada; idempotente por `cdRequisicao`) e proventos (valor a receber = cotas na data-com × valor por cota; manual ou importado do provedor sem sobrescrever o digitado). A cotação vem do `CotacaoProvider` (brapi.dev) com cache de 60 s; se o provedor não responder vale a última cotação guardada e a API devolve `cotacaoAoVivo=false`.
+
+**Acesso**: com a segurança ligada, `/financeiro/**` exige o módulo `FINANCEIRO` no perfil — `FINANCEIRO:LEITURA` consulta, `FINANCEIRO:ESCRITA` altera, e o `*` do ADMIN vale para tudo (403 caso contrário, antes de ler o corpo). Para liberar um perfil:
+```sql
+INSERT INTO perfil_permissao (id_perfil, cd_modulo, cd_acao)
+SELECT id_perfil, 'FINANCEIRO', 'ESCRITA' FROM perfil WHERE cd_perfil = '<PERFIL>'
+ON CONFLICT (id_perfil, cd_modulo) DO UPDATE SET cd_acao = EXCLUDED.cd_acao;  -- um perfil tem uma ação por módulo (use 'LEITURA' para só consultar)
+```
+O histórico da planilha entra pelos scripts de `MIGRACAO/financeiro/` (repositório `nord-tool-scripts-sql`).
+
+Os testes contra o banco real (`FinanceiroRepositoryImplDbTest`, `FinanceiroContaDoMesDbTest` e `FinanceiroInvestimentoRepositoryImplDbTest`) só rodam com `NORD_TEST_DATABASE_URL` (ex.: `jdbc:postgresql://localhost:5432/nordtest?currentSchema=nord_tool`, usuário/senha em `NORD_TEST_DATABASE_USER`/`NORD_TEST_DATABASE_PASSWORD`) apontando para um banco **de teste** com os scripts aplicados; nunca use produção.
 
 ## **Segurança**
 Com `NORD_SECURITY_ENABLED=true` toda rota exige `Authorization: Bearer <token>`; só `POST /auth/login` e `GET /nord-tool/health`
 são públicos. O teste `VarreduraRotasSemTokenTest` lê por reflexão todas as rotas dos controllers (inclusive arquivos, fotos e PDFs)
-e falha se alguma responder sem token, então rotas novas entram na checagem automaticamente.
+e falha se alguma responder sem token, então rotas novas entram na checagem automaticamente. O Financeiro, por ter dados pessoais, também é restrito por módulo (ver Financeiro > Acesso; `FinanceiroAcessoTest`).
 Respostas de dados pessoais/financeiros (Casamento, Caixinha, contratos e comprovantes) saem com `Cache-Control: no-store`.
 
 ## **Armazenamento de arquivos**
