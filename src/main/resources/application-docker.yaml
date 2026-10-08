@@ -5,11 +5,9 @@ spring:
   application:
     name: nord-tool-backend
 
-spring:
+  # Usuário e senha vêm de SPRING_DATASOURCE_USERNAME/SPRING_DATASOURCE_PASSWORD (definidos no Compose).
   datasource:
     url: jdbc:postgresql://postgres:5432/apartamento
-    username: user_app_nord
-    password: pass_user_nord_local
     driver-class-name: org.postgresql.Driver
 
     hikari:
@@ -19,7 +17,10 @@ spring:
       minimum-idle: 1
       maximum-pool-size: 10
 
+nord-tool:
+  cors:
+    allowed-origins: ${NORD_CORS_ORIGINS:http://localhost:5173}
+
 logging:
   level:
     root: INFO
-    org.springframework.jdbc.core: DEBUG
