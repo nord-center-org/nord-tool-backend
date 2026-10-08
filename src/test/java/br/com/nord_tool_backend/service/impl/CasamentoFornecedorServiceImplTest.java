@@ -7,7 +7,7 @@ import br.com.nord_tool_backend.dto.CasamentoFornecedorDto;
 import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CasamentoFornecedorForm;
 import br.com.nord_tool_backend.repository.CasamentoRepository;
-import br.com.nord_tool_backend.storage.ArmazenamentoArquivoService;
+import br.com.nord_tool_backend.storage.ArmazenamentoService;
 import br.com.nord_tool_backend.storage.ArquivoConteudo;
 import br.com.nord_tool_backend.storage.ArquivoDownload;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,13 +33,13 @@ class CasamentoFornecedorServiceImplTest {
     private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 1};
 
     private CasamentoRepository repository;
-    private ArmazenamentoArquivoService armazenamento;
+    private ArmazenamentoService armazenamento;
     private CasamentoFornecedorServiceImpl service;
 
     @BeforeEach
     void setUp() {
         repository = mock(CasamentoRepository.class);
-        armazenamento = mock(ArmazenamentoArquivoService.class);
+        armazenamento = mock(ArmazenamentoService.class);
         service = new CasamentoFornecedorServiceImpl(repository, armazenamento);
     }
 

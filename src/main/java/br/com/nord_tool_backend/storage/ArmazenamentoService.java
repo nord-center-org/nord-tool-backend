@@ -12,7 +12,7 @@ package br.com.nord_tool_backend.storage;
  *
  * Quem recebe upload deve validar antes com {@link ArquivoValidador}.
  */
-public interface ArmazenamentoArquivoService {
+public interface ArmazenamentoService {
 
     /** Grava o arquivo e devolve o id em arquivo_armazenado. */
     Long salvar(String nome, String contentType, byte[] bytes);

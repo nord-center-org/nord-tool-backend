@@ -1,7 +1,11 @@
-package br.com.nord_tool_backend.service.investimento;
+package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.CotacaoService;
+import br.com.nord_tool_backend.service.investimento.Cotacao;
+import br.com.nord_tool_backend.service.investimento.CotacaoProvider;
+import br.com.nord_tool_backend.service.investimento.ProventoCotado;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -13,8 +17,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Cotações com cache curto: várias telas abertas não multiplicam as chamadas ao provedor gratuito. */
-@Component
-public class CotacaoService {
+@Service
+public class CotacaoServiceImpl implements CotacaoService {
 
     private static final class Entrada {
         final Optional<Cotacao> cotacao;
@@ -31,14 +35,14 @@ public class CotacaoService {
     private final Duration ttl;
     private final Map<String, Entrada> cache = new ConcurrentHashMap<>();
 
-    public CotacaoService(CotacaoProvider provider, Clock clock,
-                          @Value("${nord-tool.cotacao.ttl-seconds:60}") long ttlSegundos) {
+    public CotacaoServiceImpl(CotacaoProvider provider, Clock clock,
+                              @Value("${nord-tool.cotacao.ttl-seconds:60}") long ttlSegundos) {
         this.provider = provider;
         this.clock = clock;
         this.ttl = Duration.ofSeconds(ttlSegundos);
     }
 
-    /** Só os tickers que o provedor soube cotar agora (ou há menos de um TTL). */
+    @Override
     public Map<String, Cotacao> cotar(Set<String> tickers) {
         Instant agora = clock.instant();
         Map<String, Cotacao> resultado = new HashMap<>();
@@ -53,6 +57,7 @@ public class CotacaoService {
         return resultado;
     }
 
+    @Override
     public java.util.List<ProventoCotado> proventos(String ticker) {
         return provider.proventos(ticker);
     }

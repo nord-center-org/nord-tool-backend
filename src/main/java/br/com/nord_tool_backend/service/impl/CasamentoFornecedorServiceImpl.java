@@ -10,7 +10,7 @@ import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CasamentoFornecedorForm;
 import br.com.nord_tool_backend.repository.CasamentoRepository;
 import br.com.nord_tool_backend.service.CasamentoFornecedorService;
-import br.com.nord_tool_backend.storage.ArmazenamentoArquivoService;
+import br.com.nord_tool_backend.storage.ArmazenamentoService;
 import br.com.nord_tool_backend.storage.ArquivoDownload;
 import br.com.nord_tool_backend.storage.ArquivoValidador;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorServic
     static final int MAX_DESCRICAO = 200;
 
     private final CasamentoRepository repository;
-    private final ArmazenamentoArquivoService armazenamento;
+    private final ArmazenamentoService armazenamento;
 
     @Override
     @Transactional(readOnly = true)

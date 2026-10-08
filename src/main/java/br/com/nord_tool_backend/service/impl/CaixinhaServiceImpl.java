@@ -16,7 +16,7 @@ import br.com.nord_tool_backend.form.CaixinhaMarcacaoForm;
 import br.com.nord_tool_backend.form.CaixinhaResponsavelForm;
 import br.com.nord_tool_backend.repository.CaixinhaRepository;
 import br.com.nord_tool_backend.service.CaixinhaService;
-import br.com.nord_tool_backend.storage.ArmazenamentoArquivoService;
+import br.com.nord_tool_backend.storage.ArmazenamentoService;
 import br.com.nord_tool_backend.storage.ArquivoDownload;
 import br.com.nord_tool_backend.storage.ArquivoValidador;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,10 +37,10 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     static final List<String> SITUACOES = Arrays.asList("TODOS", "A_PAGAR", "PAGO", "NAO_LANCADO");
 
     private final CaixinhaRepository repository;
-    private final ArmazenamentoArquivoService armazenamento;
+    private final ArmazenamentoService armazenamento;
     private final int maxComprovanteBytes;
 
-    public CaixinhaServiceImpl(CaixinhaRepository repository, ArmazenamentoArquivoService armazenamento,
+    public CaixinhaServiceImpl(CaixinhaRepository repository, ArmazenamentoService armazenamento,
                                @Value("${nord-tool.caixinha.max-comprovante-bytes:5242880}") int maxComprovanteBytes) {
         this.repository = repository;
         this.armazenamento = armazenamento;

@@ -10,6 +10,7 @@ import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
 import br.com.nord_tool_backend.security.AcessoModulo;
 import br.com.nord_tool_backend.security.JwtAuthenticationFilter;
 import br.com.nord_tool_backend.security.JwtService;
+import br.com.nord_tool_backend.security.JwtServiceImpl;
 import br.com.nord_tool_backend.security.SecurityConfig;
 import br.com.nord_tool_backend.security.SecurityProperties;
 import br.com.nord_tool_backend.service.AuthService;
@@ -64,7 +65,7 @@ class ContratoSegurancaGuardTest {
 
     @Nested
     @WebMvcTest(controllers = {RotaProtegida.class, HealthReadController.class, AuthReadController.class, AuthWriteController.class})
-    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class, CorrelacaoFilter.class})
+    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtServiceImpl.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class, CorrelacaoFilter.class})
     @TestPropertySource(properties = {"nord-tool.security.enabled=true", "nord-tool.security.jwt-secret=" + SEGREDO})
     class Ligada {
         @Autowired MockMvc mvc;
@@ -100,7 +101,7 @@ class ContratoSegurancaGuardTest {
 
         @Test
         void tokenAssinadoComOutraChaveRetorna401() throws Exception {
-            JwtService outraChave = new JwtService(
+            JwtService outraChave = new JwtServiceImpl(
                     new SecurityProperties(true, "outra-chave-de-teste-com-mais-de-32-bytes", 30, false));
             String forjado = outraChave.gerar(1L, "a@b.com", "ADMIN", List.of("*:ESCRITA"), Instant.now());
             mvc.perform(get(ROTA_PROTEGIDA).header("Authorization", "Bearer " + forjado))
@@ -175,7 +176,7 @@ class ContratoSegurancaGuardTest {
     /** Modo de transição até o frontend ter login (fase F6 do plano remove este modo). */
     @Nested
     @WebMvcTest(controllers = {RotaProtegida.class})
-    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class, CorrelacaoFilter.class})
+    @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtServiceImpl.class, SecurityProperties.class, GlobalExceptionHandler.class, AcessoModulo.class, CorrelacaoFilter.class})
     @TestPropertySource(properties = {"nord-tool.security.enabled=false"})
     class Desligada {
         @Autowired MockMvc mvc;

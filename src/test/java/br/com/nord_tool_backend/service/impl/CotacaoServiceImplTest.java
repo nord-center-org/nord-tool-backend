@@ -1,5 +1,9 @@
-package br.com.nord_tool_backend.service.investimento;
+package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.CotacaoService;
+import br.com.nord_tool_backend.service.investimento.Cotacao;
+import br.com.nord_tool_backend.service.investimento.CotacaoProvider;
+import br.com.nord_tool_backend.service.investimento.ProventoCotado;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -13,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class CotacaoServiceTest {
+class CotacaoServiceImplTest {
 
     private static final class RelogioMutavel extends Clock {
         Instant agora = Instant.parse("2026-10-08T12:00:00Z");
@@ -31,7 +35,7 @@ class CotacaoServiceTest {
             @Override public java.util.List<ProventoCotado> proventos(String t) { return Collections.emptyList(); }
         };
         RelogioMutavel relogio = new RelogioMutavel();
-        CotacaoService service = new CotacaoService(provider, relogio, 60);
+        CotacaoService service = new CotacaoServiceImpl(provider, relogio, 60);
         assertEquals(1, service.cotar(Collections.singleton("HGLG11")).size());
         service.cotar(Collections.singleton("HGLG11"));
         assertEquals(1, chamadas.get());
@@ -46,6 +50,6 @@ class CotacaoServiceTest {
             @Override public Optional<Cotacao> cotar(String t) { return Optional.empty(); }
             @Override public java.util.List<ProventoCotado> proventos(String t) { return Collections.emptyList(); }
         };
-        assertTrue(new CotacaoService(provider, new RelogioMutavel(), 60).cotar(Collections.singleton("XPML11")).isEmpty());
+        assertTrue(new CotacaoServiceImpl(provider, new RelogioMutavel(), 60).cotar(Collections.singleton("XPML11")).isEmpty());
     }
 }

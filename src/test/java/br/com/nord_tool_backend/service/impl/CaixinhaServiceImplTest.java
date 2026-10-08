@@ -13,7 +13,7 @@ import br.com.nord_tool_backend.form.CaixinhaLancamentoForm;
 import br.com.nord_tool_backend.form.CaixinhaMarcacaoForm;
 import br.com.nord_tool_backend.form.CaixinhaResponsavelForm;
 import br.com.nord_tool_backend.repository.CaixinhaRepository;
-import br.com.nord_tool_backend.storage.ArmazenamentoArquivoService;
+import br.com.nord_tool_backend.storage.ArmazenamentoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -43,13 +43,13 @@ class CaixinhaServiceImplTest {
     private static final byte[] PDF = "%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n".getBytes(StandardCharsets.ISO_8859_1);
 
     private CaixinhaRepository repository;
-    private ArmazenamentoArquivoService armazenamento;
+    private ArmazenamentoService armazenamento;
     private CaixinhaServiceImpl service;
 
     @BeforeEach
     void setUp() {
         repository = mock(CaixinhaRepository.class);
-        armazenamento = mock(ArmazenamentoArquivoService.class);
+        armazenamento = mock(ArmazenamentoService.class);
         service = new CaixinhaServiceImpl(repository, armazenamento, 5 * 1024 * 1024);
     }
 

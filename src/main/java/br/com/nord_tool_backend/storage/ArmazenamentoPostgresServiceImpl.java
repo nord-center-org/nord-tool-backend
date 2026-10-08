@@ -16,7 +16,7 @@ import java.security.NoSuchAlgorithmException;
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "nord-tool.storage.provider", havingValue = "POSTGRES", matchIfMissing = true)
-public class ArmazenamentoPostgresServiceImpl implements ArmazenamentoArquivoService {
+public class ArmazenamentoPostgresServiceImpl implements ArmazenamentoService {
 
     static final String PROVEDOR = "POSTGRES";
 
