@@ -28,6 +28,12 @@ nord-tool:
     email: ${NORD_ADMIN_EMAIL:}
     name: ${NORD_ADMIN_NAME:}
     password: ${NORD_ADMIN_PASSWORD:}
+  cotacao:
+    # Cotação dos fundos (brapi.dev, plano gratuito). Sem token só alguns tickers respondem; o token nunca é exposto à API.
+    url: ${NORD_COTACAO_URL:https://brapi.dev/api}
+    token: ${NORD_COTACAO_TOKEN:}
+    ttl-seconds: ${NORD_COTACAO_TTL_SEGUNDOS:60}
+    timeout-seconds: ${NORD_COTACAO_TIMEOUT_SEGUNDOS:5}
   storage:
     # Provedor de arquivos: POSTGRES (provisório). Definitivo ainda a decidir (Drive/S3).
     provider: ${NORD_STORAGE_PROVIDER:POSTGRES}
