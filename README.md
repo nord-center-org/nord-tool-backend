@@ -63,7 +63,7 @@ e falha se alguma responder sem token, então rotas novas entram na checagem aut
 Respostas de dados pessoais/financeiros (Casamento, Caixinha, contratos e comprovantes) saem com `Cache-Control: no-store`.
 
 ## **Armazenamento de arquivos**
-Provisório em Postgres (`arquivo_armazenado`, BYTEA) atrás da interface `ArmazenamentoArquivoService`; o provedor definitivo
+Provisório em Postgres (`arquivo_armazenado`, BYTEA) atrás da interface `ArmazenamentoService` (implementação atual: `ArmazenamentoPostgresServiceImpl`); o provedor definitivo
 (Drive/S3) ainda está por decidir e entrará sem alterar controllers. Limites: PDF de termo 15 MB / 80 páginas, imagens 5 MB,
 contratos do casamento 15 MB, comprovantes da Caixinha 5 MB. A JVM roda com `-Xmx512m` (ver `Dockerfile`).
 

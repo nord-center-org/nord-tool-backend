@@ -14,7 +14,7 @@ import br.com.nord_tool_backend.repository.FinanceiroInvestimentoRepository;
 import br.com.nord_tool_backend.repository.FinanceiroRepository;
 import br.com.nord_tool_backend.service.FinanceiroInvestimentoService;
 import br.com.nord_tool_backend.service.investimento.Cotacao;
-import br.com.nord_tool_backend.service.investimento.CotacaoService;
+import br.com.nord_tool_backend.service.CotacaoService;
 import br.com.nord_tool_backend.service.investimento.PosicaoCalculator;
 import br.com.nord_tool_backend.service.investimento.PosicaoCalculator.Posicao;
 import br.com.nord_tool_backend.service.investimento.ProventoCotado;

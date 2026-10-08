@@ -8,6 +8,7 @@ import br.com.nord_tool_backend.form.AlterarSenhaForm;
 import br.com.nord_tool_backend.form.LoginForm;
 import br.com.nord_tool_backend.repository.UsuarioRepository;
 import br.com.nord_tool_backend.security.JwtService;
+import br.com.nord_tool_backend.security.JwtServiceImpl;
 import br.com.nord_tool_backend.security.SecurityProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class AuthServiceImplTest {
     void setUp() {
         repository = mock(UsuarioRepository.class);
         encoder = new BCryptPasswordEncoder(4);
-        jwtService = new JwtService(new SecurityProperties(true, SEGREDO, 30, false));
+        jwtService = new JwtServiceImpl(new SecurityProperties(true, SEGREDO, 30, false));
         service = new AuthServiceImpl(repository, encoder, jwtService, RELOGIO);
         when(repository.listarPermissoes(7L)).thenReturn(List.of(new PerfilPermissao("*", "ESCRITA")));
     }

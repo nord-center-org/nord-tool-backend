@@ -11,7 +11,7 @@ import br.com.nord_tool_backend.form.OrdemFotoForm;
 import br.com.nord_tool_backend.form.SituacaoTermoForm;
 import br.com.nord_tool_backend.repository.TermoFotoRepository;
 import br.com.nord_tool_backend.repository.TermoReprovaRepository;
-import br.com.nord_tool_backend.storage.ArmazenamentoArquivoService;
+import br.com.nord_tool_backend.storage.ArmazenamentoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -38,7 +38,7 @@ class TermoReprovaServiceImplTest {
 
     private TermoReprovaRepository termoRepository;
     private TermoFotoRepository fotoRepository;
-    private ArmazenamentoArquivoService armazenamento;
+    private ArmazenamentoService armazenamento;
     private CacheService cacheService;
     private TermoReprovaServiceImpl service;
 
@@ -46,7 +46,7 @@ class TermoReprovaServiceImplTest {
     void setUp() {
         termoRepository = mock(TermoReprovaRepository.class);
         fotoRepository = mock(TermoFotoRepository.class);
-        armazenamento = mock(ArmazenamentoArquivoService.class);
+        armazenamento = mock(ArmazenamentoService.class);
         cacheService = mock(CacheService.class);
         service = new TermoReprovaServiceImpl(termoRepository, fotoRepository, armazenamento, cacheService);
     }

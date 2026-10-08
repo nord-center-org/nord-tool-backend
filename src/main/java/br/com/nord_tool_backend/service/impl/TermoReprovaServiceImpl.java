@@ -15,7 +15,7 @@ import br.com.nord_tool_backend.repository.TermoFotoRepository;
 import br.com.nord_tool_backend.repository.TermoReprovaRepository;
 import br.com.nord_tool_backend.service.CacheService;
 import br.com.nord_tool_backend.service.TermoReprovaService;
-import br.com.nord_tool_backend.storage.ArmazenamentoArquivoService;
+import br.com.nord_tool_backend.storage.ArmazenamentoService;
 import br.com.nord_tool_backend.storage.ArquivoDownload;
 import br.com.nord_tool_backend.storage.ArquivoValidador;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +42,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
 
     private final TermoReprovaRepository termoRepository;
     private final TermoFotoRepository fotoRepository;
-    private final ArmazenamentoArquivoService armazenamento;
+    private final ArmazenamentoService armazenamento;
     // A listagem de apartamentos traz os dados do último termo: qualquer alteração invalida o cache.
     private final CacheService cacheService;
 
