@@ -66,8 +66,8 @@ class FinanceiroContaDoMesDbTest {
         FinanceiroProjecaoRepositoryImpl projecao = new FinanceiroProjecaoRepositoryImpl(jdbc);
         injetar(repo, "/query/financeiro.properties");
         injetar(projecao, "/query/financeiro_projecao.properties");
-        // 08/03/2032 em São Paulo: o mês atual é março de 2032
-        Clock relogio = Clock.fixed(Instant.parse("2032-03-08T15:00:00Z"), ZoneId.of("UTC"));
+        // 28/03/2032: o mês atual é março de 2032
+        Clock relogio = Clock.fixed(Instant.parse("2032-03-28T15:00:00Z"), ZoneId.of("UTC"));
         lancamentos = new FinanceiroServiceImpl(repo, projecao, relogio);
         conta = new FinanceiroProjecaoServiceImpl(repo, projecao, relogio);
 
@@ -136,7 +136,7 @@ class FinanceiroContaDoMesDbTest {
 
     @Test
     void contaDoMesDeFevereiroAMarcoDeCimaAbaixo() {
-        // fatura fecha dia 20: o ciclo da fatura de março vai de 21/02 a 20/03 (29 dias em 2032)
+        // fatura fecha dia 20: o ciclo da fatura de março (a das compras de março) vai de 21/03 a 20/04 (31 dias)
         configurar("500.00", 3, 20);
         FinanceiroSaldoInicialForm saldoInicial = new FinanceiroSaldoInicialForm();
         saldoInicial.setVlSaldoInicial(new BigDecimal("100.00"));
@@ -175,20 +175,20 @@ class FinanceiroContaDoMesDbTest {
 
         // março (mês atual): salário e fatura parcial lançados; o resto é estimativa
         lancar(idSalario, "2032-03-05", "3000.00", true);
-        lancar(idFatura, "2032-03-08", "600.00", false);
+        lancar(idFatura, "2032-03-28", "600.00", false);
 
         FinanceiroProjecaoMesDto mar = conta.obterMes("2032-03", null);
         assertTrue(mar.isEstimado());
         assertEquals(0, new BigDecimal("100.00").compareTo(mar.getSaldoAnterior()), "vem do saldo gravado no fechamento de fevereiro");
         assertEquals(0, new BigDecimal("3000.00").compareTo(mar.getTotalEntradas()));
-        // fatura: 600 + (1 - 17/29) * 2000 (média de fevereiro) = 1427,59; apartamento: o gerado (1000)
-        assertEquals(0, new BigDecimal("1427.59").compareTo(linha(mar.getSaidas(), idFatura).getProjetado()));
+        // fatura: em 28/03 passaram 8 dos 31 dias: 600 + (1 - 8/31) * 2000 (média de fevereiro) = 2083,87; apartamento: o gerado (1000)
+        assertEquals(0, new BigDecimal("2083.87").compareTo(linha(mar.getSaidas(), idFatura).getProjetado()));
         assertEquals("RITMO", linha(mar.getSaidas(), idFatura).getOrigem());
         assertEquals(0, new BigDecimal("1000.00").compareTo(linha(mar.getSaidas(), idApartamento).getProjetado()));
-        assertEquals(0, new BigDecimal("2427.59").compareTo(mar.getTotalSaidas()));
-        assertEquals(0, new BigDecimal("672.41").compareTo(mar.getSaldoFinal()));
-        assertEquals(0, new BigDecimal("172.41").compareTo(mar.getFolga()));
-        assertEquals("VERDE", mar.getSituacao());
+        assertEquals(0, new BigDecimal("3083.87").compareTo(mar.getTotalSaidas()));
+        assertEquals(0, new BigDecimal("16.13").compareTo(mar.getSaldoFinal()));
+        assertEquals(0, new BigDecimal("-483.87").compareTo(mar.getFolga()));
+        assertEquals("VERMELHO", mar.getSituacao()); // 16,13 fica abaixo da meta de 500
         assertEquals(2, mar.getQtPrevistos(), "a fatura e o apartamento gerado ainda não foram pagos");
 
         // com filtro de pessoa não há saldo anterior
@@ -198,7 +198,7 @@ class FinanceiroContaDoMesDbTest {
         Long idLancamentoFatura = jdbc.queryForObject("SELECT id_lancamento FROM financeiro_lancamento WHERE dt_competencia = DATE '2032-03-01' AND id_categoria = :c",
                 new MapSqlParameterSource("c", idFatura), Long.class);
         assertEquals(1, conta.listarLeituras(idLancamentoFatura).size());
-        assertEquals(LocalDate.of(2032, 3, 8), conta.listarLeituras(idLancamentoFatura).get(0).getDtLeitura());
+        assertEquals(LocalDate.of(2032, 3, 28), conta.listarLeituras(idLancamentoFatura).get(0).getDtLeitura());
 
         // fechar março grava o saldo REAL (sem projetar a fatura): 100 + 3000 - (600 + 1000) = 1500
         FinanceiroFechamentoDto fechouMarco = conta.fechar("2032-03", idUsuario);
