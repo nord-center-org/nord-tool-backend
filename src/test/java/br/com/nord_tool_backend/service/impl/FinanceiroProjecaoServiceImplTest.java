@@ -168,7 +168,7 @@ class FinanceiroProjecaoServiceImplTest {
         aberta.setIdLancamento(70L);
         aberta.setIdCategoria(fatura.getId());
         aberta.setVlLancamento(v("1200.00"));
-        aberta.setDtLeitura(LocalDate.of(2026, 9, 24));
+        aberta.setDtLeitura(LocalDate.of(2026, 10, 24));
         when(projecao.faturasDoMes(eq(OUT), any())).thenReturn(Collections.singletonList(aberta));
         when(projecao.listarRecorrencias()).thenReturn(Collections.singletonList(recorrencia(9, apto, "1956.42", LocalDate.of(2026, 1, 1), null)));
         when(projecao.contarPrevistos(OUT)).thenReturn(3);
@@ -188,16 +188,16 @@ class FinanceiroProjecaoServiceImplTest {
         assertTrue(mes.isComSaldoAnterior());
         assertEquals(v("1500.00"), mes.getSaldoAnterior());
         assertEquals(v("5000.00"), mes.getTotalEntradas());
-        // fatura 1200 + (1 - 16/30) * 2400 = 2320; apartamento pela recorrência; luz pela média (300)
-        assertEquals(v("2320.00"), linha(mes.getSaidas(), 4).getProjetado());
+        // fatura de outubro (ciclo 09/10 a 08/11, 31 dias; em 24/10 passaram 16): 1200 + (1 - 16/31) * 2400 = 2361,29; apartamento pela recorrência; luz pela média (300)
+        assertEquals(v("2361.29"), linha(mes.getSaidas(), 4).getProjetado());
         assertEquals("RITMO", linha(mes.getSaidas(), 4).getOrigem());
         assertEquals(v("1956.42"), linha(mes.getSaidas(), 5).getProjetado());
         assertEquals("RECORRENCIA", linha(mes.getSaidas(), 5).getOrigem());
         assertEquals(v("300.00"), linha(mes.getSaidas(), 6).getProjetado());
-        assertEquals(v("4576.42"), mes.getTotalSaidas());
-        assertEquals(v("1923.58"), mes.getSaldoFinal());
+        assertEquals(v("4617.71"), mes.getTotalSaidas());
+        assertEquals(v("1882.29"), mes.getSaldoFinal());
         assertEquals(v("500.00"), mes.getMetaSaldo());
-        assertEquals(v("1423.58"), mes.getFolga());
+        assertEquals(v("1382.29"), mes.getFolga());
         assertEquals("VERDE", mes.getSituacao());
         assertEquals(3, mes.getQtPrevistos());
         // o saldo anterior não é uma linha: vem à parte
@@ -213,7 +213,7 @@ class FinanceiroProjecaoServiceImplTest {
         FinanceiroProjecaoMesDto mes = service.obterMes("2026-10", null);
 
         assertEquals("VERMELHO", mes.getSituacao());
-        assertEquals(v("-1076.42"), mes.getFolga());
+        assertEquals(v("-1117.71"), mes.getFolga());
     }
 
     @Test
@@ -279,13 +279,13 @@ class FinanceiroProjecaoServiceImplTest {
         assertNull(mes.getMetaSaldo());
         assertNull(mes.getFolga());
         // a recorrência do apartamento é da pessoa 1: para a pessoa 2 o apartamento fica sem valor
-        assertEquals(v("2380.00"), mes.getSaldoFinal());
+        assertEquals(v("2338.71"), mes.getSaldoFinal());
         assertEquals("SEM_DADOS", linha(mes.getSaidas(), 5).getOrigem());
         assertEquals("VERDE", mes.getSituacao());
         verify(projecao, times(1)).somarPorCategoria(any(), any(), eq(2L));
 
         // para a pessoa 1 a recorrência entra
-        assertEquals(v("423.58"), service.obterMes("2026-10", 1L).getSaldoFinal());
+        assertEquals(v("382.29"), service.obterMes("2026-10", 1L).getSaldoFinal());
     }
 
     @Test
