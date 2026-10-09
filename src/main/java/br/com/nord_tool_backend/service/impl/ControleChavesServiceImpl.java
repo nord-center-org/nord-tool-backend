@@ -36,6 +36,8 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     private static final String CODIGO_RETIRADA_PREFIXO = "RET-";
     private static final Pattern PADRAO_NOME_OBRA = Pattern.compile("\\s*[-_]?\\s*[0-9].*$");
     private static final int QUANTIDADE_POR_PAGINA_PADRAO = 20;
+    static final int MAX_POR_PAGINA = 100;
+    static final int MAX_RECENTES = 50;
     private final ControleChavesRepository controleChavesRepository;
 
     private final AutorizacaoService autorizacao;
@@ -78,7 +80,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     @Override
     public DashboardControleChavesDto buscarDashboard(int nrLimiteRecentes, String idObra) {
         autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.LEITURA);
-        int nrQuantidadePorPagina = nrLimiteRecentes > 0 ? nrLimiteRecentes : 5;
+        int nrQuantidadePorPagina = nrLimiteRecentes > 0 ? Math.min(nrLimiteRecentes, MAX_RECENTES) : 5;
         List<RetiradaControleChavesDto> retiradasRecentes = controleChavesRepository.listarHistorico().stream()
                 .filter(requisicao -> correspondeObra(requisicao, idObra))
                 .limit(nrQuantidadePorPagina)
@@ -174,7 +176,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     }
 
     private int obterQuantidadePorPagina(int nrQuantidadePorPagina) {
-        return nrQuantidadePorPagina > 0 ? nrQuantidadePorPagina : QUANTIDADE_POR_PAGINA_PADRAO;
+        return nrQuantidadePorPagina > 0 ? Math.min(nrQuantidadePorPagina, MAX_POR_PAGINA) : QUANTIDADE_POR_PAGINA_PADRAO;
     }
 
     private long obterOffset(int nrQuantidadePorPagina, int nrPagina) {

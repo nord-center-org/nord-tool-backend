@@ -39,6 +39,8 @@ import java.util.stream.Collectors;
 public class TermoReprovaServiceImpl implements TermoReprovaService {
 
     static final int MAX_PAGINAS = 80;
+    /** Cota de fotos por termo: até 4 por página do limite de páginas. */
+    static final int MAX_FOTOS_POR_TERMO = 4 * MAX_PAGINAS;
     static final int MAX_LEGENDA = 240;
     static final String MSG_CONCLUIR_SEM_FOTO = "Anexe ao menos uma foto antes de concluir o termo.";
     private static final DateTimeFormatter FORMATO = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
@@ -195,6 +197,9 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
         autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         TermoReprova termo = termo(idTermo);
         validarPagina(termo, nrPagina);
+        if (fotoRepository.contarPorTermo(idTermo) >= MAX_FOTOS_POR_TERMO) {
+            throw new EntradaInvalidaException("O termo já tem o máximo de " + MAX_FOTOS_POR_TERMO + " fotos");
+        }
         String tipoImagem = ArquivoValidador.validarImagem(nomeImagem, imagem);
         String tipoMiniatura = ArquivoValidador.validarImagem(nomeImagem, miniatura);
 

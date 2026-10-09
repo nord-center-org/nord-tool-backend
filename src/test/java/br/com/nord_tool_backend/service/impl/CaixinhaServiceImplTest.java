@@ -48,6 +48,10 @@ import br.com.nord_tool_backend.exception.NaoAutenticadoException;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verifyNoInteractions;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 class CaixinhaServiceImplTest {
 
@@ -411,6 +415,17 @@ class CaixinhaServiceImplTest {
             }
             assertTrue(json.contains("\"dtLancamento\":\"01/10/2026\""), json);
         }
+    }
+
+    // ---------- cotas e limites ----------
+
+    @Test
+    void comprovanteAcimaDaCotaDoLancamentoEhRecusadoSemGravarArquivo() {
+        when(repository.buscarLancamento(5L)).thenReturn(Optional.of(lancamento(5, 1)));
+        when(repository.listarComprovantes(5L)).thenReturn(Collections.nCopies(
+                CaixinhaServiceImpl.MAX_COMPROVANTES_POR_LANCAMENTO, new CaixinhaComprovante()));
+        assertThrows(EntradaInvalidaException.class, () -> service.anexarComprovante(5L, "c.pdf", PDF, null));
+        verify(armazenamento, never()).salvar(anyString(), anyString(), any());
     }
 
     // ---------- autorização ----------

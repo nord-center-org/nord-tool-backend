@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorService {
 
     static final int MAX_DESCRICAO = 200;
+    static final int MAX_ANEXOS_POR_FORNECEDOR = 20;
 
     private final CasamentoRepository repository;
     private final ArmazenamentoService armazenamento;
@@ -96,6 +97,9 @@ public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorServic
     public CasamentoAnexoDto anexar(Long idFornecedor, String nomeArquivo, byte[] bytes, String descricao) {
         autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         fornecedor(idFornecedor);
+        if (repository.listarAnexos(idFornecedor).size() >= MAX_ANEXOS_POR_FORNECEDOR) {
+            throw new EntradaInvalidaException("O fornecedor já tem o máximo de " + MAX_ANEXOS_POR_FORNECEDOR + " anexos");
+        }
         String contentType = ArquivoValidador.validarContrato(nomeArquivo, bytes);
         String texto = descricao == null || descricao.trim().isEmpty() ? null : descricao.trim();
         if (texto != null && texto.length() > MAX_DESCRICAO) {

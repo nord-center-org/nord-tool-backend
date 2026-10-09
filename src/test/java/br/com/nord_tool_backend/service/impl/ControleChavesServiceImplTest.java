@@ -36,6 +36,10 @@ import br.com.nord_tool_backend.security.Modulo;
 import br.com.nord_tool_backend.security.Acao;
 import br.com.nord_tool_backend.exception.AcessoNegadoException;
 import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
+import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 class ControleChavesServiceImplTest {
@@ -358,6 +362,15 @@ class ControleChavesServiceImplTest {
                 .nmPermissaoRecebedor(idUserRecebimento == null ? null : "Recebedor")
                 .nmStatusRequisicao(nmStatusRequisicao)
                 .build();
+    }
+
+    // ---------- cotas e limites ----------
+
+    @Test
+    void paginaNuncaPassaDoLimiteMesmoQuandoOClientePedeMais() {
+        when(controleChavesRepository.listarApartamentos()).thenReturn(LongStream.rangeClosed(1, 150)
+                .mapToObj(i -> apartamento(i, "A " + i)).collect(Collectors.toList()));
+        assertEquals(ControleChavesServiceImpl.MAX_POR_PAGINA, controleChavesService.listarApartamentos(null, 500, 0).size());
     }
 
     // ---------- autorização ----------

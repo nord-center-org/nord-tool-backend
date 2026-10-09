@@ -34,6 +34,11 @@ import br.com.nord_tool_backend.exception.NaoAutenticadoException;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verifyNoInteractions;
+import java.util.Collections;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 class CasamentoFornecedorServiceImplTest {
 
@@ -214,6 +219,17 @@ class CasamentoFornecedorServiceImplTest {
 
         assertEquals("contrato.pdf", download.getConteudo().getNome());
         assertTrue(download.getVersao() > 0);
+    }
+
+    // ---------- cotas e limites ----------
+
+    @Test
+    void anexoAcimaDaCotaDoFornecedorEhRecusadoSemGravarArquivo() {
+        when(repository.buscarFornecedor(3L)).thenReturn(Optional.of(fornecedor(3L)));
+        when(repository.listarAnexos(3L)).thenReturn(Collections.nCopies(
+                CasamentoFornecedorServiceImpl.MAX_ANEXOS_POR_FORNECEDOR, new CasamentoAnexo()));
+        assertThrows(EntradaInvalidaException.class, () -> service.anexar(3L, "c.pdf", new byte[]{1}, null));
+        verify(armazenamento, never()).salvar(anyString(), anyString(), any());
     }
 
     // ---------- autorização ----------

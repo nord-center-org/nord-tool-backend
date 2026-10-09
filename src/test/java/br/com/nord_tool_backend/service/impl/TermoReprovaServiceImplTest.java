@@ -40,6 +40,10 @@ import br.com.nord_tool_backend.exception.NaoAutenticadoException;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verifyNoInteractions;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 class TermoReprovaServiceImplTest {
 
@@ -573,6 +577,17 @@ class TermoReprovaServiceImplTest {
             System.arraycopy(ok, 0, longe, 0, ok.length);
             assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", longe, 5000));
         }
+    }
+
+    // ---------- cotas e limites ----------
+
+    @Test
+    void fotoAcimaDaCotaDoTermoEhRecusadaSemGravarArquivo() {
+        termoExiste(termo(1L, 3, "PENDENTE"));
+        when(fotoRepository.contarPorTermo(1L)).thenReturn(TermoReprovaServiceImpl.MAX_FOTOS_POR_TERMO);
+        assertThrows(EntradaInvalidaException.class, () ->
+                service.adicionarFoto(1L, "f.jpg", new byte[]{1}, new byte[]{1}, 1, null));
+        verify(armazenamento, never()).salvar(anyString(), anyString(), any());
     }
 
     // ---------- autorização ----------

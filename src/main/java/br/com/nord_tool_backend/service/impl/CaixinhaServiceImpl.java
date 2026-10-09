@@ -41,6 +41,8 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     static final String MSG_CONFLITO = "O lançamento mudou. Sincronize e tente novamente.";
     static final List<String> SITUACOES = Arrays.asList("TODOS", "A_PAGAR", "PAGO", "NAO_LANCADO");
 
+    static final int MAX_COMPROVANTES_POR_LANCAMENTO = 10;
+
     private final CaixinhaRepository repository;
     private final ArmazenamentoService armazenamento;
     private final int maxComprovanteBytes;
@@ -188,6 +190,9 @@ public class CaixinhaServiceImpl implements CaixinhaService {
             // Reenvio do mesmo arquivo: devolve o comprovante original, sem gravar outro PDF.
             java.util.Optional<Long> existente = repository.buscarComprovantePorRequisicao(requisicao);
             if (existente.isPresent()) return CaixinhaComprovanteDto.de(comprovante(existente.get()));
+        }
+        if (repository.listarComprovantes(idLancamento).size() >= MAX_COMPROVANTES_POR_LANCAMENTO) {
+            throw new EntradaInvalidaException("O lançamento já tem o máximo de " + MAX_COMPROVANTES_POR_LANCAMENTO + " comprovantes");
         }
         String contentType = ArquivoValidador.validarComprovantePdf(nomeArquivo, bytes, maxComprovanteBytes);
         Long idArquivo = armazenamento.salvar(nomeArquivo, contentType, bytes);
