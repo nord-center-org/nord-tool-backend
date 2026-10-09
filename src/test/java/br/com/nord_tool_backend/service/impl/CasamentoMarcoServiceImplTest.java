@@ -17,6 +17,13 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class CasamentoMarcoServiceImplTest {
 
@@ -105,5 +112,21 @@ class CasamentoMarcoServiceImplTest {
         assertEquals(404, assertThrows(NordException.class, () -> marcos.buscar(9L)).getStatus().getStatus().value());
         assertThrows(NordException.class, () -> marcos.deletar(9L));
         assertThrows(NordException.class, () -> marcos.concluir(9L, true));
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semPermissaoDeLeituraDoModuloNaoConsultaODado() {
+        when(autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> marcos.listar());
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> marcos.deletar(1L));
+        verifyNoInteractions(repository);
     }
 }

@@ -32,6 +32,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
 
 @ExtendWith(MockitoExtension.class)
 class ControleChavesServiceImplTest {
@@ -354,5 +358,21 @@ class ControleChavesServiceImplTest {
                 .nmPermissaoRecebedor(idUserRecebimento == null ? null : "Recebedor")
                 .nmStatusRequisicao(nmStatusRequisicao)
                 .build();
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semPermissaoDeLeituraDoModuloNaoConsultaODado() {
+        when(autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.LEITURA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> controleChavesService.listarObras());
+        verifyNoInteractions(controleChavesRepository);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> controleChavesService.criarRetirada(null));
+        verifyNoInteractions(controleChavesRepository);
     }
 }

@@ -33,6 +33,13 @@ import static org.mockito.Mockito.*;
 import java.util.Arrays;
 import br.com.nord_tool_backend.storage.*;
 import org.junit.jupiter.api.Nested;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class TermoReprovaServiceImplTest {
 
@@ -566,5 +573,21 @@ class TermoReprovaServiceImplTest {
             System.arraycopy(ok, 0, longe, 0, ok.length);
             assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", longe, 5000));
         }
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semPermissaoDeLeituraDoModuloNaoConsultaODado() {
+        when(autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.LEITURA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.buscar(1L));
+        verifyNoInteractions(termoRepository, fotoRepository);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.deletar(1L));
+        verifyNoInteractions(termoRepository, fotoRepository);
     }
 }

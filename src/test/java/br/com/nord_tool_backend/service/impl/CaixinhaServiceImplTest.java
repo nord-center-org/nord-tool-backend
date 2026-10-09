@@ -41,6 +41,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import br.com.nord_tool_backend.dto.*;
 import org.junit.jupiter.api.Nested;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class CaixinhaServiceImplTest {
 
@@ -404,5 +411,21 @@ class CaixinhaServiceImplTest {
             }
             assertTrue(json.contains("\"dtLancamento\":\"01/10/2026\""), json);
         }
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semPermissaoDeLeituraDoModuloNaoConsultaODado() {
+        when(autorizacao.exigir(Modulo.CAIXINHA, Acao.LEITURA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.listar(null));
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.CAIXINHA, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.excluir(1L, 1));
+        verifyNoInteractions(repository);
     }
 }

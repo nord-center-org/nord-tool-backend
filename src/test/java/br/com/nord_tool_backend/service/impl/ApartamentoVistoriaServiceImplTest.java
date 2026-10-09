@@ -39,6 +39,12 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 import br.com.nord_tool_backend.dto.*;
 import org.junit.jupiter.api.Nested;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 public class ApartamentoVistoriaServiceImplTest {
@@ -361,5 +367,21 @@ public class ApartamentoVistoriaServiceImplTest {
             assertNull(dto.getNmSituacaoTermo());
             assertNull(dto.getNrPaginasTermo());
         }
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semPermissaoDeLeituraDoModuloNaoConsultaODado() {
+        when(autorizacao.exigir(Modulo.VISTORIA, Acao.LEITURA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> apartamentoVistoriaService.listarApartamentoVistoria());
+        verifyNoInteractions(apartamentoVistoriaRepository, apartamentoVistoriaHistoricoRepository);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.VISTORIA, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> apartamentoVistoriaService.deletarApartamentoVistoria(1L));
+        verifyNoInteractions(apartamentoVistoriaRepository, apartamentoVistoriaHistoricoRepository);
     }
 }

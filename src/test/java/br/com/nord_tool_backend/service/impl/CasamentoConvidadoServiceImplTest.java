@@ -23,6 +23,13 @@ import org.apache.poi.ss.usermodel.Sheet;
 import java.util.List;
 import br.com.nord_tool_backend.handler.*;
 import org.junit.jupiter.api.Nested;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class CasamentoConvidadoServiceImplTest {
 
@@ -236,5 +243,21 @@ class CasamentoConvidadoServiceImplTest {
             assertThrows(NordException.class, () -> handler.ler(planilha(new String[]{"Grupo", "Mesa"}, new String[]{"x", "y"})));
             assertThrows(NordException.class, () -> handler.ler("isto não é uma planilha".getBytes()));
         }
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semPermissaoDeLeituraDoModuloNaoConsultaODado() {
+        when(autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> convidados.listar());
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> convidados.deletar(1L));
+        verifyNoInteractions(repository);
     }
 }

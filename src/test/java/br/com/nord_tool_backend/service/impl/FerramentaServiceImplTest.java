@@ -16,6 +16,12 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class FerramentaServiceImplTest {
@@ -97,5 +103,21 @@ class FerramentaServiceImplTest {
                         .nmCategoria("Elétrica").cdPatrimonio("PAT-3").flAtivo(true).build()),
                 ferramentaService.listarFerramentas());
         verify(ferramentaRepository).listarFerramentas();
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semAutenticacaoNaoConsultaODado() {
+        when(autorizacao.exigirAutenticado()).thenThrow(new NaoAutenticadoException("Autenticação necessária"));
+        assertThrows(NaoAutenticadoException.class, () -> ferramentaService.listarFerramentas());
+        verifyNoInteractions(ferramentaRepository);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.CADASTROS, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> ferramentaService.deletarFerramenta(1L));
+        verifyNoInteractions(ferramentaRepository);
     }
 }

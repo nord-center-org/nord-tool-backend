@@ -60,6 +60,11 @@ import java.util.HashMap;
 import java.util.Map;
 import br.com.nord_tool_backend.service.projecao.*;
 import org.junit.jupiter.api.Nested;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class FinanceiroProjecaoServiceImplTest {
 
@@ -802,5 +807,21 @@ class FinanceiroProjecaoServiceImplTest {
             assertEquals(v("1200.00"), linha(m.calcular().saidas, 4).projetado);
             assertEquals(Collections.emptyList(), new Montador().calcular().entradas);
         }
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semPermissaoDeLeituraDoModuloNaoConsultaODado() {
+        when(autorizacao.exigir(Modulo.FINANCEIRO, Acao.LEITURA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.obterConfiguracao());
+        verifyNoInteractions(repository, projecao);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.FINANCEIRO, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.reabrir("2026-10"));
+        verifyNoInteractions(repository, projecao);
     }
 }

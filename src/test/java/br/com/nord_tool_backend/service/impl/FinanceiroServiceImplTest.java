@@ -47,6 +47,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class FinanceiroServiceImplTest {
 
@@ -648,5 +653,21 @@ class FinanceiroServiceImplTest {
         assertEquals("Juan (obra)", captor.getValue().getNmCategoria());
         assertEquals(false, captor.getValue().getInAtivo());
         assertTrue(captor.getValue().getCdTipo().equals("SAIDA"));
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semPermissaoDeLeituraDoModuloNaoConsultaODado() {
+        when(autorizacao.exigir(Modulo.FINANCEIRO, Acao.LEITURA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.listarPessoas());
+        verifyNoInteractions(repository, projecaoRepository);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.FINANCEIRO, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.excluir(1L, 1));
+        verifyNoInteractions(repository, projecaoRepository);
     }
 }

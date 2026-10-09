@@ -18,6 +18,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 public class StatusVistoriaServiceImplTest {
@@ -55,5 +61,14 @@ public class StatusVistoriaServiceImplTest {
         List<StatusVistoriaDto> statusVistoriaDto = statusVistoriaService.listarStatusVistoria();
         assertEquals(lsStatusVistoriaDto, statusVistoriaDto);
         verify(statusVistoriaRepository).listarStatusVistoria();
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semAutenticacaoNaoConsultaODado() {
+        when(autorizacao.exigirAutenticado()).thenThrow(new NaoAutenticadoException("Autenticação necessária"));
+        assertThrows(NaoAutenticadoException.class, () -> statusVistoriaService.listarStatusVistoria());
+        verifyNoInteractions(statusVistoriaRepository);
     }
 }

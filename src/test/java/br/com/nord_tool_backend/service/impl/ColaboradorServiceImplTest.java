@@ -18,6 +18,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class ColaboradorServiceImplTest {
@@ -84,5 +90,21 @@ class ColaboradorServiceImplTest {
     void deveListarColaboradores() {
         when(repository.listarColaboradores()).thenReturn(Collections.singletonList(colaborador));
         assertEquals(Collections.singletonList(dto), service.listarColaboradores());
+    }
+
+    // ---------- autorização ----------
+
+    @Test
+    void semAutenticacaoNaoConsultaODado() {
+        when(autorizacao.exigirAutenticado()).thenThrow(new NaoAutenticadoException("Autenticação necessária"));
+        assertThrows(NaoAutenticadoException.class, () -> service.listarColaboradores());
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
+        when(autorizacao.exigir(Modulo.CADASTROS, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.deletarColaborador(1L));
+        verifyNoInteractions(repository);
     }
 }
