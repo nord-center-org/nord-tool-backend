@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.domain.FinanceiroCategoria;
@@ -49,6 +50,8 @@ import static org.mockito.Mockito.when;
 
 class FinanceiroServiceImplTest {
 
+    private final AutorizacaoService autorizacao = org.mockito.Mockito.mock(AutorizacaoService.class);
+
     private static final String UUID1 = "11111111-1111-1111-1111-111111111111";
 
     private FinanceiroRepository repository;
@@ -61,7 +64,7 @@ class FinanceiroServiceImplTest {
         projecaoRepository = mock(FinanceiroProjecaoRepository.class);
         // 08/10/2026 12:00 em São Paulo
         Clock relogio = Clock.fixed(Instant.parse("2026-10-08T15:00:00Z"), ZoneId.of("UTC"));
-        service = new FinanceiroServiceImpl(repository, projecaoRepository, relogio);
+        service = new FinanceiroServiceImpl(repository, projecaoRepository, relogio, autorizacao);
     }
 
     private void fechado(LocalDate competencia) {

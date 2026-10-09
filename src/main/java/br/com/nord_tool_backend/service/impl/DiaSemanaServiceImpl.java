@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.DiaSemana;
 import br.com.nord_tool_backend.dto.DiaSemanaDto;
 import br.com.nord_tool_backend.repository.DiaSemanaRepository;
@@ -19,7 +20,10 @@ public class DiaSemanaServiceImpl implements DiaSemanaService {
 
     private final DiaSemanaRepository diaSemanaRepository;
 
+    private final AutorizacaoService autorizacao;
+
     public List<DiaSemanaDto> listarDiaSemana(){
+        autorizacao.exigirAutenticado();
         log.info("Iniciando método para listar Dias da Semana");
         List<DiaSemana> lsDiaSemana = diaSemanaRepository.listarDiaSemana();
         List<DiaSemanaDto> lsDiaSemanaDto = lsDiaSemana.stream().map(DiaSemanaDto::converterToDto).collect(Collectors.toList());

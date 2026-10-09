@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.domain.CaixinhaComprovante;
@@ -35,8 +36,15 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import br.com.nord_tool_backend.dto.*;
+import org.junit.jupiter.api.Nested;
 
 class CaixinhaServiceImplTest {
+
+    private final AutorizacaoService autorizacao = org.mockito.Mockito.mock(AutorizacaoService.class);
 
     private static final String UUID1 = "11111111-1111-1111-1111-111111111111";
     private static final String UUID2 = "22222222-2222-2222-2222-222222222222";
@@ -50,7 +58,7 @@ class CaixinhaServiceImplTest {
     void setUp() {
         repository = mock(CaixinhaRepository.class);
         armazenamento = mock(ArmazenamentoService.class);
-        service = new CaixinhaServiceImpl(repository, armazenamento, 5 * 1024 * 1024);
+        service = new CaixinhaServiceImpl(repository, armazenamento, 5 * 1024 * 1024, autorizacao);
     }
 
     private CaixinhaResponsavel responsavel(long id, boolean ativo) {
@@ -371,5 +379,30 @@ class CaixinhaServiceImplTest {
         when(repository.buscarComprovante(anyLong())).thenReturn(Optional.empty());
         esperaErro(NordHttpEnum.HTTP_404, () -> service.excluirComprovante(1L));
         esperaErro(NordHttpEnum.HTTP_404, () -> service.baixarComprovante(1L));
+    }
+
+    @Nested
+    class CaixinhaResumoJsonTest {
+
+        @Test
+        void resumoSerializaOsNomesQueOFrontendLe() throws Exception {
+            String json = new ObjectMapper().writeValueAsString(
+                    new CaixinhaResumoDto(BigDecimal.TEN, BigDecimal.ONE, new BigDecimal("9"), 2, 1, 1));
+            for (String campo : new String[]{"total", "pago", "aPagar", "qtLancamentos", "qtPagos", "qtPendentes"}) {
+                assertTrue(json.contains("\"" + campo + "\":"), "falta o campo " + campo + " em " + json);
+            }
+            assertFalse(json.contains("\"apagar\""), json);
+        }
+
+        @Test
+        void lancamentoSerializaOsNomesQueOFrontendLe() throws Exception {
+            String json = new ObjectMapper().findAndRegisterModules().writeValueAsString(
+                    new CaixinhaLancamentoDto(1L, java.time.LocalDate.of(2026, 10, 1), 1L, "Ana", "x", BigDecimal.TEN, true, false, 1, 0));
+            for (String campo : new String[]{"idLancamento", "dtLancamento", "idResponsavel", "nmResponsavel", "txInsumo", "vlValor",
+                    "inLancado", "inPago", "nrVersao", "qtComprovantes"}) {
+                assertTrue(json.contains("\"" + campo + "\":"), "falta o campo " + campo + " em " + json);
+            }
+            assertTrue(json.contains("\"dtLancamento\":\"01/10/2026\""), json);
+        }
     }
 }

@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.domain.CasamentoAnexo;
 import br.com.nord_tool_backend.domain.CasamentoFornecedor;
@@ -29,6 +30,8 @@ import static org.mockito.Mockito.*;
 
 class CasamentoFornecedorServiceImplTest {
 
+    private final AutorizacaoService autorizacao = org.mockito.Mockito.mock(AutorizacaoService.class);
+
     private static final byte[] PDF = {'%', 'P', 'D', 'F', '-', '1'};
     private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 1};
 
@@ -40,7 +43,7 @@ class CasamentoFornecedorServiceImplTest {
     void setUp() {
         repository = mock(CasamentoRepository.class);
         armazenamento = mock(ArmazenamentoService.class);
-        service = new CasamentoFornecedorServiceImpl(repository, armazenamento);
+        service = new CasamentoFornecedorServiceImpl(repository, armazenamento, autorizacao);
     }
 
     private CasamentoFornecedor fornecedor(long id) {

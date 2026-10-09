@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.Empresa;
 import br.com.nord_tool_backend.dto.EmpresaDto;
 import br.com.nord_tool_backend.form.EmpresaForm;
@@ -20,6 +21,13 @@ import static org.mockito.Mockito.when;
 class EmpresaServiceImplTest {
     @Mock
     private EmpresaRepository empresaRepository;
+
+    @Mock
+
+
+    private AutorizacaoService autorizacao;
+
+
 
     @InjectMocks
     private EmpresaServiceImpl empresaService;

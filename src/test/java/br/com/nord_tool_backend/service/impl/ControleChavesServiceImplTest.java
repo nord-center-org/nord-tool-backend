@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.domain.ApartamentoVistoria;
 import br.com.nord_tool_backend.domain.ObraControleChaves;
@@ -37,6 +38,13 @@ class ControleChavesServiceImplTest {
 
     private static final LocalDateTime DT_RETIRADA = LocalDateTime.of(2026, 9, 29, 8, 30);
     private static final LocalDateTime DT_RECEBIMENTO = LocalDateTime.of(2026, 9, 29, 17, 45);
+
+    @Mock
+
+
+    private AutorizacaoService autorizacao;
+
+
 
     @InjectMocks
     private ControleChavesServiceImpl controleChavesService;

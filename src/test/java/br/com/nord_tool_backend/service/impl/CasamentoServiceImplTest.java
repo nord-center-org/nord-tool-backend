@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.domain.CasamentoMarco;
 import br.com.nord_tool_backend.dto.CasamentoConfiguracaoDto;
@@ -21,13 +22,15 @@ import static org.mockito.Mockito.*;
 
 class CasamentoServiceImplTest {
 
+    private final AutorizacaoService autorizacao = org.mockito.Mockito.mock(AutorizacaoService.class);
+
     private CasamentoRepository repository;
     private CasamentoServiceImpl service;
 
     @BeforeEach
     void setUp() {
         repository = mock(CasamentoRepository.class);
-        service = new CasamentoServiceImpl(repository);
+        service = new CasamentoServiceImpl(repository, autorizacao);
     }
 
     private CasamentoMarco marco(long id, String titulo, String prazo) {

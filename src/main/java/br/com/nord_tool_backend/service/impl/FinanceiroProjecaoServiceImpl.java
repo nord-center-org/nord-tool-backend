@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.exception.ConflitoException;
@@ -56,11 +59,13 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     private final FinanceiroRepository repository;
     private final FinanceiroProjecaoRepository projecaoRepository;
     private final Clock clock;
+    private final AutorizacaoService autorizacao;
 
-    public FinanceiroProjecaoServiceImpl(FinanceiroRepository repository, FinanceiroProjecaoRepository projecaoRepository, Clock clock) {
+    public FinanceiroProjecaoServiceImpl(FinanceiroRepository repository, FinanceiroProjecaoRepository projecaoRepository, Clock clock, AutorizacaoService autorizacao) {
         this.repository = repository;
         this.projecaoRepository = projecaoRepository;
         this.clock = clock;
+        this.autorizacao = autorizacao;
     }
 
     // ---------- a conta do mês ----------
@@ -68,12 +73,14 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     @Override
     @Transactional(readOnly = true)
     public FinanceiroProjecaoMesDto obterMes(String competencia, Long idPessoa) {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.LEITURA);
         return projetar(mes(competencia), idPessoa, false);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroProjecaoMesDto definirSaldoInicial(String competencia, FinanceiroSaldoInicialForm form) {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.ESCRITA);
         YearMonth mes = mes(competencia);
         exigirAberto(mes);
         projecaoRepository.garantirMes(mes.atDay(1));
@@ -84,6 +91,7 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroFechamentoDto fechar(String competencia, Long idUsuario) {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.ESCRITA);
         YearMonth mes = mes(competencia);
         Optional<FinanceiroMes> linha = projecaoRepository.buscarMes(mes.atDay(1));
         if (linha.isPresent() && fechado(linha.get())) throw invalido("O mês de " + rotulo(mes) + " já está fechado");
@@ -109,6 +117,7 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroProjecaoMesDto reabrir(String competencia) {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.ESCRITA);
         YearMonth mes = mes(competencia);
         if (!mesFechadoNoBanco(mes)) throw invalido("O mês de " + rotulo(mes) + " não está fechado");
         if (projecaoRepository.existeMesFechadoApos(mes.atDay(1))) {
@@ -226,12 +235,14 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     @Override
     @Transactional
     public FinanceiroConfiguracaoDto obterConfiguracao() {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.LEITURA);
         return FinanceiroConfiguracaoDto.de(configuracao());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroConfiguracaoDto atualizarConfiguracao(FinanceiroConfiguracaoForm form) {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.ESCRITA);
         projecaoRepository.garantirConfiguracao();
         FinanceiroConfiguracao c = new FinanceiroConfiguracao();
         c.setVlMetaSaldo(form.getVlMetaSaldo());
@@ -261,6 +272,7 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     @Override
     @Transactional(readOnly = true)
     public List<FinanceiroFaturaLeituraDto> listarLeituras(Long idLancamento) {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.LEITURA);
         repository.buscarLancamento(idLancamento)
                 .orElseThrow(() -> new NaoEncontradoException("Lançamento não encontrado"));
         return projecaoRepository.listarLeituras(idLancamento).stream().map(FinanceiroFaturaLeituraDto::de).collect(Collectors.toList());
@@ -271,12 +283,14 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     @Override
     @Transactional(readOnly = true)
     public List<FinanceiroRecorrenciaDto> listarRecorrencias() {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.LEITURA);
         return projecaoRepository.listarRecorrencias().stream().map(FinanceiroRecorrenciaDto::de).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroRecorrenciaDto criarRecorrencia(FinanceiroRecorrenciaForm form) {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.ESCRITA);
         validarRecorrencia(form, null, null);
         Long id = projecaoRepository.inserirRecorrencia(converter(form));
         return FinanceiroRecorrenciaDto.de(recorrencia(id));
@@ -285,6 +299,7 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroRecorrenciaDto atualizarRecorrencia(Long id, FinanceiroRecorrenciaForm form) {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.ESCRITA);
         if (form.getNrVersao() == null) throw invalido("Informe a versão da recorrência (nrVersao)");
         FinanceiroRecorrencia atual = recorrencia(id);
         validarRecorrencia(form, atual.getIdCategoria(), atual.getIdPessoa());
@@ -299,6 +314,7 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroGeracaoDto gerarRecorrencias(String competencia, Long idUsuario) {
+        autorizacao.exigir(Modulo.FINANCEIRO, Acao.ESCRITA);
         YearMonth mes = mes(competencia);
         exigirAberto(mes);
         return new FinanceiroGeracaoDto(formato(mes), gerar(mes, idUsuario));

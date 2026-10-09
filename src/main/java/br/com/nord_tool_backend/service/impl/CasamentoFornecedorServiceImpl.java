@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NaoEncontradoException;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.CasamentoAnexo;
@@ -31,21 +34,26 @@ public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorServic
     private final CasamentoRepository repository;
     private final ArmazenamentoService armazenamento;
 
+    private final AutorizacaoService autorizacao;
+
     @Override
     @Transactional(readOnly = true)
     public List<CasamentoFornecedorDto> listar() {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         return repository.listarFornecedores().stream().map(CasamentoFornecedorDto::de).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public CasamentoFornecedorDto buscar(Long id) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         return CasamentoFornecedorDto.de(fornecedor(id));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CasamentoFornecedorDto criar(CasamentoFornecedorForm form) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         Long id = repository.inserirFornecedor(converter(form));
         return CasamentoFornecedorDto.de(fornecedor(id));
     }
@@ -53,6 +61,7 @@ public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CasamentoFornecedorDto alterar(Long id, CasamentoFornecedorForm form) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         fornecedor(id);
         CasamentoFornecedor novo = converter(form);
         novo.setId(id);
@@ -63,6 +72,7 @@ public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deletar(Long id) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         fornecedor(id);
         List<Long> arquivos = repository.listarAnexos(id).stream()
                 .map(CasamentoAnexo::getIdArquivo).collect(Collectors.toList());
@@ -76,6 +86,7 @@ public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorServic
     @Override
     @Transactional(readOnly = true)
     public List<CasamentoAnexoDto> listarAnexos(Long idFornecedor) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         fornecedor(idFornecedor);
         return repository.listarAnexos(idFornecedor).stream().map(CasamentoAnexoDto::de).collect(Collectors.toList());
     }
@@ -83,6 +94,7 @@ public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CasamentoAnexoDto anexar(Long idFornecedor, String nomeArquivo, byte[] bytes, String descricao) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         fornecedor(idFornecedor);
         String contentType = ArquivoValidador.validarContrato(nomeArquivo, bytes);
         String texto = descricao == null || descricao.trim().isEmpty() ? null : descricao.trim();
@@ -97,6 +109,7 @@ public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorServic
     @Override
     @Transactional(readOnly = true)
     public ArquivoDownload baixarAnexo(Long idAnexo) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         CasamentoAnexo anexo = anexo(idAnexo);
         long versao = anexo.getDhCriacao() == null ? 0L
                 : anexo.getDhCriacao().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
@@ -106,6 +119,7 @@ public class CasamentoFornecedorServiceImpl implements CasamentoFornecedorServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluirAnexo(Long idAnexo) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         CasamentoAnexo anexo = anexo(idAnexo);
         repository.deletarAnexo(idAnexo);
         armazenamento.apagar(anexo.getIdArquivo());

@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.ApartamentoVistoria;
 import br.com.nord_tool_backend.domain.InfoGeralApartamentoVistoria;
 import br.com.nord_tool_backend.domain.OrdenacaoApartamentoVistoria;
@@ -35,9 +36,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import br.com.nord_tool_backend.dto.*;
+import org.junit.jupiter.api.Nested;
 
 @ExtendWith(MockitoExtension.class)
 public class ApartamentoVistoriaServiceImplTest {
+
+    private final AutorizacaoService autorizacao = org.mockito.Mockito.mock(AutorizacaoService.class);
 
     private ApartamentoVistoriaService apartamentoVistoriaService;
 
@@ -76,7 +82,7 @@ public class ApartamentoVistoriaServiceImplTest {
                 apartamentoVistoriaHistoricoRepository,
                 xlsxExtractorHandlerApartamento,
                 termoReprovaService
-        );
+        , autorizacao);
 
         apartamentoVistoria = ApartamentoVistoria.builder()
                 .id(1L)
@@ -196,7 +202,7 @@ public class ApartamentoVistoriaServiceImplTest {
     @Test
     void deveDeletarApartamentoVistoria(){
         doNothing().when(apartamentoVistoriaRepository).deletarApartamentoVistoria(anyLong());
-        apartamentoVistoriaService.deletarApartamentoVistoria(anyLong());
+        apartamentoVistoriaService.deletarApartamentoVistoria(1L);
         verify(termoReprovaService, times(1)).apagarPorApartamento(anyLong());
         verify(apartamentoVistoriaRepository, times(1)).deletarApartamentoVistoria(anyLong());
         verify(cacheService, times(1)).limparTodos();
@@ -205,7 +211,7 @@ public class ApartamentoVistoriaServiceImplTest {
     @Test
     void deveRetornarUmApartamentoVistoria(){
         when(apartamentoVistoriaRepository.buscarApartamentoVistoria(anyLong())).thenReturn(apartamentoVistoria);
-        apartamentoVistoriaService.buscarApartamentoVistoria(anyLong());
+        apartamentoVistoriaService.buscarApartamentoVistoria(1L);
         verify(apartamentoVistoriaRepository, times(1)).buscarApartamentoVistoria(anyLong());
     }
 
@@ -315,5 +321,45 @@ public class ApartamentoVistoriaServiceImplTest {
         assertThrows(EntradaInvalidaException.class, () ->
                 apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, 0, 101, null));
         verifyNoInteractions(apartamentoVistoriaRepository);
+    }
+
+    @Nested
+    class ApartamentoVistoriaDtoTest {
+
+        @Test
+        void converteOsDadosDoUltimoTermo() {
+            ApartamentoVistoria apt = ApartamentoVistoria.builder()
+                    .id(1L)
+                    .nmApartamentoVistoria("EN-02-1307")
+                    .inTermoAnexado(true)
+                    .qtTermos(2)
+                    .nrUltimoTermo(2)
+                    .nmSituacaoTermo("EM_ANDAMENTO")
+                    .qtFotosTermo(3)
+                    .nrPaginasTermo(4)
+                    .nrPaginasComFoto(2)
+                    .build();
+
+            ApartamentoVistoriaDto dto = ApartamentoVistoriaDto.converterToDto(apt);
+
+            assertTrue(dto.isInTermoAnexado());
+            assertEquals(2, dto.getQtTermos());
+            assertEquals(2, dto.getNrUltimoTermo());
+            assertEquals("EM_ANDAMENTO", dto.getNmSituacaoTermo());
+            assertEquals(3, dto.getQtFotosTermo());
+            assertEquals(4, dto.getNrPaginasTermo());
+            assertEquals(2, dto.getNrPaginasComFoto());
+        }
+
+        @Test
+        void semTermoMantemOsCamposVazios() {
+            ApartamentoVistoriaDto dto = ApartamentoVistoriaDto.converterToDto(
+                    ApartamentoVistoria.builder().id(2L).nmApartamentoVistoria("N1-01-0101").build());
+
+            assertFalse(dto.isInTermoAnexado());
+            assertNull(dto.getNrUltimoTermo());
+            assertNull(dto.getNmSituacaoTermo());
+            assertNull(dto.getNrPaginasTermo());
+        }
     }
 }

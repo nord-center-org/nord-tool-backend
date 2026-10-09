@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.ObraControleChaves;
@@ -33,10 +36,13 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     private static final String CODIGO_RETIRADA_PREFIXO = "RET-";
     private static final Pattern PADRAO_NOME_OBRA = Pattern.compile("\\s*[-_]?\\s*[0-9].*$");
     private static final int QUANTIDADE_POR_PAGINA_PADRAO = 20;
-    private final ControleChavesRepository controleChavesRepository;
+    private final ControleChavesRepository controleChavesRepository;
+
+    private final AutorizacaoService autorizacao;
 
     @Override
     public List<ObraControleChavesDto> listarObras() {
+        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.LEITURA);
         return controleChavesRepository.listarObras().stream()
                 .map(ObraControleChaves::getNmApartamentoVistoria)
                 .map(this::extrairNomeObra)
@@ -49,6 +55,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
 
     @Override
     public List<ApartamentoControleChavesDto> listarApartamentos(String nmBusca, int nrQuantidadePorPagina, int nrPagina) {
+        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.LEITURA);
         return controleChavesRepository.listarApartamentos().stream()
                 .filter(apartamento -> correspondeBusca(apartamento.getNmApartamentoVistoria(), nmBusca))
                 .skip(obterOffset(nrQuantidadePorPagina, nrPagina))
@@ -59,6 +66,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
 
     @Override
     public List<FerramentaControleChavesDto> listarFerramentas(String nmBusca, int nrQuantidadePorPagina, int nrPagina) {
+        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.LEITURA);
         return controleChavesRepository.listarFerramentas().stream()
                 .filter(ferramenta -> correspondeBusca(ferramenta.getNmFerramenta(), nmBusca))
                 .skip(obterOffset(nrQuantidadePorPagina, nrPagina))
@@ -69,6 +77,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
 
     @Override
     public DashboardControleChavesDto buscarDashboard(int nrLimiteRecentes, String idObra) {
+        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.LEITURA);
         int nrQuantidadePorPagina = nrLimiteRecentes > 0 ? nrLimiteRecentes : 5;
         List<RetiradaControleChavesDto> retiradasRecentes = controleChavesRepository.listarHistorico().stream()
                 .filter(requisicao -> correspondeObra(requisicao, idObra))
@@ -86,6 +95,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
 
     @Override
     public List<RetiradaControleChavesDto> listarHistorico(String nmBusca, String nmStatusRequisicao, String idObra, int nrQuantidadePorPagina, int nrPagina) {
+        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.LEITURA);
         final String nmStatusRequisicaoNormalizado = nmStatusRequisicao != null && !nmStatusRequisicao.isBlank() ? validarStatus(nmStatusRequisicao).name() : nmStatusRequisicao;
 
         return controleChavesRepository.listarHistorico().stream()
@@ -103,6 +113,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RetiradaControleChavesDto criarRetirada(NovaRetiradaControleChavesForm novaRetiradaControleChavesForm) {
+        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA);
         if (novaRetiradaControleChavesForm == null
                 || !idValido(novaRetiradaControleChavesForm.getIdUserRetirada())
                 || !idValido(novaRetiradaControleChavesForm.getIdUserLiberacao())) {
@@ -122,6 +133,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     @Transactional(rollbackFor = Exception.class)
     public RetiradaControleChavesDto receberRetirada(Long idRequisicao,
                                                        RecebimentoControleChavesForm recebimentoControleChavesForm) {
+        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA);
         if (!idValido(idRequisicao) || recebimentoControleChavesForm == null
                 || !idValido(recebimentoControleChavesForm.getIdUserRecebimento())) {
             throw erroValidacao("Retirada e usuário recebedor são obrigatórios e devem ser válidos");

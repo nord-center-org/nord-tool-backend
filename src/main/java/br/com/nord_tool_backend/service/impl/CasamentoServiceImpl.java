@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.dto.CasamentoConfiguracaoDto;
 import br.com.nord_tool_backend.dto.CasamentoDashboardDto;
@@ -27,11 +30,14 @@ public class CasamentoServiceImpl implements CasamentoService {
     static final String CHAVE_DATA = "dataCasamento";
     static final int QT_PROXIMOS_MARCOS = 5;
 
-    private final CasamentoRepository repository;
+    private final CasamentoRepository repository;
+
+    private final AutorizacaoService autorizacao;
 
     @Override
     @Transactional(readOnly = true)
     public CasamentoConfiguracaoDto buscarConfiguracao() {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         Map<String, String> config = repository.listarConfiguracao();
         return new CasamentoConfiguracaoDto(config.get(CHAVE_CASAL), config.get(CHAVE_DATA));
     }
@@ -39,6 +45,7 @@ public class CasamentoServiceImpl implements CasamentoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CasamentoConfiguracaoDto salvarConfiguracao(CasamentoConfiguracaoForm form) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         try {
             LocalDate.parse(form.getDataCasamento());
         } catch (DateTimeParseException ex) {
@@ -52,6 +59,7 @@ public class CasamentoServiceImpl implements CasamentoService {
     @Override
     @Transactional(readOnly = true)
     public CasamentoDashboardDto dashboard() {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         CasamentoTotaisDto t = repository.buscarTotais();
         List<CasamentoMarcoDto> proximos = repository.listarProximosMarcos(QT_PROXIMOS_MARCOS).stream()
                 .map(CasamentoMarcoDto::de).collect(Collectors.toList());

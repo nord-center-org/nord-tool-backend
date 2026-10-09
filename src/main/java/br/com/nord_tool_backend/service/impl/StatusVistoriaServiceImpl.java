@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.StatusVistoria;
 import br.com.nord_tool_backend.dto.StatusVistoriaDto;
 import br.com.nord_tool_backend.repository.StatusVistoriaRepository;
@@ -18,9 +19,12 @@ public class StatusVistoriaServiceImpl implements StatusVistoriaService {
 
     private final Logger log = LogManager.getLogger(StatusVistoriaServiceImpl.class);
 
-    private final StatusVistoriaRepository statusVistoriaRepository;
+    private final StatusVistoriaRepository statusVistoriaRepository;
+
+    private final AutorizacaoService autorizacao;
 
     public List<StatusVistoriaDto> listarStatusVistoria(){
+        autorizacao.exigirAutenticado();
         log.info("Iniciando método para listar Status Vistoria");
         List<StatusVistoria> lsStatusVistoria = statusVistoriaRepository.listarStatusVistoria();
         List<StatusVistoriaDto> lsStatusVistoriaDto = lsStatusVistoria.stream().map(StatusVistoriaDto::converterToDto).collect(Collectors.toList());

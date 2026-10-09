@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.Permissao;
 import br.com.nord_tool_backend.dto.PermissaoDto;
 import br.com.nord_tool_backend.form.PermissaoForm;
@@ -20,6 +21,13 @@ import static org.mockito.Mockito.when;
 class PermissaoServiceImplTest {
     @Mock
     private PermissaoRepository permissaoRepository;
+
+    @Mock
+
+
+    private AutorizacaoService autorizacao;
+
+
 
     @InjectMocks
     private PermissaoServiceImpl permissaoService;

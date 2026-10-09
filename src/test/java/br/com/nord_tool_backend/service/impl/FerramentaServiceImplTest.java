@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.Ferramenta;
 import br.com.nord_tool_backend.dto.FerramentaDto;
 import br.com.nord_tool_backend.form.FerramentaForm;
@@ -20,6 +21,13 @@ import static org.mockito.Mockito.when;
 class FerramentaServiceImplTest {
     @Mock
     private FerramentaRepository ferramentaRepository;
+
+    @Mock
+
+
+    private AutorizacaoService autorizacao;
+
+
 
     @InjectMocks
     private FerramentaServiceImpl ferramentaService;

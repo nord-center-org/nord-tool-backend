@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.Colaborador;
 import br.com.nord_tool_backend.dto.ColaboradorDto;
 import br.com.nord_tool_backend.form.ColaboradorForm;
@@ -20,6 +21,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ColaboradorServiceImplTest {
+
+    private final AutorizacaoService autorizacao = org.mockito.Mockito.mock(AutorizacaoService.class);
     @Mock
     private ColaboradorRepository repository;
 
@@ -30,7 +33,7 @@ class ColaboradorServiceImplTest {
 
     @BeforeEach
     void setup() {
-        service = new ColaboradorServiceImpl(repository);
+        service = new ColaboradorServiceImpl(repository, autorizacao);
         colaboradorForm = ColaboradorForm.builder()
                 .nmColaborador("João Silva")
                 .nrCelular("11999999999")

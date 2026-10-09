@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NaoEncontradoException;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.CasamentoMarco;
@@ -33,23 +36,28 @@ public class CasamentoMarcoServiceImpl implements CasamentoMarcoService {
             {"Confirmar logística e cronograma final", "2027-09-12"},
     };
 
-    private final CasamentoRepository repository;
+    private final CasamentoRepository repository;
+
+    private final AutorizacaoService autorizacao;
 
     @Override
     @Transactional(readOnly = true)
     public List<CasamentoMarcoDto> listar() {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         return repository.listarMarcos().stream().map(CasamentoMarcoDto::de).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public CasamentoMarcoDto buscar(Long id) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         return CasamentoMarcoDto.de(marco(id));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CasamentoMarcoDto criar(CasamentoMarcoForm form) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         CasamentoMarco novo = converter(form);
         novo.setInConcluido(false);
         return CasamentoMarcoDto.de(marco(repository.inserirMarco(novo)));
@@ -58,6 +66,7 @@ public class CasamentoMarcoServiceImpl implements CasamentoMarcoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CasamentoMarcoDto alterar(Long id, CasamentoMarcoForm form) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         marco(id);
         CasamentoMarco novo = converter(form);
         novo.setId(id);
@@ -68,6 +77,7 @@ public class CasamentoMarcoServiceImpl implements CasamentoMarcoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CasamentoMarcoDto concluir(Long id, boolean concluido) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         marco(id);
         repository.concluirMarco(id, concluido);
         return CasamentoMarcoDto.de(marco(id));
@@ -76,6 +86,7 @@ public class CasamentoMarcoServiceImpl implements CasamentoMarcoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deletar(Long id) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         marco(id);
         repository.deletarMarco(id);
     }
@@ -83,6 +94,7 @@ public class CasamentoMarcoServiceImpl implements CasamentoMarcoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<CasamentoMarcoDto> criarPadrao() {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         if (repository.contarMarcos() > 0) {
             throw new EntradaInvalidaException("Os marcos padrão só podem ser criados quando não há marcos cadastrados");
         }

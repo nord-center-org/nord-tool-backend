@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.CronogramaSemanal;
 import br.com.nord_tool_backend.dto.CronogramaSemanalDto;
@@ -20,11 +23,14 @@ import java.util.stream.Collectors;
 public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     private final Logger log = LogManager.getLogger(CronogramaSemanalServiceImpl.class);
 
-    private final CronogramaSemanalRepository cronogramaSemanalRepository;
+    private final CronogramaSemanalRepository cronogramaSemanalRepository;
+
+    private final AutorizacaoService autorizacao;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CronogramaSemanalDto salvarCronogramaSemanal(CronogramaSemanalForm cronogramaSemanalForm) {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
         log.info("Iniciando método para salvar um Cronograma Semanal");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalForm.converterToDomain();
         validarOrigemCronogramaSemanal(cronogramaSemanal);
@@ -36,6 +42,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CronogramaSemanalDto alterarCronogramaSemanal(CronogramaSemanalForm cronogramaSemanalForm) {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
         log.info("Iniciando método para alterar um Cronograma Semanal");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalForm.converterToDomain();
         validarOrigemCronogramaSemanal(cronogramaSemanal);
@@ -54,6 +61,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deletarCronogramaSemanal(Long id) {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
         log.info("Iniciando método para deletar um Cronograma Semanal");
         this.cronogramaSemanalRepository.deletarCronogramaSemanal(id);
         log.info("Finalizando método que deleta um Cronograma Semanal");
@@ -61,6 +69,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
 
     @Override
     public CronogramaSemanalDto buscarPorIdCronogramaSemanal(Long id) {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.LEITURA);
         log.info("Iniciando método para buscar um Cronograma Semanal por id");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id);
         CronogramaSemanalDto cronogramaSemanalDto = CronogramaSemanalDto.converterToDto(cronogramaSemanal);
@@ -70,6 +79,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
 
     @Override
     public List<CronogramaSemanalDto> listarCronogramaSemanal() {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.LEITURA);
         log.info("Iniciando método para listar Cronograma Semanal");
         List<CronogramaSemanal> lsCronogramaSemanal = cronogramaSemanalRepository.listarCronogramaSemanal();
         List<CronogramaSemanalDto> lsCronogramaSemanalDto = lsCronogramaSemanal.stream().map(CronogramaSemanalDto::converterToDto).collect(Collectors.toList());

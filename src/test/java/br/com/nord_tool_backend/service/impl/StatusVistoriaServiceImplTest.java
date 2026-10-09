@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.StatusVistoria;
 import br.com.nord_tool_backend.dto.StatusVistoriaDto;
 import br.com.nord_tool_backend.repository.StatusVistoriaRepository;
@@ -20,6 +21,11 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class StatusVistoriaServiceImplTest {
+
+    @Mock
+
+    private AutorizacaoService autorizacao;
+
 
     @InjectMocks
     private StatusVistoriaServiceImpl statusVistoriaService;

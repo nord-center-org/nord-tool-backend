@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.domain.TermoFoto;
 import br.com.nord_tool_backend.domain.TermoReprova;
@@ -29,8 +30,13 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import java.util.Arrays;
+import br.com.nord_tool_backend.storage.*;
+import org.junit.jupiter.api.Nested;
 
 class TermoReprovaServiceImplTest {
+
+    private final AutorizacaoService autorizacao = org.mockito.Mockito.mock(AutorizacaoService.class);
 
     private static final byte[] PDF = {'%', 'P', 'D', 'F', '-', '1'};
     private static final byte[] JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 1, 2};
@@ -48,7 +54,7 @@ class TermoReprovaServiceImplTest {
         fotoRepository = mock(TermoFotoRepository.class);
         armazenamento = mock(ArmazenamentoService.class);
         cacheService = mock(CacheService.class);
-        service = new TermoReprovaServiceImpl(termoRepository, fotoRepository, armazenamento, cacheService);
+        service = new TermoReprovaServiceImpl(termoRepository, fotoRepository, armazenamento, cacheService, autorizacao);
     }
 
     private TermoReprova termo(long id, int paginas, String situacao) {
@@ -467,5 +473,98 @@ class TermoReprovaServiceImplTest {
         service.buscar(1L);
 
         verifyNoInteractions(cacheService);
+    }
+
+    @Nested
+    class ArquivoValidadorTest {
+
+        private byte[] comPrefixo(int tamanho, int... prefixo) {
+            byte[] b = new byte[tamanho];
+            for (int i = 0; i < prefixo.length; i++) b[i] = (byte) prefixo[i];
+            return b;
+        }
+
+        private final int[] JPEG = {0xFF, 0xD8, 0xFF, 0xE0};
+        private final int[] PNG = {0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
+        private final int[] PDF = {'%', 'P', 'D', 'F', '-'};
+
+        @Test
+        void aceitaPdfValido() {
+            assertEquals("application/pdf", ArquivoValidador.validarPdf("termo.pdf", comPrefixo(100, PDF)));
+        }
+
+        @Test
+        void rejeitaPdfSemAssinaturaOuAcimaDe15Mb() {
+            NordException a = assertThrows(NordException.class,
+                    () -> ArquivoValidador.validarPdf("x.pdf", comPrefixo(100, JPEG)));
+            assertTrue(a.getMessage().contains("PDF"));
+            assertThrows(NordException.class,
+                    () -> ArquivoValidador.validarPdf("x.pdf", comPrefixo(ArquivoValidador.MAX_PDF_BYTES + 1, PDF)));
+            assertDoesNotThrow(() -> ArquivoValidador.validarPdf("x.pdf", comPrefixo(ArquivoValidador.MAX_PDF_BYTES, PDF)));
+        }
+
+        @Test
+        void detectaJpegEPngPeloConteudoENaoPelaExtensao() {
+            assertEquals("image/jpeg", ArquivoValidador.validarImagem("a.png", comPrefixo(50, JPEG)));
+            assertEquals("image/png", ArquivoValidador.validarImagem("a.jpg", comPrefixo(50, PNG)));
+        }
+
+        @Test
+        void rejeitaImagemInvalidaOuAcimaDe5Mb() {
+            assertThrows(NordException.class, () -> ArquivoValidador.validarImagem("a.gif", comPrefixo(50, 'G', 'I', 'F')));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarImagem("a.jpg", comPrefixo(ArquivoValidador.MAX_IMAGEM_BYTES + 1, JPEG)));
+            assertDoesNotThrow(() -> ArquivoValidador.validarImagem("a.jpg", comPrefixo(ArquivoValidador.MAX_IMAGEM_BYTES, JPEG)));
+        }
+
+        @Test
+        void rejeitaArquivoVazioOuNulo() {
+            assertThrows(NordException.class, () -> ArquivoValidador.validarPdf("x.pdf", new byte[0]));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarImagem("x.jpg", null));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarPdf("x.pdf", new byte[3]));
+        }
+
+        @Test
+        void validaNome() {
+            char[] longo = new char[181];
+            Arrays.fill(longo, 'a');
+            assertThrows(NordException.class, () -> ArquivoValidador.validarNome(new String(longo)));
+            assertDoesNotThrow(() -> ArquivoValidador.validarNome(new String(longo, 0, 180)));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarNome("a\nb.pdf"));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarNome("a\u0000.pdf"));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarNome("  "));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarNome(null));
+            assertDoesNotThrow(() -> ArquivoValidador.validarNome("Relatório de reprova (1º).pdf"));
+        }
+
+        @Test
+        void contratoAceitaPdfEImagemAte15Mb() {
+            assertEquals("application/pdf", ArquivoValidador.validarContrato("c.pdf", comPrefixo(100, PDF)));
+            assertEquals("image/jpeg", ArquivoValidador.validarContrato("c.jpg", comPrefixo(100, JPEG)));
+            assertEquals("image/png", ArquivoValidador.validarContrato("c.png", comPrefixo(100, PNG)));
+            assertDoesNotThrow(() -> ArquivoValidador.validarContrato("c.jpg", comPrefixo(ArquivoValidador.MAX_CONTRATO_BYTES, JPEG)));
+        }
+
+        @Test
+        void contratoRecusaOutrosTiposVazioEAcimaDe15Mb() {
+            assertThrows(NordException.class, () -> ArquivoValidador.validarContrato("c.txt", comPrefixo(100, 'G', 'I', 'F')));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarContrato("c.pdf", new byte[0]));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarContrato("c.pdf", comPrefixo(ArquivoValidador.MAX_CONTRATO_BYTES + 1, PDF)));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarContrato("a\nb.pdf", comPrefixo(100, PDF)));
+        }
+
+        @Test
+        void comprovanteCaixinhaExigePdfCompletoDentroDoLimite() {
+            byte[] ok = "%PDF-1.4\nconteudo\n%%EOF\n".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+            assertEquals(ArquivoValidador.PDF, ArquivoValidador.validarComprovantePdf("n.pdf", ok, 1024));
+            byte[] semEof = "%PDF-1.4\ncortado".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+            assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", semEof, 1024));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", ok, 10));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", new byte[0], 1024));
+            assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", "GIF89a%%EOF".getBytes(), 1024));
+            // %%EOF só vale nos últimos 1024 bytes
+            byte[] longe = new byte[3000];
+            System.arraycopy(ok, 0, longe, 0, ok.length);
+            assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", longe, 5000));
+        }
     }
 }

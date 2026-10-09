@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.TermoFoto;
 import br.com.nord_tool_backend.domain.TermoReprova;
 import br.com.nord_tool_backend.domain.enums.SituacaoTermoEnum;
@@ -46,11 +49,14 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     // A listagem de apartamentos traz os dados do último termo: qualquer alteração invalida o cache.
     private final CacheService cacheService;
 
+    private final AutorizacaoService autorizacao;
+
     // ---------- termos ----------
 
     @Override
     @Transactional(readOnly = true)
     public TermoReprovaResumoGeralDto resumoGeral() {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.LEITURA);
         TermoReprovaResumoGeralDto resumo = termoRepository.resumoGeral();
         int total = valor(resumo.getTotalApartamentosComReprova());
         double percentual = total == 0 ? 0.0
@@ -66,6 +72,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(readOnly = true)
     public List<TermoReprovaResumoDto> listarPorApartamento(Long idApartamento) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.LEITURA);
         return termoRepository.listarPorApartamento(idApartamento).stream()
                 .map(this::toResumo).collect(Collectors.toList());
     }
@@ -73,12 +80,14 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(readOnly = true)
     public TermoReprovaDto buscar(Long idTermo) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.LEITURA);
         return montar(termo(idTermo), new ArrayList<>());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TermoReprovaDto criar(Long idApartamento, String nomeArquivo, byte[] pdf, int nrPaginas) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         if (!termoRepository.apartamentoExiste(idApartamento)) {
             throw new NaoEncontradoException("Apartamento não encontrado");
         }
@@ -98,6 +107,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TermoReprovaDto trocarArquivo(Long idTermo, String nomeArquivo, byte[] pdf, int nrPaginas) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         TermoReprova atual = termo(idTermo);
         validarNrPaginas(nrPaginas);
         String contentType = ArquivoValidador.validarPdf(nomeArquivo, pdf);
@@ -130,6 +140,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TermoReprovaDto atualizarSituacao(Long idTermo, SituacaoTermoForm form) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         termo(idTermo);
         SituacaoTermoEnum situacao = SituacaoTermoEnum.de(form.getSituacao())
                 .orElseThrow(() -> new EntradaInvalidaException("Situação inválida. Use PENDENTE, EM_ANDAMENTO ou CONCLUIDO."));
@@ -146,6 +157,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deletar(Long idTermo) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         TermoReprova termo = termo(idTermo);
         List<TermoFoto> fotos = fotoRepository.listarPorTermo(idTermo);
         // Primeiro as linhas (o cascade remove as fotos), depois os arquivos que elas referenciam.
@@ -161,6 +173,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void apagarPorApartamento(Long idApartamento) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         for (Long idTermo : termoRepository.listarIdsPorApartamento(idApartamento)) {
             deletar(idTermo);
         }
@@ -169,6 +182,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(readOnly = true)
     public ArquivoDownload abrirPdf(Long idTermo) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.LEITURA);
         TermoReprova termo = termo(idTermo);
         return new ArquivoDownload(armazenamento.abrir(termo.getIdArquivo()), versao(termo.getDhAlteracao()));
     }
@@ -178,6 +192,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TermoFotoDto adicionarFoto(Long idTermo, String nomeImagem, byte[] imagem, byte[] miniatura, int nrPagina, String legenda) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         TermoReprova termo = termo(idTermo);
         validarPagina(termo, nrPagina);
         String tipoImagem = ArquivoValidador.validarImagem(nomeImagem, imagem);
@@ -198,6 +213,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TermoFotoDto editarFoto(Long idFoto, String nomeImagem, byte[] imagem, byte[] miniatura, String legenda, Integer nrPagina) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         TermoFoto foto = foto(idFoto);
         if ((imagem == null) != (miniatura == null)) {
             throw new EntradaInvalidaException("Envie a imagem e a miniatura juntas.");
@@ -229,6 +245,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluirFoto(Long idFoto) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         TermoFoto foto = foto(idFoto);
         fotoRepository.deletar(idFoto);
         cacheService.limparTodos();
@@ -239,6 +256,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<TermoFotoDto> ordenarFotos(Long idTermo, List<OrdemFotoForm> ordem) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.ESCRITA);
         termo(idTermo);
         Set<Long> idsDoTermo = fotoRepository.listarPorTermo(idTermo).stream()
                 .map(TermoFoto::getId).collect(Collectors.toCollection(HashSet::new));
@@ -259,6 +277,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(readOnly = true)
     public ArquivoDownload abrirImagem(Long idFoto) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.LEITURA);
         TermoFoto foto = foto(idFoto);
         return new ArquivoDownload(armazenamento.abrir(foto.getIdArquivoImagem()), versao(foto.getDhAlteracao()));
     }
@@ -266,6 +285,7 @@ public class TermoReprovaServiceImpl implements TermoReprovaService {
     @Override
     @Transactional(readOnly = true)
     public ArquivoDownload abrirMiniatura(Long idFoto) {
+        autorizacao.exigir(Modulo.TERMO_REPROVA, Acao.LEITURA);
         TermoFoto foto = foto(idFoto);
         return new ArquivoDownload(armazenamento.abrir(foto.getIdArquivoMiniatura()), versao(foto.getDhAlteracao()));
     }

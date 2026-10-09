@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NaoEncontradoException;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.CasamentoConvidado;
@@ -24,23 +27,28 @@ public class CasamentoConvidadoServiceImpl implements CasamentoConvidadoService 
     static final int MAX_BYTES_PLANILHA = 5 * 1024 * 1024;
 
     private final CasamentoRepository repository;
-    private final ConvidadosXlsxHandler xlsxHandler;
+    private final ConvidadosXlsxHandler xlsxHandler;
+
+    private final AutorizacaoService autorizacao;
 
     @Override
     @Transactional(readOnly = true)
     public List<CasamentoConvidadoDto> listar() {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         return repository.listarConvidados().stream().map(CasamentoConvidadoDto::de).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public CasamentoConvidadoDto buscar(Long id) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.LEITURA);
         return CasamentoConvidadoDto.de(convidado(id));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CasamentoConvidadoDto criar(CasamentoConvidadoForm form) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         Long id = repository.inserirConvidado(converter(form));
         return CasamentoConvidadoDto.de(convidado(id));
     }
@@ -48,6 +56,7 @@ public class CasamentoConvidadoServiceImpl implements CasamentoConvidadoService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CasamentoConvidadoDto alterar(Long id, CasamentoConvidadoForm form) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         convidado(id);
         CasamentoConvidado novo = converter(form);
         novo.setId(id);
@@ -58,6 +67,7 @@ public class CasamentoConvidadoServiceImpl implements CasamentoConvidadoService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deletar(Long id) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         convidado(id);
         repository.deletarConvidado(id);
     }
@@ -65,6 +75,7 @@ public class CasamentoConvidadoServiceImpl implements CasamentoConvidadoService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ImportacaoConvidadosDto importar(String nomeArquivo, byte[] bytes) {
+        autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         if (bytes == null || bytes.length == 0) {
             throw new EntradaInvalidaException("Planilha vazia");
         }

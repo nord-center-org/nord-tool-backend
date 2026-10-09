@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.domain.CronogramaSemanal;
 import br.com.nord_tool_backend.dto.CronogramaSemanalDto;
 import br.com.nord_tool_backend.form.CronogramaSemanalForm;
@@ -23,6 +24,11 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class CronogramaSemanalServiceImplTest {
+
+    @Mock
+
+    private AutorizacaoService autorizacao;
+
 
     @InjectMocks
     private CronogramaSemanalServiceImpl cronogramaSemanalService;
@@ -122,14 +128,14 @@ public class CronogramaSemanalServiceImplTest {
     @Test
     void deveDeletarCronogramaSemanal(){
         doNothing().when(cronogramaSemanalRepository).deletarCronogramaSemanal(anyLong());
-        cronogramaSemanalService.deletarCronogramaSemanal(anyLong());
+        cronogramaSemanalService.deletarCronogramaSemanal(1L);
         verify(cronogramaSemanalRepository, times(1)).deletarCronogramaSemanal(anyLong());
     }
 
     @Test
     void deveRetornarUmCronogramaSemanal(){
         when(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(anyLong())).thenReturn(cronogramaSemanal);
-        cronogramaSemanalService.buscarPorIdCronogramaSemanal(anyLong());
+        cronogramaSemanalService.buscarPorIdCronogramaSemanal(1L);
         verify(cronogramaSemanalRepository, times(1)).buscarPorIdCronogramaSemanal(anyLong());
     }
 

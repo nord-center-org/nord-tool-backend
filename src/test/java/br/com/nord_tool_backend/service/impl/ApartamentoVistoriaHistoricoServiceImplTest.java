@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.dto.ApartamentoVistoriaHistoricoConsultaDto;
 import br.com.nord_tool_backend.dto.ApartamentoVistoriaHistoricoDto;
 import br.com.nord_tool_backend.repository.ApartamentoVistoriaHistoricoRepository;
@@ -22,6 +23,11 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ApartamentoVistoriaHistoricoServiceImplTest {
+
+    @Mock
+
+    private AutorizacaoService autorizacao;
+
 
     @InjectMocks
     private ApartamentoVistoriaHistoricoServiceImpl apartamentoVistoriaHistoricoService;

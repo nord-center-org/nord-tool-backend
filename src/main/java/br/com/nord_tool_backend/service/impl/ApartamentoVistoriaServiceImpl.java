@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.builder.ApartamentoVistoriaHistoricoBuilder;
 import br.com.nord_tool_backend.domain.ApartamentoVistoria;
 import br.com.nord_tool_backend.domain.ApartamentoVistoriaHistorico;
@@ -40,13 +43,16 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
 
     private final XlsxExtractorHandlerApartamento xlsxExtractorHandlerApartamento;
 
-    private final TermoReprovaService termoReprovaService;
+    private final TermoReprovaService termoReprovaService;
+
+    private final AutorizacaoService autorizacao;
 
     static final int MAX_POR_PAGINA = 100;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ApartamentoVistoriaDto salvarApartamentoVistoria(ApartamentoVistoriaForm apartamentoVistoriaForm){
+        autorizacao.exigir(Modulo.VISTORIA, Acao.ESCRITA);
         log.info("Iniciando método para salvar um Apartamento Vistoria");
         ApartamentoVistoria apartamentoVistoria = apartamentoVistoriaForm.converterToDomain();
         ApartamentoVistoriaDto apartamentoVistoriaDto = apartamentoVistoriaRepository.salvarApartamentoVistoria(apartamentoVistoria);
@@ -59,6 +65,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ApartamentoVistoriaDto alterarApartamentoVistoria(ApartamentoVistoriaForm apartamentoVistoriaForm) {
+        autorizacao.exigir(Modulo.VISTORIA, Acao.ESCRITA);
         log.info("Iniciando método para alterar um Apartamento Vistoria");
         ApartamentoVistoria apartamentoVistoriaAtual = apartamentoVistoriaForm.converterToDomain();
         log.info("Iniciando método para gerar historia dos Apartamentos");
@@ -76,6 +83,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deletarApartamentoVistoria(Long id) {
+        autorizacao.exigir(Modulo.VISTORIA, Acao.ESCRITA);
         log.info("Iniciando método para deletar um Apartamento Vistoria");
         // O ON DELETE CASCADE do banco não apaga os arquivos armazenados: remove termos/fotos antes.
         termoReprovaService.apagarPorApartamento(id);
@@ -87,6 +95,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
 
     @Override
     public ApartamentoVistoriaDto buscarApartamentoVistoria(Long id) {
+        autorizacao.exigir(Modulo.VISTORIA, Acao.LEITURA);
         log.info("Iniciando método para buscar um Apartamento Vistoria");
         ApartamentoVistoria apartamentoVistoria = apartamentoVistoriaRepository.buscarApartamentoVistoria(id);
         ApartamentoVistoriaDto apartamentoVistoriaDto = ApartamentoVistoriaDto.converterToDto(apartamentoVistoria);
@@ -97,6 +106,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     @Override
     //@Cacheable("apartamentoVistoriaDto")
     public List<ApartamentoVistoriaDto> listarApartamentoVistoria() {
+        autorizacao.exigir(Modulo.VISTORIA, Acao.LEITURA);
         log.info("Iniciando método para listar Apartamentos Vistoria");
         List<ApartamentoVistoria> lsApartamentoVistoria = apartamentoVistoriaRepository.listarApartamentoVistoria();
         List<ApartamentoVistoriaDto> lsApartamentoVistoriaDto = lsApartamentoVistoria.stream().map(ApartamentoVistoriaDto::converterToDto).collect(Collectors.toList());
@@ -107,6 +117,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void importarPlanilha(MultipartFile arquivo) throws Exception {
+        autorizacao.exigir(Modulo.VISTORIA, Acao.ESCRITA);
         log.info("Iniciando método para importar planilha de Apartamentos Vistoria");
         xlsxExtractorHandlerApartamento.init(arquivo);
         log.info("Iniciando método limpar o cache após importar");
@@ -115,6 +126,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
 
     @Override
     public List<ApartamentoVistoriaDto> listarApartamentoVistoriaFiltrado(ApartamentoVistoriaFiltroDto apartamentoVistoriaFiltroDto, String filtraTodos, int nrPagina, int nrQuantidadePorPagina, String nmOrdenacao) {
+        autorizacao.exigir(Modulo.VISTORIA, Acao.LEITURA);
         log.info("Iniciando método para filtrar listas de Apartamentos");
         if (nrPagina < 0 || nrQuantidadePorPagina < 1 || nrQuantidadePorPagina > MAX_POR_PAGINA) {
             throw new EntradaInvalidaException("Paginação inválida: página a partir de 0 e de 1 a " + MAX_POR_PAGINA + " itens por página");
@@ -127,6 +139,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
 
     @Override
     public List<InfoGeralApartamentoVistoriaDto> listarInfoGeralApartamentoVistoria(String dtiApartamentoVistoria, String dtfApartamentoVistoria){
+        autorizacao.exigir(Modulo.VISTORIA, Acao.LEITURA);
         log.info("Iniciando método para listar Informações Gerais dos Apartamentos");
         List<InfoGeralApartamentoVistoria> lsInfoGeralApartamentoVistoria =  apartamentoVistoriaRepository.listarInfoGeralApartamentoVistoria(dtiApartamentoVistoria, dtfApartamentoVistoria);
         List<InfoGeralApartamentoVistoriaDto> lsInfoGeralApartamentoVistoriaDto = lsInfoGeralApartamentoVistoria.stream().map(InfoGeralApartamentoVistoriaDto::converterToDTO).collect(Collectors.toList());

@@ -1,5 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.exception.ConflitoException;
 import br.com.nord_tool_backend.exception.NaoEncontradoException;
@@ -41,12 +44,14 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     private final CaixinhaRepository repository;
     private final ArmazenamentoService armazenamento;
     private final int maxComprovanteBytes;
+    private final AutorizacaoService autorizacao;
 
     public CaixinhaServiceImpl(CaixinhaRepository repository, ArmazenamentoService armazenamento,
-                               @Value("${nord-tool.caixinha.max-comprovante-bytes:5242880}") int maxComprovanteBytes) {
+                               @Value("${nord-tool.caixinha.max-comprovante-bytes:5242880}") int maxComprovanteBytes, AutorizacaoService autorizacao) {
         this.repository = repository;
         this.armazenamento = armazenamento;
         this.maxComprovanteBytes = maxComprovanteBytes;
+        this.autorizacao = autorizacao;
     }
 
     // ---------- listagem e resumo ----------
@@ -54,6 +59,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(readOnly = true)
     public CaixinhaListaDto listar(CaixinhaFiltro filtro) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.LEITURA);
         validarFiltro(filtro);
         List<CaixinhaLancamentoDto> lancamentos = repository.listarLancamentos(filtro).stream()
                 .map(CaixinhaLancamentoDto::de).collect(Collectors.toList());
@@ -63,6 +69,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(readOnly = true)
     public CaixinhaResumoDto resumir(CaixinhaFiltro filtro) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.LEITURA);
         validarFiltro(filtro);
         CaixinhaRepository.Totais t = repository.resumir(filtro);
         BigDecimal total = t.total == null ? BigDecimal.ZERO : t.total;
@@ -75,6 +82,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CaixinhaLancamentoDto criar(CaixinhaLancamentoForm form) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.ESCRITA);
         String requisicao = uuidObrigatorio(form.getCdRequisicao(), "Informe o identificador da requisição (cdRequisicao)");
         // Reenvio: devolve o lançamento original sem validar de novo nem duplicar.
         java.util.Optional<Long> existente = repository.buscarLancamentoPorRequisicao(requisicao);
@@ -93,6 +101,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CaixinhaLancamentoDto alterar(Long id, CaixinhaLancamentoForm form) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.ESCRITA);
         int versao = versaoObrigatoria(form.getNrVersao());
         CaixinhaLancamento atual = lancamento(id);
         validarResponsavel(form.getIdResponsavel(), atual.getIdResponsavel());
@@ -105,6 +114,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CaixinhaLancamentoDto marcar(Long id, CaixinhaMarcacaoForm form) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.ESCRITA);
         int versao = versaoObrigatoria(form.getNrVersao());
         CaixinhaLancamento atual = lancamento(id);
         boolean lancado = form.getLancado() != null ? form.getLancado() : Boolean.TRUE.equals(atual.getInLancado());
@@ -116,6 +126,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluir(Long id, Integer nrVersao) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.ESCRITA);
         int versao = versaoObrigatoria(nrVersao);
         lancamento(id);
         List<Long> arquivos = repository.listarComprovantes(id).stream()
@@ -130,12 +141,14 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(readOnly = true)
     public List<CaixinhaResponsavelDto> listarResponsaveis() {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.LEITURA);
         return repository.listarResponsaveis().stream().map(CaixinhaResponsavelDto::de).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CaixinhaResponsavelDto criarResponsavel(CaixinhaResponsavelForm form) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.ESCRITA);
         String nome = nomeResponsavel(form.getNmResponsavel(), null);
         CaixinhaResponsavel r = new CaixinhaResponsavel();
         r.setNmResponsavel(nome);
@@ -147,6 +160,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CaixinhaResponsavelDto atualizarResponsavel(Long id, CaixinhaResponsavelForm form) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.ESCRITA);
         CaixinhaResponsavel atual = responsavel(id);
         if (form.getNmResponsavel() != null) atual.setNmResponsavel(nomeResponsavel(form.getNmResponsavel(), id));
         if (form.getInAtivo() != null) atual.setInAtivo(form.getInAtivo());
@@ -159,6 +173,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(readOnly = true)
     public List<CaixinhaComprovanteDto> listarComprovantes(Long idLancamento) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.LEITURA);
         lancamento(idLancamento);
         return repository.listarComprovantes(idLancamento).stream().map(CaixinhaComprovanteDto::de).collect(Collectors.toList());
     }
@@ -166,6 +181,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CaixinhaComprovanteDto anexarComprovante(Long idLancamento, String nomeArquivo, byte[] bytes, String cdRequisicao) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.ESCRITA);
         lancamento(idLancamento);
         String requisicao = uuidOpcional(cdRequisicao);
         if (requisicao != null) {
@@ -182,6 +198,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(readOnly = true)
     public ArquivoDownload baixarComprovante(Long idComprovante) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.LEITURA);
         CaixinhaComprovante c = comprovante(idComprovante);
         long versao = c.getDhCriacao() == null ? 0L : c.getDhCriacao().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
         return new ArquivoDownload(armazenamento.abrir(c.getIdArquivo()), versao);
@@ -190,6 +207,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluirComprovante(Long idComprovante) {
+        autorizacao.exigir(Modulo.CAIXINHA, Acao.ESCRITA);
         CaixinhaComprovante c = comprovante(idComprovante);
         repository.deletarComprovante(idComprovante);
         armazenamento.apagar(c.getIdArquivo());
