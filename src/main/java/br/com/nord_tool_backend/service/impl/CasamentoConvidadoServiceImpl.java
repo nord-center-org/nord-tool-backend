@@ -1,11 +1,11 @@
 package br.com.nord_tool_backend.service.impl;
 
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.exception.NaoEncontradoException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.CasamentoConvidado;
 import br.com.nord_tool_backend.domain.enums.StatusConvidadoEnum;
 import br.com.nord_tool_backend.dto.CasamentoConvidadoDto;
 import br.com.nord_tool_backend.dto.ImportacaoConvidadosDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CasamentoConvidadoForm;
 import br.com.nord_tool_backend.handler.ConvidadosXlsxHandler;
 import br.com.nord_tool_backend.repository.CasamentoRepository;
@@ -66,13 +66,13 @@ public class CasamentoConvidadoServiceImpl implements CasamentoConvidadoService 
     @Transactional(rollbackFor = Exception.class)
     public ImportacaoConvidadosDto importar(String nomeArquivo, byte[] bytes) {
         if (bytes == null || bytes.length == 0) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_400, "Planilha vazia", null);
+            throw new EntradaInvalidaException("Planilha vazia");
         }
         if (bytes.length > MAX_BYTES_PLANILHA) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_400, "A planilha deve ter no máximo 5 MB", null);
+            throw new EntradaInvalidaException("A planilha deve ter no máximo 5 MB");
         }
         if (nomeArquivo == null || !nomeArquivo.toLowerCase().endsWith(".xlsx")) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_400, "Envie um arquivo .xlsx", null);
+            throw new EntradaInvalidaException("Envie um arquivo .xlsx");
         }
         ImportacaoConvidadosDto relatorio = new ImportacaoConvidadosDto();
         for (ConvidadosXlsxHandler.LinhaLida linha : xlsxHandler.ler(bytes)) {
@@ -88,14 +88,13 @@ public class CasamentoConvidadoServiceImpl implements CasamentoConvidadoService 
 
     private CasamentoConvidado convidado(Long id) {
         return repository.buscarConvidado(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Convidado não encontrado", null));
+                .orElseThrow(() -> new NaoEncontradoException("Convidado não encontrado"));
     }
 
     CasamentoConvidado converter(CasamentoConvidadoForm form) {
         StatusConvidadoEnum status = form.getNmStatus() == null || form.getNmStatus().trim().isEmpty()
                 ? StatusConvidadoEnum.NAO_CONVIDADO
-                : StatusConvidadoEnum.de(form.getNmStatus()).orElseThrow(() -> new ValidacaoException(
-                        NordHttpEnum.HTTP_400, "Status inválido. Use NAO_CONVIDADO, CONVIDADO, CONFIRMADO ou NAO_IRA.", null));
+                : StatusConvidadoEnum.de(form.getNmStatus()).orElseThrow(() -> new EntradaInvalidaException("Status inválido. Use NAO_CONVIDADO, CONVIDADO, CONFIRMADO ou NAO_IRA."));
         CasamentoConvidado c = new CasamentoConvidado();
         c.setNmConvidado(form.getNmConvidado().trim());
         c.setNmGrupo(CasamentoFornecedorServiceImpl.vazioParaNulo(form.getNmGrupo()));

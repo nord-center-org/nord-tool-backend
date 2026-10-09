@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.domain.FinanceiroAtivo;
 import br.com.nord_tool_backend.domain.FinanceiroOperacao;
@@ -7,7 +8,6 @@ import br.com.nord_tool_backend.domain.FinanceiroPessoa;
 import br.com.nord_tool_backend.domain.FinanceiroProvento;
 import br.com.nord_tool_backend.dto.FinanceiroAtivoDto;
 import br.com.nord_tool_backend.dto.FinanceiroInvestimentoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.FinanceiroAtivoForm;
 import br.com.nord_tool_backend.form.FinanceiroOperacaoForm;
 import br.com.nord_tool_backend.form.FinanceiroProventoForm;
@@ -115,8 +115,8 @@ class FinanceiroInvestimentoServiceImplTest {
     }
 
     private static void assertInvalido(Runnable acao, String trecho) {
-        ValidacaoException ex = assertThrows(ValidacaoException.class, acao::run);
-        assertEquals(NordHttpEnum.HTTP_400, ex.getHttpEnum());
+        NordException ex = assertThrows(NordException.class, acao::run);
+        assertEquals(NordHttpEnum.HTTP_400, ex.getStatus());
         assertTrue(ex.getMessage().contains(trecho), ex.getMessage());
     }
 
@@ -216,8 +216,8 @@ class FinanceiroInvestimentoServiceImplTest {
         FinanceiroAtivoForm f = new FinanceiroAtivoForm();
         f.setNmAtivo("Logística");
         f.setNrVersao(1);
-        ValidacaoException ex = assertThrows(ValidacaoException.class, () -> service.atualizarAtivo(1L, f));
-        assertEquals(NordHttpEnum.HTTP_409, ex.getHttpEnum());
+        NordException ex = assertThrows(NordException.class, () -> service.atualizarAtivo(1L, f));
+        assertEquals(NordHttpEnum.HTTP_409, ex.getStatus());
     }
 
     @Test
@@ -295,7 +295,7 @@ class FinanceiroInvestimentoServiceImplTest {
     @Test
     void fundoInexistenteDa404() {
         when(repository.buscarAtivo(9L)).thenReturn(Optional.empty());
-        ValidacaoException ex = assertThrows(ValidacaoException.class, () -> service.registrarOperacao(9L, form("COMPRA", 1, "1.00")));
-        assertEquals(NordHttpEnum.HTTP_404, ex.getHttpEnum());
+        NordException ex = assertThrows(NordException.class, () -> service.registrarOperacao(9L, form("COMPRA", 1, "1.00")));
+        assertEquals(NordHttpEnum.HTTP_404, ex.getStatus());
     }
 }

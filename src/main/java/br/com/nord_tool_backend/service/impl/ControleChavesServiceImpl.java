@@ -1,6 +1,7 @@
 package br.com.nord_tool_backend.service.impl;
 
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.exception.NordException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.ObraControleChaves;
 import br.com.nord_tool_backend.domain.RequisicaoChave;
 import br.com.nord_tool_backend.domain.RequisicaoChaveConsulta;
@@ -11,7 +12,6 @@ import br.com.nord_tool_backend.dto.DashboardControleChavesDto;
 import br.com.nord_tool_backend.dto.FerramentaControleChavesDto;
 import br.com.nord_tool_backend.dto.ObraControleChavesDto;
 import br.com.nord_tool_backend.dto.RetiradaControleChavesDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.NovaRetiradaControleChavesForm;
 import br.com.nord_tool_backend.form.RecebimentoControleChavesForm;
 import br.com.nord_tool_backend.repository.ControleChavesRepository;
@@ -222,7 +222,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
         return id != null && id > 0;
     }
 
-    private ValidacaoException erroValidacao(String mensagem) {
-        return new ValidacaoException(NordHttpEnum.HTTP_400, mensagem, mensagem);
+    private NordException erroValidacao(String mensagem) {
+        return new EntradaInvalidaException(mensagem);
     }
 }

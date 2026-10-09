@@ -1,6 +1,6 @@
 package br.com.nord_tool_backend.handler;
 
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
+import br.com.nord_tool_backend.exception.NordException;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -113,7 +113,7 @@ class ConvidadosXlsxHandlerTest {
 
     @Test
     void planilhaSemColunaNomeOuQueNaoEhXlsxEhRecusada() throws Exception {
-        assertThrows(ValidacaoException.class, () -> handler.ler(planilha(new String[]{"Grupo", "Mesa"}, new String[]{"x", "y"})));
-        assertThrows(ValidacaoException.class, () -> handler.ler("isto não é uma planilha".getBytes()));
+        assertThrows(NordException.class, () -> handler.ler(planilha(new String[]{"Grupo", "Mesa"}, new String[]{"x", "y"})));
+        assertThrows(NordException.class, () -> handler.ler("isto não é uma planilha".getBytes()));
     }
 }

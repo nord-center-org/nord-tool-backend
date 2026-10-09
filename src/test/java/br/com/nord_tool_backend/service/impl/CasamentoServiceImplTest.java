@@ -1,10 +1,10 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.domain.CasamentoMarco;
 import br.com.nord_tool_backend.dto.CasamentoConfiguracaoDto;
 import br.com.nord_tool_backend.dto.CasamentoDashboardDto;
 import br.com.nord_tool_backend.dto.CasamentoTotaisDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CasamentoConfiguracaoForm;
 import br.com.nord_tool_backend.repository.CasamentoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,7 +88,7 @@ class CasamentoServiceImplTest {
         form.setCasal("Ana & Beto");
         form.setDataCasamento("2027-02-31");
 
-        assertThrows(ValidacaoException.class, () -> service.salvarConfiguracao(form));
+        assertThrows(NordException.class, () -> service.salvarConfiguracao(form));
         verify(repository, never()).salvarConfiguracao(anyString(), anyString());
     }
 

@@ -1,12 +1,12 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.domain.TermoFoto;
 import br.com.nord_tool_backend.domain.TermoReprova;
 import br.com.nord_tool_backend.dto.TermoFotoDto;
 import br.com.nord_tool_backend.dto.TermoReprovaResumoGeralDto;
 import br.com.nord_tool_backend.service.CacheService;
 import br.com.nord_tool_backend.dto.TermoReprovaDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.OrdemFotoForm;
 import br.com.nord_tool_backend.form.SituacaoTermoForm;
 import br.com.nord_tool_backend.repository.TermoFotoRepository;
@@ -111,9 +111,9 @@ class TermoReprovaServiceImplTest {
     void naoCriaTermoParaApartamentoInexistente() {
         when(termoRepository.apartamentoExiste(10L)).thenReturn(false);
 
-        ValidacaoException ex = assertThrows(ValidacaoException.class, () -> service.criar(10L, "a.pdf", PDF, 4));
+        NordException ex = assertThrows(NordException.class, () -> service.criar(10L, "a.pdf", PDF, 4));
 
-        assertEquals(404, ex.getHttpEnum().getStatus().value());
+        assertEquals(404, ex.getStatus().getStatus().value());
         verifyNoInteractions(armazenamento);
     }
 
@@ -121,9 +121,9 @@ class TermoReprovaServiceImplTest {
     void validaPaginasEPdfAntesDeGravar() {
         when(termoRepository.apartamentoExiste(10L)).thenReturn(true);
 
-        assertThrows(ValidacaoException.class, () -> service.criar(10L, "a.pdf", PDF, 0));
-        assertThrows(ValidacaoException.class, () -> service.criar(10L, "a.pdf", PDF, 81));
-        assertThrows(ValidacaoException.class, () -> service.criar(10L, "a.pdf", JPEG, 3));
+        assertThrows(NordException.class, () -> service.criar(10L, "a.pdf", PDF, 0));
+        assertThrows(NordException.class, () -> service.criar(10L, "a.pdf", PDF, 81));
+        assertThrows(NordException.class, () -> service.criar(10L, "a.pdf", JPEG, 3));
         verify(armazenamento, never()).salvar(anyString(), anyString(), any());
         verify(termoRepository, never()).inserir(any());
     }
@@ -137,7 +137,7 @@ class TermoReprovaServiceImplTest {
         SituacaoTermoForm form = new SituacaoTermoForm();
         form.setSituacao("CONCLUIDO");
 
-        ValidacaoException ex = assertThrows(ValidacaoException.class, () -> service.atualizarSituacao(1L, form));
+        NordException ex = assertThrows(NordException.class, () -> service.atualizarSituacao(1L, form));
 
         assertEquals("Anexe ao menos uma foto antes de concluir o termo.", ex.getMessage());
         verify(termoRepository, never()).atualizarSituacao(anyLong(), anyString(), any());
@@ -162,7 +162,7 @@ class TermoReprovaServiceImplTest {
         SituacaoTermoForm form = new SituacaoTermoForm();
         form.setSituacao("FINALIZADO");
 
-        assertThrows(ValidacaoException.class, () -> service.atualizarSituacao(1L, form));
+        assertThrows(NordException.class, () -> service.atualizarSituacao(1L, form));
     }
 
     @Test
@@ -212,9 +212,9 @@ class TermoReprovaServiceImplTest {
     void excluirTermoInexistenteRetorna404() {
         when(termoRepository.buscarPorId(9L)).thenReturn(Optional.empty());
 
-        ValidacaoException ex = assertThrows(ValidacaoException.class, () -> service.deletar(9L));
+        NordException ex = assertThrows(NordException.class, () -> service.deletar(9L));
 
-        assertEquals(404, ex.getHttpEnum().getStatus().value());
+        assertEquals(404, ex.getStatus().getStatus().value());
     }
 
     // ---------- trocar PDF ----------
@@ -283,8 +283,8 @@ class TermoReprovaServiceImplTest {
     void recusaFotoEmPaginaForaDoTermo() {
         termoExiste(termo(1L, 3, "PENDENTE"));
 
-        assertThrows(ValidacaoException.class, () -> service.adicionarFoto(1L, "f.jpg", JPEG, JPEG, 4, null));
-        assertThrows(ValidacaoException.class, () -> service.adicionarFoto(1L, "f.jpg", JPEG, JPEG, 0, null));
+        assertThrows(NordException.class, () -> service.adicionarFoto(1L, "f.jpg", JPEG, JPEG, 4, null));
+        assertThrows(NordException.class, () -> service.adicionarFoto(1L, "f.jpg", JPEG, JPEG, 0, null));
         verify(fotoRepository, never()).inserir(any());
     }
 
@@ -293,15 +293,15 @@ class TermoReprovaServiceImplTest {
         termoExiste(termo(1L, 3, "PENDENTE"));
         String longa = new String(new char[241]).replace('\0', 'x');
 
-        assertThrows(ValidacaoException.class, () -> service.adicionarFoto(1L, "f.jpg", JPEG, JPEG, 1, longa));
-        assertThrows(ValidacaoException.class, () -> service.adicionarFoto(1L, "f.jpg", PDF, JPEG, 1, null));
+        assertThrows(NordException.class, () -> service.adicionarFoto(1L, "f.jpg", JPEG, JPEG, 1, longa));
+        assertThrows(NordException.class, () -> service.adicionarFoto(1L, "f.jpg", PDF, JPEG, 1, null));
     }
 
     @Test
     void editarExigeImagemEMiniaturaJuntas() {
         when(fotoRepository.buscarPorId(5L)).thenReturn(Optional.of(foto(5, 1, 1, 501, 502)));
 
-        assertThrows(ValidacaoException.class, () -> service.editarFoto(5L, "n.jpg", JPEG, null, null, null));
+        assertThrows(NordException.class, () -> service.editarFoto(5L, "n.jpg", JPEG, null, null, null));
         verify(fotoRepository, never()).atualizar(any());
     }
 
@@ -335,7 +335,7 @@ class TermoReprovaServiceImplTest {
         assertEquals(3, captor.getValue().getNrPagina());
         assertEquals(2, captor.getValue().getNrOrdem());
         verify(armazenamento, never()).apagar(anyLong());
-        assertThrows(ValidacaoException.class, () -> service.editarFoto(5L, null, null, null, null, 9));
+        assertThrows(NordException.class, () -> service.editarFoto(5L, null, null, null, null, 9));
     }
 
     @Test
@@ -369,7 +369,7 @@ class TermoReprovaServiceImplTest {
         OrdemFotoForm intrusa = new OrdemFotoForm();
         intrusa.setIdTermoFoto(99L);
         intrusa.setNrOrdem(0);
-        assertThrows(ValidacaoException.class, () -> service.ordenarFotos(1L, List.of(intrusa)));
+        assertThrows(NordException.class, () -> service.ordenarFotos(1L, List.of(intrusa)));
         verify(fotoRepository, never()).atualizarOrdem(eq(1L), eq(99L), anyInt());
     }
 
@@ -378,7 +378,7 @@ class TermoReprovaServiceImplTest {
         termoExiste(termo(1L, 3, "PENDENTE"));
         when(fotoRepository.listarPorTermo(1L)).thenReturn(List.of());
 
-        assertThrows(ValidacaoException.class, () -> service.ordenarFotos(1L, List.of(new OrdemFotoForm())));
+        assertThrows(NordException.class, () -> service.ordenarFotos(1L, List.of(new OrdemFotoForm())));
     }
 
     // ---------- resumo geral (dashboard) e cache ----------

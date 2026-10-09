@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.domain.CaixinhaComprovante;
 import br.com.nord_tool_backend.domain.CaixinhaFiltro;
@@ -8,7 +9,6 @@ import br.com.nord_tool_backend.domain.CaixinhaResponsavel;
 import br.com.nord_tool_backend.dto.CaixinhaComprovanteDto;
 import br.com.nord_tool_backend.dto.CaixinhaLancamentoDto;
 import br.com.nord_tool_backend.dto.CaixinhaResumoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CaixinhaLancamentoForm;
 import br.com.nord_tool_backend.form.CaixinhaMarcacaoForm;
 import br.com.nord_tool_backend.form.CaixinhaResponsavelForm;
@@ -87,8 +87,8 @@ class CaixinhaServiceImplTest {
     }
 
     private void esperaErro(NordHttpEnum esperado, Runnable acao) {
-        ValidacaoException ex = assertThrows(ValidacaoException.class, acao::run);
-        assertEquals(esperado, ex.getHttpEnum());
+        NordException ex = assertThrows(NordException.class, acao::run);
+        assertEquals(esperado, ex.getStatus());
     }
 
     // ---------- criação idempotente ----------
@@ -157,10 +157,10 @@ class CaixinhaServiceImplTest {
         CaixinhaLancamentoForm f = form(null);
         f.setNrVersao(2);
 
-        ValidacaoException ex = assertThrows(ValidacaoException.class, () -> service.alterar(5L, f));
+        NordException ex = assertThrows(NordException.class, () -> service.alterar(5L, f));
 
-        assertEquals(NordHttpEnum.HTTP_409, ex.getHttpEnum());
-        assertEquals("O lançamento mudou. Sincronize e tente novamente.", ex.getMenssage());
+        assertEquals(NordHttpEnum.HTTP_409, ex.getStatus());
+        assertEquals("O lançamento mudou. Sincronize e tente novamente.", ex.getMessage());
     }
 
     @Test

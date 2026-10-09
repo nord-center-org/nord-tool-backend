@@ -1,6 +1,9 @@
 package br.com.nord_tool_backend.service.impl;
 
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.exception.NordException;
+import br.com.nord_tool_backend.exception.ConflitoException;
+import br.com.nord_tool_backend.exception.NaoEncontradoException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.CaixinhaComprovante;
 import br.com.nord_tool_backend.domain.CaixinhaFiltro;
 import br.com.nord_tool_backend.domain.CaixinhaLancamento;
@@ -10,7 +13,6 @@ import br.com.nord_tool_backend.dto.CaixinhaLancamentoDto;
 import br.com.nord_tool_backend.dto.CaixinhaListaDto;
 import br.com.nord_tool_backend.dto.CaixinhaResponsavelDto;
 import br.com.nord_tool_backend.dto.CaixinhaResumoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CaixinhaLancamentoForm;
 import br.com.nord_tool_backend.form.CaixinhaMarcacaoForm;
 import br.com.nord_tool_backend.form.CaixinhaResponsavelForm;
@@ -84,7 +86,7 @@ public class CaixinhaServiceImpl implements CaixinhaService {
         Long id = repository.inserirLancamento(l)
                 // Corrida: outra requisição com o mesmo UUID acabou de gravar.
                 .orElseGet(() -> repository.buscarLancamentoPorRequisicao(requisicao).orElseThrow(() ->
-                        new ValidacaoException(NordHttpEnum.HTTP_400, "Não foi possível salvar o lançamento", null)));
+                        new EntradaInvalidaException("Não foi possível salvar o lançamento")));
         return CaixinhaLancamentoDto.de(lancamento(id));
     }
 
@@ -197,25 +199,25 @@ public class CaixinhaServiceImpl implements CaixinhaService {
 
     private CaixinhaLancamento lancamento(Long id) {
         return repository.buscarLancamento(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Lançamento não encontrado", null));
+                .orElseThrow(() -> new NaoEncontradoException("Lançamento não encontrado"));
     }
 
     private CaixinhaResponsavel responsavel(Long id) {
         return repository.buscarResponsavel(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Responsável não encontrado", null));
+                .orElseThrow(() -> new NaoEncontradoException("Responsável não encontrado"));
     }
 
     private CaixinhaComprovante comprovante(Long id) {
         return repository.buscarComprovante(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Comprovante não encontrado", null));
+                .orElseThrow(() -> new NaoEncontradoException("Comprovante não encontrado"));
     }
 
-    private static ValidacaoException conflito() {
-        return new ValidacaoException(NordHttpEnum.HTTP_409, MSG_CONFLITO, null);
+    private static NordException conflito() {
+        return new ConflitoException(MSG_CONFLITO);
     }
 
-    private static ValidacaoException invalido(String mensagem) {
-        return new ValidacaoException(NordHttpEnum.HTTP_400, mensagem, null);
+    private static NordException invalido(String mensagem) {
+        return new EntradaInvalidaException(mensagem);
     }
 
     private static int versaoObrigatoria(Integer nrVersao) {

@@ -1,9 +1,9 @@
 package br.com.nord_tool_backend.service.impl;
 
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.exception.NaoEncontradoException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.CasamentoMarco;
 import br.com.nord_tool_backend.dto.CasamentoMarcoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CasamentoMarcoForm;
 import br.com.nord_tool_backend.repository.CasamentoRepository;
 import br.com.nord_tool_backend.service.CasamentoMarcoService;
@@ -84,8 +84,7 @@ public class CasamentoMarcoServiceImpl implements CasamentoMarcoService {
     @Transactional(rollbackFor = Exception.class)
     public List<CasamentoMarcoDto> criarPadrao() {
         if (repository.contarMarcos() > 0) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_400,
-                    "Os marcos padrão só podem ser criados quando não há marcos cadastrados", null);
+            throw new EntradaInvalidaException("Os marcos padrão só podem ser criados quando não há marcos cadastrados");
         }
         for (String[] padrao : MARCOS_PADRAO) {
             CasamentoMarco m = new CasamentoMarco();
@@ -99,7 +98,7 @@ public class CasamentoMarcoServiceImpl implements CasamentoMarcoService {
 
     private CasamentoMarco marco(Long id) {
         return repository.buscarMarco(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Marco não encontrado", null));
+                .orElseThrow(() -> new NaoEncontradoException("Marco não encontrado"));
     }
 
     private CasamentoMarco converter(CasamentoMarcoForm form) {

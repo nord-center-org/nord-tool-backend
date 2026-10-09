@@ -1,8 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.domain.CasamentoConvidado;
 import br.com.nord_tool_backend.dto.ImportacaoConvidadosDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CasamentoConvidadoForm;
 import br.com.nord_tool_backend.handler.ConvidadosXlsxHandler;
 import br.com.nord_tool_backend.repository.CasamentoRepository;
@@ -76,10 +76,10 @@ class CasamentoConvidadoServiceImplTest {
 
     @Test
     void recusaStatusInvalidoEConvidadoInexistente() {
-        assertThrows(ValidacaoException.class, () -> convidados.criar(form("A", "TALVEZ", 0, null)));
+        assertThrows(NordException.class, () -> convidados.criar(form("A", "TALVEZ", 0, null)));
         when(repository.buscarConvidado(9L)).thenReturn(Optional.empty());
-        assertEquals(404, assertThrows(ValidacaoException.class, () -> convidados.deletar(9L)).getHttpEnum().getStatus().value());
-        assertEquals(404, assertThrows(ValidacaoException.class, () -> convidados.alterar(9L, form("A", null, 0, null))).getHttpEnum().getStatus().value());
+        assertEquals(404, assertThrows(NordException.class, () -> convidados.deletar(9L)).getStatus().getStatus().value());
+        assertEquals(404, assertThrows(NordException.class, () -> convidados.alterar(9L, form("A", null, 0, null))).getStatus().getStatus().value());
     }
 
     private byte[] xlsx(String[]... linhas) throws Exception {
@@ -115,10 +115,10 @@ class CasamentoConvidadoServiceImplTest {
 
     @Test
     void importacaoRecusaArquivoVazioExtensaoErradaOuGrande() {
-        assertThrows(ValidacaoException.class, () -> convidados.importar("a.xlsx", new byte[0]));
-        assertThrows(ValidacaoException.class, () -> convidados.importar("a.csv", new byte[]{1, 2, 3}));
-        assertThrows(ValidacaoException.class, () -> convidados.importar(null, new byte[]{1, 2, 3}));
-        assertThrows(ValidacaoException.class, () -> convidados.importar("a.xlsx", new byte[CasamentoConvidadoServiceImpl.MAX_BYTES_PLANILHA + 1]));
+        assertThrows(NordException.class, () -> convidados.importar("a.xlsx", new byte[0]));
+        assertThrows(NordException.class, () -> convidados.importar("a.csv", new byte[]{1, 2, 3}));
+        assertThrows(NordException.class, () -> convidados.importar(null, new byte[]{1, 2, 3}));
+        assertThrows(NordException.class, () -> convidados.importar("a.xlsx", new byte[CasamentoConvidadoServiceImpl.MAX_BYTES_PLANILHA + 1]));
         verify(repository, never()).inserirConvidado(any());
     }
 }

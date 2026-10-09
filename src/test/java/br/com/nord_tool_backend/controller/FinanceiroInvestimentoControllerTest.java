@@ -1,11 +1,11 @@
 package br.com.nord_tool_backend.controller;
 
+import br.com.nord_tool_backend.exception.ConflitoException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.controller.read.FinanceiroInvestimentoReadController;
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.controller.write.FinanceiroInvestimentoWriteController;
 import br.com.nord_tool_backend.dto.FinanceiroAtivoDto;
 import br.com.nord_tool_backend.dto.FinanceiroInvestimentoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
 import br.com.nord_tool_backend.security.AcessoModulo;
 import br.com.nord_tool_backend.security.JwtAuthenticationFilter;
@@ -106,7 +106,7 @@ class FinanceiroInvestimentoControllerTest {
 
     @Test
     void erroDeNegocioVira400ComAMensagem() throws Exception {
-        when(service.registrarOperacao(any(), any())).thenThrow(new ValidacaoException(NordHttpEnum.HTTP_400, "Não há cotas suficientes para essa venda.", null));
+        when(service.registrarOperacao(any(), any())).thenThrow(new EntradaInvalidaException("Não há cotas suficientes para essa venda."));
         mvc.perform(post(BASE + "/ativos/1/operacoes").contentType(MediaType.APPLICATION_JSON).content(OPERACAO).header("Authorization", auth()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.txMensagem").value("Não há cotas suficientes para essa venda."));
@@ -114,7 +114,7 @@ class FinanceiroInvestimentoControllerTest {
 
     @Test
     void conflitoDeVersaoVira409() throws Exception {
-        when(service.atualizarAtivo(any(), any())).thenThrow(new ValidacaoException(NordHttpEnum.HTTP_409, "O fundo mudou. Sincronize e tente novamente.", null));
+        when(service.atualizarAtivo(any(), any())).thenThrow(new ConflitoException("O fundo mudou. Sincronize e tente novamente."));
         mvc.perform(put(BASE + "/ativos/1").contentType(MediaType.APPLICATION_JSON).content("{\"nrVersao\":1}").header("Authorization", auth()))
                 .andExpect(status().isConflict());
     }

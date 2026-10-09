@@ -2,6 +2,9 @@ package br.com.nord_tool_backend.service.impl;
 
 import br.com.nord_tool_backend.domain.ApartamentoVistoria;
 import br.com.nord_tool_backend.domain.InfoGeralApartamentoVistoria;
+import br.com.nord_tool_backend.domain.OrdenacaoApartamentoVistoria;
+import br.com.nord_tool_backend.domain.enums.OrdenacaoApartamentoVistoriaEnum;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.dto.ApartamentoVistoriaDto;
 import br.com.nord_tool_backend.dto.ApartamentoVistoriaFiltroDto;
 import br.com.nord_tool_backend.dto.InfoGeralApartamentoVistoriaDto;
@@ -19,7 +22,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -29,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -43,9 +46,6 @@ public class ApartamentoVistoriaServiceImplTest {
 
     @Mock
     private ApartamentoVistoriaHistoricoRepository apartamentoVistoriaHistoricoRepository;
-
-    @Mock
-    private Environment env;
 
     @Mock
     private CacheService cacheService;
@@ -72,7 +72,6 @@ public class ApartamentoVistoriaServiceImplTest {
 
         apartamentoVistoriaService = new ApartamentoVistoriaServiceImpl(
                 apartamentoVistoriaRepository,
-                env,
                 cacheService,
                 apartamentoVistoriaHistoricoRepository,
                 xlsxExtractorHandlerApartamento,
@@ -236,13 +235,12 @@ public class ApartamentoVistoriaServiceImplTest {
         int nrQuantidadePorPagina = 20;
         String nmOrdem = "";
 
-        when(env.getProperty(Mockito.anyString())).thenReturn("sql");
-        when(apartamentoVistoriaRepository.listarApartamentoVistoriaFiltrado(Mockito.anyString(), Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina)))
+        when(apartamentoVistoriaRepository.listarApartamentoVistoriaFiltrado(Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina), Mockito.any()))
                 .thenReturn(lsApartamentoVistoriaDto);
 
         apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, filtraTodos, nrPagina, nrQuantidadePorPagina, nmOrdem);
         verify(apartamentoVistoriaRepository, times(1))
-                .listarApartamentoVistoriaFiltrado(Mockito.anyString(), Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina)
+                .listarApartamentoVistoriaFiltrado(Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina), Mockito.any()
         );
     }
 
@@ -253,13 +251,12 @@ public class ApartamentoVistoriaServiceImplTest {
         int nrQuantidadePorPagina = 20;
         String nmOrdem = null;
 
-        when(env.getProperty(Mockito.anyString())).thenReturn("sql");
-        when(apartamentoVistoriaRepository.listarApartamentoVistoriaFiltrado(Mockito.anyString(), Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina)))
+        when(apartamentoVistoriaRepository.listarApartamentoVistoriaFiltrado(Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina), Mockito.any()))
                 .thenReturn(lsApartamentoVistoriaDto);
 
         apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, filtraTodos, nrPagina, nrQuantidadePorPagina, nmOrdem);
         verify(apartamentoVistoriaRepository, times(1))
-                .listarApartamentoVistoriaFiltrado(Mockito.anyString(), Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina));
+                .listarApartamentoVistoriaFiltrado(Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina), Mockito.any());
     }
 
     @Test
@@ -269,13 +266,12 @@ public class ApartamentoVistoriaServiceImplTest {
         int nrQuantidadePorPagina = 20;
         String nmOrdem = "ASC";
 
-        when(env.getProperty(Mockito.anyString())).thenReturn("sql");
-        when(apartamentoVistoriaRepository.listarApartamentoVistoriaFiltrado(Mockito.anyString(), Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina)))
+        when(apartamentoVistoriaRepository.listarApartamentoVistoriaFiltrado(Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina), Mockito.any()))
                 .thenReturn(lsApartamentoVistoriaDto);
 
         apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, filtraTodos, nrPagina, nrQuantidadePorPagina, nmOrdem);
         verify(apartamentoVistoriaRepository, times(1))
-                .listarApartamentoVistoriaFiltrado(Mockito.anyString(), Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina));
+                .listarApartamentoVistoriaFiltrado(Mockito.eq(apartamentoVistoriaFiltroDto), Mockito.eq(filtraTodos), Mockito.eq(nrPagina), Mockito.eq(nrQuantidadePorPagina), Mockito.any());
     }
 
     @Test
@@ -287,5 +283,37 @@ public class ApartamentoVistoriaServiceImplTest {
         List<InfoGeralApartamentoVistoriaDto> lsInfoGeralApartamentoVistoriaDtoTest = apartamentoVistoriaService.listarInfoGeralApartamentoVistoria(dtInicio,dtFim);
         assertEquals(lsInfoGeralApartamentoVistoriaDto, lsInfoGeralApartamentoVistoriaDtoTest);
         verify(apartamentoVistoriaRepository, times(1)).listarInfoGeralApartamentoVistoria(Mockito.eq(dtInicio), Mockito.eq(dtFim));
+    }
+
+    @Test
+    void ordenacaoComTextoArbitrarioSoUsaColunaEDirecaoPermitidas() {
+        apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, 0, 20,
+                "nmDiaSemana,ASC; DROP TABLE apartamento_vistoria");
+        verify(apartamentoVistoriaRepository).listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, 0, 20,
+                new OrdenacaoApartamentoVistoria(OrdenacaoApartamentoVistoriaEnum.nm_dia_semana, false));
+
+        apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, 0, 20,
+                "id_apartamento_vistoria; DELETE FROM usuario,DESC");
+        verify(apartamentoVistoriaRepository).listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, 0, 20,
+                new OrdenacaoApartamentoVistoria(OrdenacaoApartamentoVistoriaEnum.id_apartamento_vistoria, true));
+    }
+
+    @Test
+    void ordenacaoAusenteUsaOPadrao() {
+        apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, 0, 20, null);
+        verify(apartamentoVistoriaRepository).listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, 0, 20,
+                OrdenacaoApartamentoVistoria.PADRAO);
+        assertEquals(" ORDER BY id_apartamento_vistoria DESC ", OrdenacaoApartamentoVistoria.PADRAO.sql());
+    }
+
+    @Test
+    void paginacaoForaDosLimitesENegada() {
+        assertThrows(EntradaInvalidaException.class, () ->
+                apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, -1, 20, null));
+        assertThrows(EntradaInvalidaException.class, () ->
+                apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, 0, 0, null));
+        assertThrows(EntradaInvalidaException.class, () ->
+                apartamentoVistoriaService.listarApartamentoVistoriaFiltrado(apartamentoVistoriaFiltroDto, null, 0, 101, null));
+        verifyNoInteractions(apartamentoVistoriaRepository);
     }
 }

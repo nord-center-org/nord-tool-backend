@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.domain.FinanceiroCategoria;
 import br.com.nord_tool_backend.domain.FinanceiroFiltro;
@@ -8,7 +9,6 @@ import br.com.nord_tool_backend.domain.FinanceiroPessoa;
 import br.com.nord_tool_backend.dto.FinanceiroLancamentoDto;
 import br.com.nord_tool_backend.dto.FinanceiroListaDto;
 import br.com.nord_tool_backend.dto.FinanceiroResumoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.FinanceiroCategoriaForm;
 import br.com.nord_tool_backend.form.FinanceiroLancamentoForm;
 import br.com.nord_tool_backend.form.FinanceiroPessoaForm;
@@ -126,8 +126,8 @@ class FinanceiroServiceImplTest {
     }
 
     private void esperaErro(NordHttpEnum esperado, Runnable acao) {
-        ValidacaoException ex = assertThrows(ValidacaoException.class, acao::run);
-        assertEquals(esperado, ex.getHttpEnum());
+        NordException ex = assertThrows(NordException.class, acao::run);
+        assertEquals(esperado, ex.getStatus());
     }
 
     // ---------- criação ----------

@@ -1,12 +1,11 @@
 package br.com.nord_tool_backend.controller;
 
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.controller.read.TermoReprovaReadController;
 import br.com.nord_tool_backend.controller.write.TermoReprovaWriteController;
 import br.com.nord_tool_backend.dto.TermoReprovaDto;
 import br.com.nord_tool_backend.dto.TermoReprovaResumoDto;
 import br.com.nord_tool_backend.dto.TermoReprovaResumoGeralDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
 import br.com.nord_tool_backend.security.JwtAuthenticationFilter;
 import br.com.nord_tool_backend.security.JwtService;
@@ -153,7 +152,7 @@ class TermoReprovaControllerTest {
     @Test
     void erroDeNegocioViraRespostaPadronizada() throws Exception {
         when(service.atualizarSituacao(eq(7L), any()))
-                .thenThrow(new ValidacaoException(NordHttpEnum.HTTP_400, "Anexe ao menos uma foto antes de concluir o termo.", null));
+                .thenThrow(new EntradaInvalidaException("Anexe ao menos uma foto antes de concluir o termo."));
 
         mvc.perform(put(BASE + "/termos-reprova/7/situacao").header("Authorization", auth())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"situacao\":\"CONCLUIDO\"}"))

@@ -1,12 +1,14 @@
 package br.com.nord_tool_backend.service.impl;
 
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.exception.NordException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
+import br.com.nord_tool_backend.exception.NaoEncontradoException;
+import br.com.nord_tool_backend.exception.ConflitoException;
 import br.com.nord_tool_backend.domain.FinanceiroAtivo;
 import br.com.nord_tool_backend.domain.FinanceiroOperacao;
 import br.com.nord_tool_backend.domain.FinanceiroProvento;
 import br.com.nord_tool_backend.dto.FinanceiroAtivoDto;
 import br.com.nord_tool_backend.dto.FinanceiroInvestimentoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.FinanceiroAtivoForm;
 import br.com.nord_tool_backend.form.FinanceiroOperacaoForm;
 import br.com.nord_tool_backend.form.FinanceiroProventoForm;
@@ -175,7 +177,7 @@ public class FinanceiroInvestimentoServiceImpl implements FinanceiroInvestimento
         if (form.getNmAtivo() != null) atual.setNmAtivo(texto(form.getNmAtivo()));
         if (form.getInAtivo() != null) atual.setInAtivo(form.getInAtivo());
         if (repository.alterarAtivo(atual, form.getNrVersao()) == 0) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_409, MSG_CONFLITO, "nrVersao divergente");
+            throw new ConflitoException(MSG_CONFLITO);
         }
         return um(id);
     }
@@ -212,7 +214,7 @@ public class FinanceiroInvestimentoServiceImpl implements FinanceiroInvestimento
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroAtivoDto excluirOperacao(Long idOperacao) {
         FinanceiroOperacao op = repository.buscarOperacao(idOperacao)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Operação não encontrada", "id " + idOperacao));
+                .orElseThrow(() -> new NaoEncontradoException("Operação não encontrada"));
         List<FinanceiroOperacao> restantes = repository.listarOperacoes(Collections.singletonList(op.getIdAtivo())).stream()
                 .filter(o -> !o.getId().equals(idOperacao)).collect(Collectors.toList());
         if (PosicaoCalculator.calcular(restantes) == null) throw invalido("Excluir essa compra deixaria uma venda sem cotas. Exclua a venda antes.");
@@ -241,7 +243,7 @@ public class FinanceiroInvestimentoServiceImpl implements FinanceiroInvestimento
     @Transactional(rollbackFor = Exception.class)
     public FinanceiroAtivoDto excluirProvento(Long idProvento) {
         FinanceiroProvento p = repository.buscarProvento(idProvento)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Provento não encontrado", "id " + idProvento));
+                .orElseThrow(() -> new NaoEncontradoException("Provento não encontrado"));
         repository.excluirProvento(idProvento);
         return um(p.getIdAtivo());
     }
@@ -275,7 +277,7 @@ public class FinanceiroInvestimentoServiceImpl implements FinanceiroInvestimento
 
     private FinanceiroAtivo ativo(Long id) {
         return repository.buscarAtivo(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Fundo não encontrado", "id " + id));
+                .orElseThrow(() -> new NaoEncontradoException("Fundo não encontrado"));
     }
 
     private LocalDate hoje() {
@@ -308,8 +310,8 @@ public class FinanceiroInvestimentoServiceImpl implements FinanceiroInvestimento
         }
     }
 
-    private static ValidacaoException invalido(String mensagem) {
-        return new ValidacaoException(NordHttpEnum.HTTP_400, mensagem, mensagem);
+    private static NordException invalido(String mensagem) {
+        return new EntradaInvalidaException(mensagem);
     }
 
     private static BigDecimal soma(List<FinanceiroAtivoDto> itens, java.util.function.Function<FinanceiroAtivoDto, BigDecimal> campo) {

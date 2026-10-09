@@ -1,8 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.domain.CasamentoMarco;
 import br.com.nord_tool_backend.dto.CasamentoMarcoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CasamentoMarcoForm;
 import br.com.nord_tool_backend.repository.CasamentoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +57,7 @@ class CasamentoMarcoServiceImplTest {
     void marcosPadraoSoComATabelaVazia() {
         when(repository.contarMarcos()).thenReturn(3);
 
-        assertThrows(ValidacaoException.class, () -> marcos.criarPadrao());
+        assertThrows(NordException.class, () -> marcos.criarPadrao());
         verify(repository, never()).inserirMarco(any());
     }
 
@@ -99,8 +99,8 @@ class CasamentoMarcoServiceImplTest {
     void marcoInexistenteRetorna404() {
         when(repository.buscarMarco(9L)).thenReturn(Optional.empty());
 
-        assertEquals(404, assertThrows(ValidacaoException.class, () -> marcos.buscar(9L)).getHttpEnum().getStatus().value());
-        assertThrows(ValidacaoException.class, () -> marcos.deletar(9L));
-        assertThrows(ValidacaoException.class, () -> marcos.concluir(9L, true));
+        assertEquals(404, assertThrows(NordException.class, () -> marcos.buscar(9L)).getStatus().getStatus().value());
+        assertThrows(NordException.class, () -> marcos.deletar(9L));
+        assertThrows(NordException.class, () -> marcos.concluir(9L, true));
     }
 }

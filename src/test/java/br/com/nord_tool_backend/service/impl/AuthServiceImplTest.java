@@ -1,9 +1,9 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.domain.PerfilPermissao;
 import br.com.nord_tool_backend.domain.Usuario;
 import br.com.nord_tool_backend.dto.LoginResponseDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.AlterarSenhaForm;
 import br.com.nord_tool_backend.form.LoginForm;
 import br.com.nord_tool_backend.repository.UsuarioRepository;
@@ -89,8 +89,8 @@ class AuthServiceImplTest {
         when(repository.buscarPorEmail("x@nord.com")).thenReturn(Optional.empty());
         when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(usuario(0, null)));
 
-        ValidacaoException a = assertThrows(ValidacaoException.class, () -> service.login(form("x@nord.com", "qualquer")));
-        ValidacaoException b = assertThrows(ValidacaoException.class, () -> service.login(form("admin@nord.com", "errada")));
+        NordException a = assertThrows(NordException.class, () -> service.login(form("x@nord.com", "qualquer")));
+        NordException b = assertThrows(NordException.class, () -> service.login(form("admin@nord.com", "errada")));
 
         assertEquals("E-mail ou senha inválidos", a.getMessage());
         assertEquals(a.getMessage(), b.getMessage());
@@ -101,7 +101,7 @@ class AuthServiceImplTest {
     void quintaFalhaBloqueiaPorQuinzeMinutos() {
         when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(usuario(4, null)));
 
-        assertThrows(ValidacaoException.class, () -> service.login(form("admin@nord.com", "errada")));
+        assertThrows(NordException.class, () -> service.login(form("admin@nord.com", "errada")));
 
         ArgumentCaptor<LocalDateTime> ate = ArgumentCaptor.forClass(LocalDateTime.class);
         verify(repository).registrarFalha(eq(1L), eq(0), ate.capture());
@@ -113,7 +113,7 @@ class AuthServiceImplTest {
         LocalDateTime ate = LocalDateTime.now(RELOGIO).plusMinutes(10);
         when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(usuario(0, ate)));
 
-        ValidacaoException ex = assertThrows(ValidacaoException.class,
+        NordException ex = assertThrows(NordException.class,
                 () -> service.login(form("admin@nord.com", "senha-correta-123")));
 
         assertTrue(ex.getMessage().contains("bloqueada"));
@@ -135,7 +135,7 @@ class AuthServiceImplTest {
         u.setInAtivo(false);
         when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(u));
 
-        assertThrows(ValidacaoException.class, () -> service.login(form("admin@nord.com", "senha-correta-123")));
+        assertThrows(NordException.class, () -> service.login(form("admin@nord.com", "senha-correta-123")));
         verify(repository, never()).registrarFalha(anyLong(), anyInt(), any());
     }
 
@@ -150,7 +150,7 @@ class AuthServiceImplTest {
     void refreshDeUsuarioInexistenteEh401() {
         when(repository.buscarPorId(9L)).thenReturn(Optional.empty());
 
-        assertThrows(ValidacaoException.class, () -> service.refresh(9L));
+        assertThrows(NordException.class, () -> service.refresh(9L));
     }
 
     @Test
@@ -174,7 +174,7 @@ class AuthServiceImplTest {
         f.setSenhaAtual("errada");
         f.setNovaSenha("outra-senha-forte-456");
 
-        assertThrows(ValidacaoException.class, () -> service.alterarSenha(1L, f));
+        assertThrows(NordException.class, () -> service.alterarSenha(1L, f));
         verify(repository, never()).alterarSenha(anyLong(), any());
     }
 }

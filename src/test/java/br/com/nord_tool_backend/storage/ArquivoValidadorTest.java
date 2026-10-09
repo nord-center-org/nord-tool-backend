@@ -1,6 +1,6 @@
 package br.com.nord_tool_backend.storage;
 
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
+import br.com.nord_tool_backend.exception.NordException;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -26,10 +26,10 @@ class ArquivoValidadorTest {
 
     @Test
     void rejeitaPdfSemAssinaturaOuAcimaDe15Mb() {
-        ValidacaoException a = assertThrows(ValidacaoException.class,
+        NordException a = assertThrows(NordException.class,
                 () -> ArquivoValidador.validarPdf("x.pdf", comPrefixo(100, JPEG)));
         assertTrue(a.getMessage().contains("PDF"));
-        assertThrows(ValidacaoException.class,
+        assertThrows(NordException.class,
                 () -> ArquivoValidador.validarPdf("x.pdf", comPrefixo(ArquivoValidador.MAX_PDF_BYTES + 1, PDF)));
         assertDoesNotThrow(() -> ArquivoValidador.validarPdf("x.pdf", comPrefixo(ArquivoValidador.MAX_PDF_BYTES, PDF)));
     }
@@ -42,28 +42,28 @@ class ArquivoValidadorTest {
 
     @Test
     void rejeitaImagemInvalidaOuAcimaDe5Mb() {
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarImagem("a.gif", comPrefixo(50, 'G', 'I', 'F')));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarImagem("a.jpg", comPrefixo(ArquivoValidador.MAX_IMAGEM_BYTES + 1, JPEG)));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarImagem("a.gif", comPrefixo(50, 'G', 'I', 'F')));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarImagem("a.jpg", comPrefixo(ArquivoValidador.MAX_IMAGEM_BYTES + 1, JPEG)));
         assertDoesNotThrow(() -> ArquivoValidador.validarImagem("a.jpg", comPrefixo(ArquivoValidador.MAX_IMAGEM_BYTES, JPEG)));
     }
 
     @Test
     void rejeitaArquivoVazioOuNulo() {
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarPdf("x.pdf", new byte[0]));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarImagem("x.jpg", null));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarPdf("x.pdf", new byte[3]));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarPdf("x.pdf", new byte[0]));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarImagem("x.jpg", null));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarPdf("x.pdf", new byte[3]));
     }
 
     @Test
     void validaNome() {
         char[] longo = new char[181];
         Arrays.fill(longo, 'a');
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarNome(new String(longo)));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarNome(new String(longo)));
         assertDoesNotThrow(() -> ArquivoValidador.validarNome(new String(longo, 0, 180)));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarNome("a\nb.pdf"));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarNome("a\u0000.pdf"));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarNome("  "));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarNome(null));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarNome("a\nb.pdf"));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarNome("a\u0000.pdf"));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarNome("  "));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarNome(null));
         assertDoesNotThrow(() -> ArquivoValidador.validarNome("Relatório de reprova (1º).pdf"));
     }
 
@@ -77,10 +77,10 @@ class ArquivoValidadorTest {
 
     @Test
     void contratoRecusaOutrosTiposVazioEAcimaDe15Mb() {
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarContrato("c.txt", comPrefixo(100, 'G', 'I', 'F')));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarContrato("c.pdf", new byte[0]));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarContrato("c.pdf", comPrefixo(ArquivoValidador.MAX_CONTRATO_BYTES + 1, PDF)));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarContrato("a\nb.pdf", comPrefixo(100, PDF)));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarContrato("c.txt", comPrefixo(100, 'G', 'I', 'F')));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarContrato("c.pdf", new byte[0]));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarContrato("c.pdf", comPrefixo(ArquivoValidador.MAX_CONTRATO_BYTES + 1, PDF)));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarContrato("a\nb.pdf", comPrefixo(100, PDF)));
     }
 
     @Test
@@ -88,13 +88,13 @@ class ArquivoValidadorTest {
         byte[] ok = "%PDF-1.4\nconteudo\n%%EOF\n".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
         assertEquals(ArquivoValidador.PDF, ArquivoValidador.validarComprovantePdf("n.pdf", ok, 1024));
         byte[] semEof = "%PDF-1.4\ncortado".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", semEof, 1024));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", ok, 10));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", new byte[0], 1024));
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", "GIF89a%%EOF".getBytes(), 1024));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", semEof, 1024));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", ok, 10));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", new byte[0], 1024));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", "GIF89a%%EOF".getBytes(), 1024));
         // %%EOF só vale nos últimos 1024 bytes
         byte[] longe = new byte[3000];
         System.arraycopy(ok, 0, longe, 0, ok.length);
-        assertThrows(ValidacaoException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", longe, 5000));
+        assertThrows(NordException.class, () -> ArquivoValidador.validarComprovantePdf("n.pdf", longe, 5000));
     }
 }

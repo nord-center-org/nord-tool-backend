@@ -1,6 +1,9 @@
 package br.com.nord_tool_backend.service.impl;
 
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.exception.NordException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
+import br.com.nord_tool_backend.exception.ConflitoException;
+import br.com.nord_tool_backend.exception.NaoEncontradoException;
 import br.com.nord_tool_backend.domain.FinanceiroCategoria;
 import br.com.nord_tool_backend.domain.FinanceiroConfiguracao;
 import br.com.nord_tool_backend.domain.FinanceiroFaturaAberta;
@@ -17,7 +20,6 @@ import br.com.nord_tool_backend.dto.FinanceiroGeracaoDto;
 import br.com.nord_tool_backend.dto.FinanceiroProjecaoLinhaDto;
 import br.com.nord_tool_backend.dto.FinanceiroProjecaoMesDto;
 import br.com.nord_tool_backend.dto.FinanceiroRecorrenciaDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.FinanceiroConfiguracaoForm;
 import br.com.nord_tool_backend.form.FinanceiroRecorrenciaForm;
 import br.com.nord_tool_backend.form.FinanceiroSaldoInicialForm;
@@ -260,7 +262,7 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
     @Transactional(readOnly = true)
     public List<FinanceiroFaturaLeituraDto> listarLeituras(Long idLancamento) {
         repository.buscarLancamento(idLancamento)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Lançamento não encontrado", null));
+                .orElseThrow(() -> new NaoEncontradoException("Lançamento não encontrado"));
         return projecaoRepository.listarLeituras(idLancamento).stream().map(FinanceiroFaturaLeituraDto::de).collect(Collectors.toList());
     }
 
@@ -289,7 +291,7 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
         FinanceiroRecorrencia nova = converter(form);
         nova.setId(id);
         if (projecaoRepository.alterarRecorrencia(nova, form.getNrVersao()) == 0) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_409, MSG_CONFLITO, null);
+            throw new ConflitoException(MSG_CONFLITO);
         }
         return FinanceiroRecorrenciaDto.de(recorrencia(id));
     }
@@ -367,7 +369,7 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
 
     private FinanceiroRecorrencia recorrencia(Long id) {
         return projecaoRepository.buscarRecorrencia(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Recorrência não encontrada", null));
+                .orElseThrow(() -> new NaoEncontradoException("Recorrência não encontrada"));
     }
 
     // ---------- auxiliares ----------
@@ -380,7 +382,7 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
         if (mesFechadoNoBanco(mes)) throw mesFechado(mes);
     }
 
-    private static ValidacaoException mesFechado(YearMonth mes) {
+    private static NordException mesFechado(YearMonth mes) {
         return invalido("O mês de " + rotulo(mes) + " está fechado. Reabra o mês para alterá-lo.");
     }
 
@@ -407,8 +409,8 @@ public class FinanceiroProjecaoServiceImpl implements FinanceiroProjecaoService 
         return NOMES[mes.getMonthValue() - 1] + " de " + mes.getYear();
     }
 
-    private static ValidacaoException invalido(String mensagem) {
-        return new ValidacaoException(NordHttpEnum.HTTP_400, mensagem, null);
+    private static NordException invalido(String mensagem) {
+        return new EntradaInvalidaException(mensagem);
     }
 
     private static int valor(Integer valor, int padrao) {

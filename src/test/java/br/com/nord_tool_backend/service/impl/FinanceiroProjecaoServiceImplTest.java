@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NordException;
 import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.domain.FinanceiroCategoria;
 import br.com.nord_tool_backend.domain.FinanceiroConfiguracao;
@@ -14,7 +15,6 @@ import br.com.nord_tool_backend.dto.FinanceiroFechamentoDto;
 import br.com.nord_tool_backend.dto.FinanceiroGeracaoDto;
 import br.com.nord_tool_backend.dto.FinanceiroProjecaoLinhaDto;
 import br.com.nord_tool_backend.dto.FinanceiroProjecaoMesDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.FinanceiroConfiguracaoForm;
 import br.com.nord_tool_backend.form.FinanceiroRecorrenciaForm;
 import br.com.nord_tool_backend.form.FinanceiroSaldoInicialForm;
@@ -153,8 +153,8 @@ class FinanceiroProjecaoServiceImplTest {
     }
 
     private void esperaErro(NordHttpEnum esperado, Runnable acao) {
-        ValidacaoException ex = assertThrows(ValidacaoException.class, acao::run);
-        assertEquals(esperado, ex.getHttpEnum());
+        NordException ex = assertThrows(NordException.class, acao::run);
+        assertEquals(esperado, ex.getStatus());
     }
 
     /** Agosto e setembro fechados, outubro (atual) com salário e fatura lançados e o resto estimado. */

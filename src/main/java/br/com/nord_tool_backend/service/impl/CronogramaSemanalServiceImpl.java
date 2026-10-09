@@ -1,9 +1,8 @@
 package br.com.nord_tool_backend.service.impl;
 
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.CronogramaSemanal;
 import br.com.nord_tool_backend.dto.CronogramaSemanalDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.CronogramaSemanalForm;
 import br.com.nord_tool_backend.repository.CronogramaSemanalRepository;
 import br.com.nord_tool_backend.service.CronogramaSemanalService;
@@ -48,9 +47,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     private void validarOrigemCronogramaSemanal(CronogramaSemanal cronogramaSemanal) {
         boolean fixo = Boolean.TRUE.equals(cronogramaSemanal.getInCronogramaFixo());
         if (fixo && cronogramaSemanal.getIdDiaSemana() == null) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_400,
-                    "Atividades fixas precisam de um dia da semana.",
-                    "idDiaSemana ausente para item fixo");
+            throw new EntradaInvalidaException("Atividades fixas precisam de um dia da semana.");
         }
     }
 

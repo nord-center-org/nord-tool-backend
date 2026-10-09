@@ -1,13 +1,12 @@
 package br.com.nord_tool_backend.controller;
 
+import br.com.nord_tool_backend.exception.ConflitoException;
 import br.com.nord_tool_backend.controller.read.FinanceiroReadController;
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.controller.write.FinanceiroWriteController;
 import br.com.nord_tool_backend.domain.FinanceiroFiltro;
 import br.com.nord_tool_backend.dto.FinanceiroLancamentoDto;
 import br.com.nord_tool_backend.dto.FinanceiroListaDto;
 import br.com.nord_tool_backend.dto.FinanceiroResumoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
 import br.com.nord_tool_backend.security.AcessoModulo;
 import br.com.nord_tool_backend.security.JwtAuthenticationFilter;
@@ -149,8 +148,7 @@ class FinanceiroControllerTest {
 
     @Test
     void conflitoDeVersaoVira409ComAMensagem() throws Exception {
-        when(service.marcarRealizado(anyLong(), any())).thenThrow(new ValidacaoException(NordHttpEnum.HTTP_409,
-                "O lançamento mudou. Sincronize e tente novamente.", null));
+        when(service.marcarRealizado(anyLong(), any())).thenThrow(new ConflitoException("O lançamento mudou. Sincronize e tente novamente."));
 
         mvc.perform(put(BASE + "/lancamentos/5/realizado").header("Authorization", auth()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"inRealizado\":true,\"nrVersao\":1}"))
@@ -174,7 +172,7 @@ class FinanceiroControllerTest {
                 .andExpect(status().isNoContent());
         verify(service).excluir(5L, 3);
 
-        doThrow(new ValidacaoException(NordHttpEnum.HTTP_409, "O lançamento mudou. Sincronize e tente novamente.", null))
+        doThrow(new ConflitoException("O lançamento mudou. Sincronize e tente novamente."))
                 .when(service).excluir(eq(6L), any());
         mvc.perform(delete(BASE + "/lancamentos/6").param("nrVersao", "1").header("Authorization", auth()))
                 .andExpect(status().isConflict());

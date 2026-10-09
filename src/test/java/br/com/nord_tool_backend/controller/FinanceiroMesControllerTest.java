@@ -1,7 +1,8 @@
 package br.com.nord_tool_backend.controller;
 
+import br.com.nord_tool_backend.exception.ConflitoException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.controller.read.FinanceiroMesReadController;
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.controller.write.FinanceiroMesWriteController;
 import br.com.nord_tool_backend.dto.FinanceiroConfiguracaoDto;
 import br.com.nord_tool_backend.dto.FinanceiroFaturaLeituraDto;
@@ -10,7 +11,6 @@ import br.com.nord_tool_backend.dto.FinanceiroGeracaoDto;
 import br.com.nord_tool_backend.dto.FinanceiroProjecaoLinhaDto;
 import br.com.nord_tool_backend.dto.FinanceiroProjecaoMesDto;
 import br.com.nord_tool_backend.dto.FinanceiroRecorrenciaDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.handler.GlobalExceptionHandler;
 import br.com.nord_tool_backend.security.AcessoModulo;
 import br.com.nord_tool_backend.security.JwtAuthenticationFilter;
@@ -108,7 +108,7 @@ class FinanceiroMesControllerTest {
 
     @Test
     void competenciaInvalidaVira400() throws Exception {
-        when(service.obterMes("10-2026", null)).thenThrow(new ValidacaoException(NordHttpEnum.HTTP_400, "Competência inválida", null));
+        when(service.obterMes("10-2026", null)).thenThrow(new EntradaInvalidaException("Competência inválida"));
         mvc.perform(get(BASE + "/mes/10-2026").header("Authorization", auth())).andExpect(status().isBadRequest());
     }
 
@@ -126,7 +126,7 @@ class FinanceiroMesControllerTest {
 
     @Test
     void fecharMesJaFechadoVira400ComAMensagem() throws Exception {
-        when(service.fechar(any(), any())).thenThrow(new ValidacaoException(NordHttpEnum.HTTP_400, "O mês de outubro de 2026 já está fechado", null));
+        when(service.fechar(any(), any())).thenThrow(new EntradaInvalidaException("O mês de outubro de 2026 já está fechado"));
 
         mvc.perform(post(BASE + "/mes/2026-10/fechar").header("Authorization", auth()))
                 .andExpect(status().isBadRequest())
@@ -197,7 +197,7 @@ class FinanceiroMesControllerTest {
                     .andExpect(status().isBadRequest());
         }
 
-        when(service.atualizarRecorrencia(eq(30L), any())).thenThrow(new ValidacaoException(NordHttpEnum.HTTP_409, "O registro mudou. Sincronize e tente novamente.", null));
+        when(service.atualizarRecorrencia(eq(30L), any())).thenThrow(new ConflitoException("O registro mudou. Sincronize e tente novamente."));
         mvc.perform(put(BASE + "/recorrencias/30").header("Authorization", auth()).contentType(MediaType.APPLICATION_JSON)
                 .content(RECORRENCIA.replace("}", ",\"nrVersao\":1}"))).andExpect(status().isConflict());
     }

@@ -4,10 +4,11 @@ import br.com.nord_tool_backend.builder.ApartamentoVistoriaHistoricoBuilder;
 import br.com.nord_tool_backend.domain.ApartamentoVistoria;
 import br.com.nord_tool_backend.domain.ApartamentoVistoriaHistorico;
 import br.com.nord_tool_backend.domain.InfoGeralApartamentoVistoria;
-import br.com.nord_tool_backend.domain.enums.ApartamentoVistoriaFiltroEnum;
+import br.com.nord_tool_backend.domain.OrdenacaoApartamentoVistoria;
 import br.com.nord_tool_backend.dto.ApartamentoVistoriaDto;
 import br.com.nord_tool_backend.dto.ApartamentoVistoriaFiltroDto;
 import br.com.nord_tool_backend.dto.InfoGeralApartamentoVistoriaDto;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.form.ApartamentoVistoriaForm;
 import br.com.nord_tool_backend.handler.XlsxExtractorHandlerApartamento;
 import br.com.nord_tool_backend.repository.ApartamentoVistoriaHistoricoRepository;
@@ -18,7 +19,6 @@ import br.com.nord_tool_backend.service.TermoReprovaService;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,8 +34,6 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
 
     private final ApartamentoVistoriaRepository apartamentoVistoriaRepository;
 
-    public final Environment env;
-
     private final CacheService cacheService;
 
     private final ApartamentoVistoriaHistoricoRepository apartamentoVistoriaHistoricoRepository;
@@ -43,6 +41,8 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     private final XlsxExtractorHandlerApartamento xlsxExtractorHandlerApartamento;
 
     private final TermoReprovaService termoReprovaService;
+
+    static final int MAX_POR_PAGINA = 100;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -116,15 +116,11 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     @Override
     public List<ApartamentoVistoriaDto> listarApartamentoVistoriaFiltrado(ApartamentoVistoriaFiltroDto apartamentoVistoriaFiltroDto, String filtraTodos, int nrPagina, int nrQuantidadePorPagina, String nmOrdenacao) {
         log.info("Iniciando método para filtrar listas de Apartamentos");
-        nmOrdenacao = (nmOrdenacao == null) ? "" : nmOrdenacao;
-        String query;
-
-        if (filtraTodos != null && !filtraTodos.isEmpty()) {
-            query = env.getProperty((ApartamentoVistoriaFiltroEnum.QUERY_TODOS.getQueryProperty())) + ApartamentoVistoriaFiltroEnum.QUERY_TODOS.getSort(nmOrdenacao);
-        } else {
-            query = env.getProperty((ApartamentoVistoriaFiltroEnum.QUERY_WHERE.getQueryProperty())) + ApartamentoVistoriaFiltroEnum.QUERY_WHERE.getSort(nmOrdenacao);
+        if (nrPagina < 0 || nrQuantidadePorPagina < 1 || nrQuantidadePorPagina > MAX_POR_PAGINA) {
+            throw new EntradaInvalidaException("Paginação inválida: página a partir de 0 e de 1 a " + MAX_POR_PAGINA + " itens por página");
         }
-        List<ApartamentoVistoriaDto> lsApartamentoVistoriaDto = apartamentoVistoriaRepository.listarApartamentoVistoriaFiltrado(query,apartamentoVistoriaFiltroDto, filtraTodos, nrPagina,nrQuantidadePorPagina);
+        List<ApartamentoVistoriaDto> lsApartamentoVistoriaDto = apartamentoVistoriaRepository.listarApartamentoVistoriaFiltrado(
+                apartamentoVistoriaFiltroDto, filtraTodos, nrPagina, nrQuantidadePorPagina, OrdenacaoApartamentoVistoria.de(nmOrdenacao));
         log.info("Finalizando método que filtrar listas de Apartamentos");
         return lsApartamentoVistoriaDto;
     }

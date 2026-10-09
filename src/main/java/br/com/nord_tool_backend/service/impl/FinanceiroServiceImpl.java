@@ -1,6 +1,9 @@
 package br.com.nord_tool_backend.service.impl;
 
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.exception.NordException;
+import br.com.nord_tool_backend.exception.ConflitoException;
+import br.com.nord_tool_backend.exception.NaoEncontradoException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.FinanceiroCategoria;
 import br.com.nord_tool_backend.domain.FinanceiroFiltro;
 import br.com.nord_tool_backend.domain.FinanceiroLancamento;
@@ -14,7 +17,6 @@ import br.com.nord_tool_backend.dto.FinanceiroLancamentoDto;
 import br.com.nord_tool_backend.dto.FinanceiroListaDto;
 import br.com.nord_tool_backend.dto.FinanceiroPessoaDto;
 import br.com.nord_tool_backend.dto.FinanceiroResumoDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.FinanceiroCategoriaForm;
 import br.com.nord_tool_backend.form.FinanceiroLancamentoForm;
 import br.com.nord_tool_backend.form.FinanceiroPessoaForm;
@@ -115,7 +117,7 @@ public class FinanceiroServiceImpl implements FinanceiroService {
             Long id = repository.inserirLancamento(l)
                     // Corrida: outra requisição com o mesmo UUID acabou de gravar.
                     .orElseGet(() -> repository.buscarLancamentoPorRequisicao(l.getCdRequisicao()).orElseThrow(() ->
-                            new ValidacaoException(NordHttpEnum.HTTP_400, "Não foi possível salvar o lançamento", null)));
+                            new EntradaInvalidaException("Não foi possível salvar o lançamento")));
             registrarLeitura(categoria, id, l.getVlLancamento(), idUsuario);
             criados.add(FinanceiroLancamentoDto.de(lancamento(id)));
         }
@@ -258,25 +260,25 @@ public class FinanceiroServiceImpl implements FinanceiroService {
 
     private FinanceiroLancamento lancamento(Long id) {
         return repository.buscarLancamento(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Lançamento não encontrado", null));
+                .orElseThrow(() -> new NaoEncontradoException("Lançamento não encontrado"));
     }
 
     private FinanceiroPessoa pessoa(Long id) {
         return repository.buscarPessoa(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Pessoa não encontrada", null));
+                .orElseThrow(() -> new NaoEncontradoException("Pessoa não encontrada"));
     }
 
     private FinanceiroCategoria categoria(Long id) {
         return repository.buscarCategoria(id)
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_404, "Categoria não encontrada", null));
+                .orElseThrow(() -> new NaoEncontradoException("Categoria não encontrada"));
     }
 
-    private static ValidacaoException conflito() {
-        return new ValidacaoException(NordHttpEnum.HTTP_409, MSG_CONFLITO, null);
+    private static NordException conflito() {
+        return new ConflitoException(MSG_CONFLITO);
     }
 
-    private static ValidacaoException invalido(String mensagem) {
-        return new ValidacaoException(NordHttpEnum.HTTP_400, mensagem, null);
+    private static NordException invalido(String mensagem) {
+        return new EntradaInvalidaException(mensagem);
     }
 
     private static BigDecimal zero(BigDecimal valor) {

@@ -1,10 +1,9 @@
 package br.com.nord_tool_backend.controller.write;
 
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
 import br.com.nord_tool_backend.controller.response.ApiResponseBody;
 import br.com.nord_tool_backend.controller.response.BaseResponse;
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
 import br.com.nord_tool_backend.dto.LoginResponseDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.AlterarSenhaForm;
 import br.com.nord_tool_backend.form.LoginForm;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
@@ -51,7 +50,7 @@ public class AuthWriteController implements BaseResponse {
 
     static UsuarioAutenticado exigir(UsuarioAutenticado usuario) {
         if (usuario == null) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_401, "Autenticação necessária", null);
+            throw new NaoAutenticadoException("Autenticação necessária");
         }
         return usuario;
     }

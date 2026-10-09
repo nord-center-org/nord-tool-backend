@@ -1,11 +1,12 @@
 package br.com.nord_tool_backend.service.impl;
 
-import br.com.nord_tool_backend.controller.response.NordHttpEnum;
+import br.com.nord_tool_backend.exception.NordException;
+import br.com.nord_tool_backend.exception.NaoAutenticadoException;
+import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.PerfilPermissao;
 import br.com.nord_tool_backend.domain.Usuario;
 import br.com.nord_tool_backend.dto.LoginResponseDto;
 import br.com.nord_tool_backend.dto.UsuarioDto;
-import br.com.nord_tool_backend.excepetion.ValidacaoException;
 import br.com.nord_tool_backend.form.AlterarSenhaForm;
 import br.com.nord_tool_backend.form.LoginForm;
 import br.com.nord_tool_backend.repository.UsuarioRepository;
@@ -40,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private String hashFalso;
 
     @Override
-    @Transactional(rollbackFor = Exception.class, noRollbackFor = ValidacaoException.class)
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NordException.class)
     public LoginResponseDto login(LoginForm form) {
         Usuario usuario = usuarioRepository.buscarPorEmail(form.getEmail().trim()).orElse(null);
         if (usuario == null) {
@@ -82,10 +83,10 @@ public class AuthServiceImpl implements AuthService {
     public void alterarSenha(Long idUsuario, AlterarSenhaForm form) {
         Usuario usuario = buscarAtivo(idUsuario);
         if (!passwordEncoder.matches(form.getSenhaAtual(), usuario.getNmSenhaHash())) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_400, "Senha atual incorreta", null);
+            throw new EntradaInvalidaException("Senha atual incorreta");
         }
         if (form.getNovaSenha().equals(form.getSenhaAtual())) {
-            throw new ValidacaoException(NordHttpEnum.HTTP_400, "A nova senha deve ser diferente da atual", null);
+            throw new EntradaInvalidaException("A nova senha deve ser diferente da atual");
         }
         usuarioRepository.alterarSenha(usuario.getId(), passwordEncoder.encode(form.getNovaSenha()));
     }
@@ -102,7 +103,7 @@ public class AuthServiceImpl implements AuthService {
     private Usuario buscarAtivo(Long idUsuario) {
         return usuarioRepository.buscarPorId(idUsuario)
                 .filter(u -> Boolean.TRUE.equals(u.getInAtivo()))
-                .orElseThrow(() -> new ValidacaoException(NordHttpEnum.HTTP_401, "Sessão inválida", null));
+                .orElseThrow(() -> new NaoAutenticadoException("Sessão inválida"));
     }
 
     private LoginResponseDto montarResposta(Usuario usuario) {
@@ -120,8 +121,8 @@ public class AuthServiceImpl implements AuthService {
         return new UsuarioDto(usuario.getId(), usuario.getNmNome(), usuario.getNmEmail(), usuario.getCdPerfil(), permissoes);
     }
 
-    private ValidacaoException erro(String mensagem) {
-        return new ValidacaoException(NordHttpEnum.HTTP_401, mensagem, null);
+    private NordException erro(String mensagem) {
+        return new NaoAutenticadoException(mensagem);
     }
 
     private synchronized String hashFalso() {
