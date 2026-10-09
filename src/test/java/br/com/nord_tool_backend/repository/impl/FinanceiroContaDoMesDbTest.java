@@ -66,7 +66,7 @@ class FinanceiroContaDoMesDbTest {
         FinanceiroProjecaoRepositoryImpl projecao = new FinanceiroProjecaoRepositoryImpl(jdbc);
         injetar(repo, "/query/financeiro.properties");
         injetar(projecao, "/query/financeiro_projecao.properties");
-        // 08/03/2032 em São Paulo: o mês atual é março de 2032
+        // 28/03/2032: o mês atual é março de 2032
         Clock relogio = Clock.fixed(Instant.parse("2032-03-28T15:00:00Z"), ZoneId.of("UTC"));
         lancamentos = new FinanceiroServiceImpl(repo, projecao, relogio);
         conta = new FinanceiroProjecaoServiceImpl(repo, projecao, relogio);
