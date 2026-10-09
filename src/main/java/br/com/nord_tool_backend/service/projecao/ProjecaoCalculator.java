@@ -189,8 +189,8 @@ public final class ProjecaoCalculator {
     }
 
     /**
-     * Estima o valor final de uma fatura em aberto. O ciclo da fatura do mês M vai do dia seguinte ao
-     * fechamento de M-1 até o fechamento de M. Com {@code d} dias já decorridos até a leitura e {@code D} dias no ciclo:
+     * Estima o valor final de uma fatura em aberto. A fatura "do mês M" é a das compras de M: o ciclo vai do dia
+     * seguinte ao fechamento de M até o fechamento de M+1 (a fatura de setembro fecha em outubro e vence em 10/10). Com {@code d} dias já decorridos até a leitura e {@code D} dias no ciclo:
      * <ul>
      *   <li>com média histórica: {@code parcial + (1 − d/D) × média} (no começo vale a média; no fim, o parcial);</li>
      *   <li>sem histórico: {@code parcial × D/d} (o ritmo do ciclo);</li>
@@ -200,8 +200,8 @@ public final class ProjecaoCalculator {
     public static BigDecimal projetarFatura(BigDecimal parcial, LocalDate dtLeitura, YearMonth competencia,
                                             int diaFechamento, BigDecimal media) {
         if (dtLeitura == null) return parcial;
-        LocalDate fim = dataDoDia(competencia, diaFechamento);
-        LocalDate inicio = dataDoDia(competencia.minusMonths(1), diaFechamento).plusDays(1);
+        LocalDate inicio = dataDoDia(competencia, diaFechamento).plusDays(1);
+        LocalDate fim = dataDoDia(competencia.plusMonths(1), diaFechamento);
         if (!dtLeitura.isBefore(fim) || dtLeitura.isBefore(inicio)) return parcial;
 
         BigDecimal decorridos = BigDecimal.valueOf(ChronoUnit.DAYS.between(inicio, dtLeitura) + 1);

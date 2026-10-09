@@ -184,7 +184,7 @@ class FinanceiroProjecaoServiceImplTest {
         aberta.setIdLancamento(70L);
         aberta.setIdCategoria(fatura.getId());
         aberta.setVlLancamento(v("1200.00"));
-        aberta.setDtLeitura(LocalDate.of(2026, 9, 24));
+        aberta.setDtLeitura(LocalDate.of(2026, 10, 24));
         when(projecao.faturasDoMes(eq(OUT), any())).thenReturn(Collections.singletonList(aberta));
         when(projecao.listarRecorrencias()).thenReturn(Collections.singletonList(recorrencia(9, apto, "1956.42", LocalDate.of(2026, 1, 1), null)));
         when(projecao.contarPrevistos(OUT)).thenReturn(3);
@@ -204,16 +204,16 @@ class FinanceiroProjecaoServiceImplTest {
         assertTrue(mes.isComSaldoAnterior());
         assertEquals(v("1500.00"), mes.getSaldoAnterior());
         assertEquals(v("5000.00"), mes.getTotalEntradas());
-        // fatura 1200 + (1 - 16/30) * 2400 = 2320; apartamento pela recorrência; luz pela média (300)
-        assertEquals(v("2320.00"), linha(mes.getSaidas(), 4).getProjetado());
+        // fatura de outubro (ciclo 09/10 a 08/11, 31 dias; em 24/10 passaram 16): 1200 + (1 - 16/31) * 2400 = 2361,29; apartamento pela recorrência; luz pela média (300)
+        assertEquals(v("2361.29"), linha(mes.getSaidas(), 4).getProjetado());
         assertEquals("RITMO", linha(mes.getSaidas(), 4).getOrigem());
         assertEquals(v("1956.42"), linha(mes.getSaidas(), 5).getProjetado());
         assertEquals("RECORRENCIA", linha(mes.getSaidas(), 5).getOrigem());
         assertEquals(v("300.00"), linha(mes.getSaidas(), 6).getProjetado());
-        assertEquals(v("4576.42"), mes.getTotalSaidas());
-        assertEquals(v("1923.58"), mes.getSaldoFinal());
+        assertEquals(v("4617.71"), mes.getTotalSaidas());
+        assertEquals(v("1882.29"), mes.getSaldoFinal());
         assertEquals(v("500.00"), mes.getMetaSaldo());
-        assertEquals(v("1423.58"), mes.getFolga());
+        assertEquals(v("1382.29"), mes.getFolga());
         assertEquals("VERDE", mes.getSituacao());
         assertEquals(3, mes.getQtPrevistos());
         // o saldo anterior não é uma linha: vem à parte
@@ -229,7 +229,7 @@ class FinanceiroProjecaoServiceImplTest {
         FinanceiroProjecaoMesDto mes = service.obterMes("2026-10", null);
 
         assertEquals("VERMELHO", mes.getSituacao());
-        assertEquals(v("-1076.42"), mes.getFolga());
+        assertEquals(v("-1117.71"), mes.getFolga());
     }
 
     @Test
@@ -295,13 +295,13 @@ class FinanceiroProjecaoServiceImplTest {
         assertNull(mes.getMetaSaldo());
         assertNull(mes.getFolga());
         // a recorrência do apartamento é da pessoa 1: para a pessoa 2 o apartamento fica sem valor
-        assertEquals(v("2380.00"), mes.getSaldoFinal());
+        assertEquals(v("2338.71"), mes.getSaldoFinal());
         assertEquals("SEM_DADOS", linha(mes.getSaidas(), 5).getOrigem());
         assertEquals("VERDE", mes.getSituacao());
         verify(projecao, times(1)).somarPorCategoria(any(), any(), eq(2L));
 
         // para a pessoa 1 a recorrência entra
-        assertEquals(v("423.58"), service.obterMes("2026-10", 1L).getSaldoFinal());
+        assertEquals(v("382.29"), service.obterMes("2026-10", 1L).getSaldoFinal());
     }
 
     @Test
@@ -550,6 +550,7 @@ class FinanceiroProjecaoServiceImplTest {
     class ProjecaoCalculatorTest {
 
         private final YearMonth OUT = YearMonth.of(2026, 10);
+        private final YearMonth SET = YearMonth.of(2026, 9);
 
         private BigDecimal v(String valor) {
             return new BigDecimal(valor);
@@ -718,43 +719,43 @@ class FinanceiroProjecaoServiceImplTest {
 
         @Test
         void faturaComMediaSomaOParcialAoQueFaltaDoCiclo() {
-            // fechamento dia 8: ciclo da fatura de outubro = 09/09 a 08/10 (30 dias); em 24/09 passaram 16
-            BigDecimal r = ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 9, 24), OUT, 8, v("2400.00"));
+            // fechamento dia 8: ciclo da fatura de setembro = 09/09 a 08/10 (30 dias); em 24/09 passaram 16
+            BigDecimal r = ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 9, 24), SET, 8, v("2400.00"));
             assertEquals(v("2320.00"), r); // 1200 + (1 - 16/30) * 2400
         }
 
         @Test
         void faturaSemHistoricoUsaORitmoDoCiclo() {
-            BigDecimal r = ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 9, 24), OUT, 8, null);
+            BigDecimal r = ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 9, 24), SET, 8, null);
             assertEquals(v("2250.00"), r); // 1200 * 30 / 16
         }
 
         @Test
         void faturaNuncaFicaAbaixoDoParcial() {
-            BigDecimal r = ProjecaoCalculator.projetarFatura(v("3000.00"), LocalDate.of(2026, 9, 24), OUT, 8, v("2400.00"));
+            BigDecimal r = ProjecaoCalculator.projetarFatura(v("3000.00"), LocalDate.of(2026, 9, 24), SET, 8, v("2400.00"));
             assertEquals(v("4120.00"), r);
             assertTrue(r.compareTo(v("3000.00")) >= 0);
         }
 
         @Test
         void faturaSemLeituraCicloEncerradoOuLeituraForaDoCicloFicaNoParcial() {
-            assertEquals(v("1200.00"), ProjecaoCalculator.projetarFatura(v("1200.00"), null, OUT, 8, v("2400.00")));
-            assertEquals(v("1200.00"), ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 10, 8), OUT, 8, v("2400.00")));
-            assertEquals(v("1200.00"), ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 10, 20), OUT, 8, v("2400.00")));
-            assertEquals(v("1200.00"), ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 9, 1), OUT, 8, v("2400.00")));
+            assertEquals(v("1200.00"), ProjecaoCalculator.projetarFatura(v("1200.00"), null, SET, 8, v("2400.00")));
+            assertEquals(v("1200.00"), ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 10, 8), SET, 8, v("2400.00")));
+            assertEquals(v("1200.00"), ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 10, 20), SET, 8, v("2400.00")));
+            assertEquals(v("1200.00"), ProjecaoCalculator.projetarFatura(v("1200.00"), LocalDate.of(2026, 9, 1), SET, 8, v("2400.00")));
         }
 
         @Test
         void primeiroDiaDoCicloPesaQuaseTudoNaMedia() {
-            BigDecimal r = ProjecaoCalculator.projetarFatura(v("100.00"), LocalDate.of(2026, 9, 9), OUT, 8, v("3000.00"));
+            BigDecimal r = ProjecaoCalculator.projetarFatura(v("100.00"), LocalDate.of(2026, 9, 9), SET, 8, v("3000.00"));
             assertEquals(v("3000.00"), r); // d = 1 de 30: 100 + 29/30 * 3000 = 3000
         }
 
         @Test
         void diaDeFechamentoMaiorQueOMesUsaOUltimoDia() {
-            // fechamento "dia 31" em fevereiro/2027 vale 28/02; o ciclo começa em 01/02 (31/01 + 1)
-            YearMonth fev = YearMonth.of(2027, 2);
-            BigDecimal r = ProjecaoCalculator.projetarFatura(v("1000.00"), LocalDate.of(2027, 2, 14), fev, 31, null);
+            // fechamento "dia 31": a fatura de janeiro/2027 começa em 01/02 (31/01 + 1) e fecha em 28/02 (fevereiro não tem dia 31)
+            YearMonth jan = YearMonth.of(2027, 1);
+            BigDecimal r = ProjecaoCalculator.projetarFatura(v("1000.00"), LocalDate.of(2027, 2, 14), jan, 31, null);
             assertEquals(v("2000.00"), r); // d = 14 de 28
         }
 
@@ -762,11 +763,11 @@ class FinanceiroProjecaoServiceImplTest {
         void linhaDeFaturaEmAbertoUsaOParcialMaisOQueFalta() {
             Montador m = new Montador().categorias(FATURA).lancado(FATURA, "1200.00")
                     .mesAnterior(1, FATURA, "2400.00").mesAnterior(2, FATURA, "2400.00").mesAnterior(3, FATURA, "2400.00")
-                    .fatura(FATURA, "1200.00", LocalDate.of(2026, 9, 24));
+                    .fatura(FATURA, "1200.00", LocalDate.of(2026, 10, 24));
 
             Linha l = linha(m.calcular().saidas, 4);
 
-            assertEquals(v("2320.00"), l.projetado);
+            assertEquals(v("2361.29"), l.projetado); // ciclo de outubro: 09/10 a 08/11 (31 dias), em 24/10 passaram 16
             assertEquals(v("1200.00"), l.real);
             assertEquals(ProjecaoCalculator.ORIGEM_RITMO, l.origem);
         }
@@ -778,7 +779,7 @@ class FinanceiroProjecaoServiceImplTest {
             assertEquals(ProjecaoCalculator.ORIGEM_MEDIA, linha(m.calcular().saidas, 4).origem);
 
             Montador fechada = new Montador().categorias(FATURA).lancado(FATURA, "2380.38").mesAnterior(1, FATURA, "2400.00")
-                    .fatura(FATURA, "2380.38", LocalDate.of(2026, 10, 9));
+                    .fatura(FATURA, "2380.38", LocalDate.of(2026, 11, 9)); // depois do fechamento de 08/11
             Linha l = linha(fechada.calcular().saidas, 4);
             assertEquals(v("2380.38"), l.projetado);
             assertEquals(ProjecaoCalculator.ORIGEM_REAL, l.origem);
@@ -794,15 +795,15 @@ class FinanceiroProjecaoServiceImplTest {
         void duasFaturasNaMesmaCategoriaDividemAMedia() {
             Montador m = new Montador().categorias(FATURA).lancado(FATURA, "1200.00")
                     .mesAnterior(1, FATURA, "2400.00")
-                    .fatura(FATURA, "600.00", LocalDate.of(2026, 9, 24)).fatura(FATURA, "600.00", LocalDate.of(2026, 9, 24));
+                    .fatura(FATURA, "600.00", LocalDate.of(2026, 10, 24)).fatura(FATURA, "600.00", LocalDate.of(2026, 10, 24));
 
-            assertEquals(v("2320.00"), linha(m.calcular().saidas, 4).projetado);
+            assertEquals(v("2361.30"), linha(m.calcular().saidas, 4).projetado); // 2 x (600 + 0,4839 x 1200)
         }
 
         @Test
         void semEstimarAFaturaFicaNoValorLancado() {
             Montador m = new Montador().categorias(FATURA).lancado(FATURA, "1200.00").mesAnterior(1, FATURA, "2400.00")
-                    .fatura(FATURA, "1200.00", LocalDate.of(2026, 9, 24));
+                    .fatura(FATURA, "1200.00", LocalDate.of(2026, 10, 24));
             m.estimar = false;
             assertEquals(v("1200.00"), linha(m.calcular().saidas, 4).projetado);
             assertEquals(Collections.emptyList(), new Montador().calcular().entradas);
