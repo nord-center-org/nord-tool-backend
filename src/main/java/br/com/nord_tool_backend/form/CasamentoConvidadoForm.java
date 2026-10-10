@@ -31,4 +31,7 @@ public class CasamentoConvidadoForm {
 
     @Size(max = 40, message = "A mesa deve ter no máximo 40 caracteres")
     private String nmMesa;
+
+    /** Convidado que este acompanha (família). Vazio = convidado principal. */
+    private Long idConvidadoPrincipal;
 }
