@@ -14,7 +14,8 @@ WORKDIR /app
 COPY --from=build --chown=nord:nord /build/target/*.jar app.jar
 USER 10001
 
-# Heap proporcional ao limite de memória do container; encerra em OutOfMemory em vez de seguir degradado.
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Djava.io.tmpdir=/tmp"
+# Heap fixa de 512 MB (o Railway cobra pela memória usada; heap maior só adia o GC). Encerra em OutOfMemory
+# em vez de seguir degradado. Para mudar sem rebuild, sobrescreva JAVA_TOOL_OPTIONS nas variáveis do serviço.
+ENV JAVA_TOOL_OPTIONS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Djava.io.tmpdir=/tmp"
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
