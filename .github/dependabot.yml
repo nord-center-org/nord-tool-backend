@@ -5,9 +5,16 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+    groups:
+      # api, impl e jackson precisam andar juntos (PRs separados quebram o build).
+      jjwt:
+        patterns: ["io.jsonwebtoken:*"]
     ignore:
       # Linha Spring Boot fixada em 2.7.x (AGENTS.md): só patches.
       - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # jjwt 0.12+ muda a API (parserBuilder/signWith); migração fica para um PR próprio.
+      - dependency-name: "io.jsonwebtoken:*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: github-actions
     directory: "/"
@@ -19,3 +26,10 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+    ignore:
+      # Imagens presas ao Java 11 (AGENTS.md): só atualização de digest da mesma tag.
+      - dependency-name: "eclipse-temurin"
+        update-types: ["version-update:semver-major"]
+      # A tag do maven carrega o JDK no sufixo (ex.: -eclipse-temurin-26), que o Dependabot não trata como major.
+      - dependency-name: "maven"
+        versions: ["> 3.9.9-eclipse-temurin-11"]
