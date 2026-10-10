@@ -206,6 +206,22 @@ class CasamentoConvidadoServiceImplTest {
         verify(repository).alterarConvidado(any());
     }
 
+    @Test
+    void guardaOPapelNoCortejoSemEspacosEVazioViraNulo() {
+        when(repository.inserirConvidado(any())).thenReturn(2L);
+        when(repository.buscarConvidado(2L)).thenReturn(Optional.of(convidado(2)));
+        CasamentoConvidadoForm f = form("Bia", null, null, null);
+        f.setNmCortejo("  Madrinha ");
+        convidados.criar(f);
+        f.setNmCortejo("   ");
+        convidados.criar(f);
+
+        ArgumentCaptor<CasamentoConvidado> captor = ArgumentCaptor.forClass(CasamentoConvidado.class);
+        verify(repository, times(2)).inserirConvidado(captor.capture());
+        assertEquals("Madrinha", captor.getAllValues().get(0).getNmCortejo());
+        assertNull(captor.getAllValues().get(1).getNmCortejo());
+    }
+
     @Nested
     class ConvidadosXlsxHandlerTest {
 

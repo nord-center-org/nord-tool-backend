@@ -34,4 +34,8 @@ public class CasamentoConvidadoForm {
 
     /** Convidado que este acompanha (família). Vazio = convidado principal. */
     private Long idConvidadoPrincipal;
+
+    /** Papel no cortejo nupcial (padrinho, madrinha, daminha, pajem...). Vazio = não faz parte. */
+    @Size(max = 40, message = "O papel no cortejo deve ter no máximo 40 caracteres")
+    private String nmCortejo;
 }

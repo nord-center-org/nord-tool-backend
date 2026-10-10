@@ -134,6 +134,7 @@ public class CasamentoConvidadoServiceImpl implements CasamentoConvidadoService 
         c.setNrAcompanhantes(form.getNrAcompanhantes() == null ? 0 : form.getNrAcompanhantes());
         c.setNmMesa(CasamentoFornecedorServiceImpl.vazioParaNulo(form.getNmMesa()));
         c.setIdConvidadoPrincipal(form.getIdConvidadoPrincipal());
+        c.setNmCortejo(CasamentoFornecedorServiceImpl.vazioParaNulo(form.getNmCortejo()));
         return c;
     }
 }
