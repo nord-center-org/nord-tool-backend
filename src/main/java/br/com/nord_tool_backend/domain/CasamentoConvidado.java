@@ -15,6 +15,8 @@ public class CasamentoConvidado extends GlobalDomain {
     private String nmMesa;
     /** Convidado que este acompanha (família); nulo se for um convidado principal. */
     private Long idConvidadoPrincipal;
+    /** Papel no cortejo nupcial (padrinho, madrinha, daminha...); nulo = não faz parte. */
+    private String nmCortejo;
     /** Vem do join com o principal. */
     private String nmConvidadoPrincipal;
 }
