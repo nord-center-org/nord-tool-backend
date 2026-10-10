@@ -19,10 +19,12 @@ public class CasamentoConvidadoDto {
     /** Convidado que este acompanha (família); nulo se for principal. */
     private Long idConvidadoPrincipal;
     private String nmConvidadoPrincipal;
+    /** Papel no cortejo nupcial; nulo = não faz parte. */
+    private String nmCortejo;
 
     public static CasamentoConvidadoDto de(CasamentoConvidado c) {
         return new CasamentoConvidadoDto(c.getId(), c.getNmConvidado(), c.getNmGrupo(), c.getNrTelefone(),
                 c.getNmRelacao(), c.getNmStatus(), c.getNrAcompanhantes() == null ? 0 : c.getNrAcompanhantes(), c.getNmMesa(),
-                c.getIdConvidadoPrincipal(), c.getNmConvidadoPrincipal());
+                c.getIdConvidadoPrincipal(), c.getNmConvidadoPrincipal(), c.getNmCortejo());
     }
 }
