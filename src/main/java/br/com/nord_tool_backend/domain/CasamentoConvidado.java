@@ -13,4 +13,8 @@ public class CasamentoConvidado extends GlobalDomain {
     private String nmStatus;
     private Integer nrAcompanhantes;
     private String nmMesa;
+    /** Convidado que este acompanha (família); nulo se for um convidado principal. */
+    private Long idConvidadoPrincipal;
+    /** Vem do join com o principal. */
+    private String nmConvidadoPrincipal;
 }

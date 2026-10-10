@@ -121,4 +121,72 @@ class CasamentoConvidadoServiceImplTest {
         assertThrows(ValidacaoException.class, () -> convidados.importar("a.xlsx", new byte[CasamentoConvidadoServiceImpl.MAX_BYTES_PLANILHA + 1]));
         verify(repository, never()).inserirConvidado(any());
     }
+
+    private CasamentoConvidado ligado(long id, String nome, Long principal) {
+        CasamentoConvidado c = convidado(id);
+        c.setNmConvidado(nome);
+        c.setIdConvidadoPrincipal(principal);
+        return c;
+    }
+
+    @Test
+    void ligaConvidadoAOutroDaFamilia() {
+        when(repository.buscarConvidado(1L)).thenReturn(Optional.of(ligado(1, "Ana", null)));
+        when(repository.inserirConvidado(any())).thenReturn(2L);
+        when(repository.buscarConvidado(2L)).thenReturn(Optional.of(ligado(2, "Bia", 1L)));
+        CasamentoConvidadoForm f = form("Bia", null, null, null);
+        f.setIdConvidadoPrincipal(1L);
+
+        assertEquals(1L, convidados.criar(f).getIdConvidadoPrincipal());
+
+        ArgumentCaptor<CasamentoConvidado> captor = ArgumentCaptor.forClass(CasamentoConvidado.class);
+        verify(repository).inserirConvidado(captor.capture());
+        assertEquals(1L, captor.getValue().getIdConvidadoPrincipal());
+    }
+
+    @Test
+    void semPrincipalFicaSolto() {
+        when(repository.inserirConvidado(any())).thenReturn(2L);
+        when(repository.buscarConvidado(2L)).thenReturn(Optional.of(ligado(2, "Bia", null)));
+        convidados.criar(form("Bia", null, null, null));
+        ArgumentCaptor<CasamentoConvidado> captor = ArgumentCaptor.forClass(CasamentoConvidado.class);
+        verify(repository).inserirConvidado(captor.capture());
+        assertNull(captor.getValue().getIdConvidadoPrincipal());
+    }
+
+    @Test
+    void recusaPrincipalInexistenteELigacaoParaSiMesmo() {
+        when(repository.buscarConvidado(9L)).thenReturn(Optional.empty());
+        CasamentoConvidadoForm f = form("Bia", null, null, null);
+        f.setIdConvidadoPrincipal(9L);
+        ValidacaoException ex = assertThrows(ValidacaoException.class, () -> convidados.criar(f));
+        assertTrue(ex.getMessage().contains("principal não encontrado"));
+
+        when(repository.buscarConvidado(2L)).thenReturn(Optional.of(ligado(2, "Bia", null)));
+        f.setIdConvidadoPrincipal(2L);
+        ex = assertThrows(ValidacaoException.class, () -> convidados.alterar(2L, f));
+        assertTrue(ex.getMessage().contains("a si mesmo"));
+        verify(repository, never()).inserirConvidado(any());
+        verify(repository, never()).alterarConvidado(any());
+    }
+
+    @Test
+    void recusaLigacaoCircularNaCascata() {
+        // Ana <- Bia <- Caio: ligar Ana a Caio fecharia o círculo
+        when(repository.buscarConvidado(1L)).thenReturn(Optional.of(ligado(1, "Ana", null)));
+        when(repository.buscarConvidado(2L)).thenReturn(Optional.of(ligado(2, "Bia", 1L)));
+        when(repository.buscarConvidado(3L)).thenReturn(Optional.of(ligado(3, "Caio", 2L)));
+        CasamentoConvidadoForm f = form("Ana", null, null, null);
+        f.setIdConvidadoPrincipal(3L);
+
+        ValidacaoException ex = assertThrows(ValidacaoException.class, () -> convidados.alterar(1L, f));
+        assertTrue(ex.getMessage().contains("circular"));
+        verify(repository, never()).alterarConvidado(any());
+
+        // ligar Caio a Ana (mais acima na mesma família) é permitido
+        CasamentoConvidadoForm ok = form("Caio", null, null, null);
+        ok.setIdConvidadoPrincipal(1L);
+        convidados.alterar(3L, ok);
+        verify(repository).alterarConvidado(any());
+    }
 }
