@@ -27,8 +27,8 @@ class AdminBootstrapServiceImplTest {
     }
 
     @Test
-    void criaAdminApenasComTabelaVazia() {
-        when(repository.contar()).thenReturn(0L);
+    void criaAdminQuandoOEmailNaoExisteMesmoComOutrosUsuarios() {
+        when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.empty());
         when(repository.buscarIdPerfil("ADMIN")).thenReturn(Optional.of(9L));
 
         assertTrue(service.executar(" admin@nord.com ", " Admin ", "senha-forte-123"));
@@ -41,10 +41,11 @@ class AdminBootstrapServiceImplTest {
     }
 
     @Test
-    void naoCriaSeJaExistemUsuarios() {
-        when(repository.contar()).thenReturn(1L);
-        assertFalse(service.executar("admin@nord.com", "Admin", "senha-forte-123"));
+    void naoAlteraUsuarioQueJaExiste() {
+        when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(new Usuario()));
+        assertFalse(service.executar(" admin@nord.com ", "Admin", "senha-forte-123"));
         verify(repository, never()).inserir(any());
+        verify(repository, never()).alterarSenha(any(), any());
     }
 
     @Test
@@ -64,7 +65,7 @@ class AdminBootstrapServiceImplTest {
 
     @Test
     void perfilAdminAusenteDerrubaOStartup() {
-        when(repository.contar()).thenReturn(0L);
+        when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.empty());
         when(repository.buscarIdPerfil("ADMIN")).thenReturn(Optional.empty());
         assertThrows(IllegalStateException.class, () -> service.executar("admin@nord.com", "Admin", "senha-forte-123"));
         verify(repository, never()).inserir(any());

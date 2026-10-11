@@ -12,7 +12,6 @@ public interface UsuarioRepository {
     Optional<Usuario> buscarPorId(Long id);
     /** Só id, inAtivo e nrVersaoSessao: leitura barata usada na validação de cada requisição (com cache). */
     Optional<Usuario> buscarEstadoSessao(Long id);
-    long contar();
     List<PerfilPermissao> listarPermissoes(Long idPerfil);
     /** Exceções de permissão do usuário (tabela usuario_permissao). */
     List<PerfilPermissao> listarPermissoesUsuario(Long idUsuario);

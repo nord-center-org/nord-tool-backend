@@ -35,7 +35,7 @@ nord-tool:
     # Compatibilidade: chave única em texto (32+ bytes), usada só se NORD_JWT_KEYS estiver vazia.
     jwt-secret: ${NORD_JWT_SECRET:}
     access-token-minutes: ${NORD_ACCESS_TOKEN_MINUTES:15}
-    session-max-hours: ${NORD_SESSION_MAX_HOURS:12}
+    session-max-hours: ${NORD_SESSION_MAX_HOURS:2}
   admin:
     # Bootstrap do primeiro ADMIN (só roda com a tabela usuario vazia). Remover as variáveis depois.
     email: ${NORD_ADMIN_EMAIL:}
