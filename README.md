@@ -33,9 +33,9 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 | `NORD_JWT_ACTIVE_KID` | `kid` que assina os tokens novos (obrigatória com mais de uma chave) | — |
 | `NORD_JWT_SECRET` | compatibilidade: chave única em texto (≥ 32 bytes), usada só se `NORD_JWT_KEYS` estiver vazia | — |
 | `NORD_ACCESS_TOKEN_MINUTES` | duração do token de acesso (o frontend renova enquanto há atividade) | `15` |
-| `NORD_SESSION_MAX_HOURS` | limite absoluto da sessão desde o login | `12` |
+| `NORD_SESSION_MAX_HOURS` | limite absoluto da sessão desde o login | `2` |
 | `NORD_CORS_ORIGINS` | origens do frontend, separadas por vírgula | `localhost:5173` (local/docker) · frontend develop (railway) |
-| `NORD_ADMIN_EMAIL` `NORD_ADMIN_NAME` `NORD_ADMIN_PASSWORD` | cria o primeiro ADMIN **somente** com a tabela `usuario` vazia | — |
+| `NORD_ADMIN_EMAIL` `NORD_ADMIN_NAME` `NORD_ADMIN_PASSWORD` | cria um ADMIN com esse e-mail se ele ainda não existir (não altera usuário existente nem a senha) | — |
 | `NORD_STORAGE_PROVIDER` | provedor de arquivos (`POSTGRES`, provisório) | `POSTGRES` |
 | `nord-tool.caixinha.max-comprovante-bytes` | limite do PDF de comprovante da Caixinha | 5 MB |
 | `NORD_COTACAO_TOKEN` | token da brapi.dev (plano gratuito) para a cotação dos fundos; sem ele só alguns tickers respondem. Nunca é exposto pela API | — |
@@ -43,8 +43,8 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 
 ### Primeiro acesso (Railway)
 1. Aplique os scripts do `nord-tool-scripts-sql` (colunas de sessão e `usuario_permissao`) antes de publicar o backend.
-2. Defina `NORD_JWT_KEYS`/`NORD_JWT_ACTIVE_KID` e `NORD_ADMIN_*`, publique e confira no log "Usuário ADMIN inicial criado".
-3. Entre pelo frontend e confirme o login. **Remova `NORD_ADMIN_*`** em seguida.
+2. Defina `NORD_JWT_KEYS`/`NORD_JWT_ACTIVE_KID` e `NORD_ADMIN_*`, publique e confira no log "Usuário ADMIN de NORD_ADMIN_EMAIL criado".
+3. Entre pelo frontend e confirme o login. Quando houver tela de cadastro de usuários, **remova `NORD_ADMIN_*`**.
 
 ### Rotação da chave JWT
 1. Gere a nova chave (`openssl rand -base64 48`) e acrescente: `NORD_JWT_KEYS=k1:<antiga>;k2:<nova>`, mantendo `NORD_JWT_ACTIVE_KID=k1`; publique.

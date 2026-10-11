@@ -37,8 +37,8 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
         PoliticaSenha.validar(senha).ifPresent(motivo -> {
             throw new IllegalStateException("NORD_ADMIN_PASSWORD: " + motivo);
         });
-        if (usuarioRepository.contar() > 0) {
-            log.info("Bootstrap do ADMIN ignorado: já existem usuários. Remova as variáveis NORD_ADMIN_*.");
+        if (usuarioRepository.buscarPorEmail(email.trim()).isPresent()) {
+            log.info("Bootstrap do ADMIN: o usuário de NORD_ADMIN_EMAIL já existe; nada foi alterado.");
             return false;
         }
         Long idPerfil = usuarioRepository.buscarIdPerfil(PERFIL_ADMIN)
@@ -50,7 +50,7 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
         admin.setNmSenhaHash(passwordEncoder.encode(senha));
         admin.setIdPerfil(idPerfil);
         usuarioRepository.inserir(admin);
-        log.info("Usuário ADMIN inicial criado. Remova as variáveis NORD_ADMIN_*.");
+        log.info("Usuário ADMIN de NORD_ADMIN_EMAIL criado.");
         return true;
     }
 

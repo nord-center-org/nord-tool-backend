@@ -26,7 +26,7 @@ public class SecurityProperties {
             @Value("${nord-tool.security.active-kid:}") String activeKid,
             @Value("${nord-tool.security.jwt-secret:}") String jwtSecret,
             @Value("${nord-tool.security.access-token-minutes:15}") long accessTokenMinutes,
-            @Value("${nord-tool.security.session-max-hours:12}") long sessionMaxHours,
+            @Value("${nord-tool.security.session-max-hours:2}") long sessionMaxHours,
             @Value("${nord-tool.security.allow-ephemeral-secret:false}") boolean allowEphemeralSecret) {
         this.jwtKeys = jwtKeys;
         this.activeKid = activeKid;

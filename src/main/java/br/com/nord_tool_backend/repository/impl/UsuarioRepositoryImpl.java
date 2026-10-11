@@ -8,7 +8,6 @@ import br.com.nord_tool_backend.repository.jdbc.JdbcSuporte;
 import br.com.nord_tool_backend.repository.jdbc.SqlQueries;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.namedparam.BeanPropertySqlParameterSource;
-import org.springframework.jdbc.core.namedparam.EmptySqlParameterSource;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -27,7 +26,6 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     private final String qBuscarPorEmail;
     private final String qBuscarPorId;
     private final String qEstadoSessao;
-    private final String qContar;
     private final String qPermissoes;
     private final String qPermissoesUsuario;
     private final String qIdPerfil;
@@ -43,7 +41,6 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
         this.qBuscarPorEmail = queries.get("SPS.USUARIO.BUSCAR_POR_EMAIL");
         this.qBuscarPorId = queries.get("SPS.USUARIO.BUSCAR_POR_ID");
         this.qEstadoSessao = queries.get("SPS.USUARIO.ESTADO_SESSAO");
-        this.qContar = queries.get("SPS.USUARIO.CONTAR");
         this.qPermissoes = queries.get("SPS.USUARIO.PERMISSOES");
         this.qPermissoesUsuario = queries.get("SPS.USUARIO.PERMISSOES_USUARIO");
         this.qIdPerfil = queries.get("SPS.USUARIO.ID_PERFIL_POR_CODIGO");
@@ -67,14 +64,6 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     @Override
     public Optional<Usuario> buscarEstadoSessao(Long id) {
         return buscarUm("Consultar sessão do usuário", qEstadoSessao, new MapSqlParameterSource("id", id));
-    }
-
-    @Override
-    public long contar() {
-        return executor.executar("Contar usuários", () -> {
-            Long total = jdbc.queryForObject(qContar, EmptySqlParameterSource.INSTANCE, Long.class);
-            return total == null ? 0L : total;
-        });
     }
 
     @Override
