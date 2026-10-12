@@ -2,7 +2,9 @@ package br.com.nord_tool_backend.repository;
 
 import br.com.nord_tool_backend.domain.CronogramaSemanal;
 import br.com.nord_tool_backend.dto.CronogramaSemanalDto;
+import br.com.nord_tool_backend.dto.CronogramaSemanalExcecaoDto;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface CronogramaSemanalRepository {
@@ -11,4 +13,7 @@ public interface CronogramaSemanalRepository {
     void deletarCronogramaSemanal(Long id);
     CronogramaSemanal buscarPorIdCronogramaSemanal(Long id);
     List<CronogramaSemanal> listarCronogramaSemanal();
+    List<CronogramaSemanalExcecaoDto> listarExcecoes();
+    void incluirExcecao(Long id, LocalDate data);
+    void removerExcecao(Long id, LocalDate data);
 }

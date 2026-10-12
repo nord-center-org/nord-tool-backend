@@ -2,6 +2,7 @@ package br.com.nord_tool_backend.repository.impl;
 
 import br.com.nord_tool_backend.domain.CronogramaSemanal;
 import br.com.nord_tool_backend.dto.CronogramaSemanalDto;
+import br.com.nord_tool_backend.dto.CronogramaSemanalExcecaoDto;
 import br.com.nord_tool_backend.repository.CronogramaSemanalRepository;
 import br.com.nord_tool_backend.repository.jdbc.JdbcExecutor;
 import br.com.nord_tool_backend.repository.jdbc.JdbcSuporte;
@@ -12,6 +13,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -24,6 +26,9 @@ public class CronogramaSemanalRepositoryImpl implements CronogramaSemanalReposit
     private final String qDeletar;
     private final String qBuscarPorId;
     private final String qListar;
+    private final String qListarExcecoes;
+    private final String qInserirExcecao;
+    private final String qDeletarExcecao;
 
     public CronogramaSemanalRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries) {
         this.jdbc = jdbc;
@@ -33,6 +38,9 @@ public class CronogramaSemanalRepositoryImpl implements CronogramaSemanalReposit
         this.qDeletar = queries.get("SPD.CRONOGRAMA_SEMANAL.DELETAR");
         this.qBuscarPorId = queries.get("SPS.CRONOGRAMA_SEMANAL.BUSTAR_POR_ID");
         this.qListar = queries.get("SPS.CRONOGRAMA_SEMANAL.LISTAR");
+        this.qListarExcecoes = queries.get("SPS.CRONOGRAMA_SEMANAL_EXCECAO.LISTAR");
+        this.qInserirExcecao = queries.get("SPI.CRONOGRAMA_SEMANAL_EXCECAO.INSERIR");
+        this.qDeletarExcecao = queries.get("SPD.CRONOGRAMA_SEMANAL_EXCECAO.DELETAR");
     }
 
     @Override
@@ -66,6 +74,24 @@ public class CronogramaSemanalRepositoryImpl implements CronogramaSemanalReposit
     public List<CronogramaSemanal> listarCronogramaSemanal() {
         return executor.executar("Listar cronogramas semanais", () ->
                 jdbc.query(qListar, BeanPropertyRowMapper.newInstance(CronogramaSemanal.class)));
+    }
+
+    @Override
+    public List<CronogramaSemanalExcecaoDto> listarExcecoes() {
+        return executor.executar("Listar exceções do cronograma semanal", () ->
+                jdbc.query(qListarExcecoes, BeanPropertyRowMapper.newInstance(CronogramaSemanalExcecaoDto.class)));
+    }
+
+    @Override
+    public void incluirExcecao(Long id, LocalDate data) {
+        executor.executar("Incluir exceção do cronograma semanal", () ->
+                jdbc.update(qInserirExcecao, new MapSqlParameterSource("id", id).addValue("data", java.sql.Date.valueOf(data))));
+    }
+
+    @Override
+    public void removerExcecao(Long id, LocalDate data) {
+        executor.executar("Remover exceção do cronograma semanal", () ->
+                jdbc.update(qDeletarExcecao, new MapSqlParameterSource("id", id).addValue("data", java.sql.Date.valueOf(data))));
     }
 
     private CronogramaSemanal buscar(Long id) {
