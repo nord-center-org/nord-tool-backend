@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import javax.validation.Valid;
+import java.time.LocalDate;
 
 @RestController
 @RequiredArgsConstructor
@@ -48,4 +50,19 @@ public class CronogramaSemanalWriteController implements BaseResponse {
         return noContent();
     }
 
+    @Operation(summary = "Desmarcar um compromisso fixo em um dia específico")
+    @PutMapping("/{id}/excecoes/{data}")
+    public ResponseEntity<ApiResponseBody<Void>> incluirExcecao(@PathVariable("id") Long id,
+            @PathVariable("data") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
+        cronogramaSemanalService.incluirExcecao(id, data);
+        return noContent();
+    }
+
+    @Operation(summary = "Reativar um compromisso fixo em um dia específico")
+    @DeleteMapping("/{id}/excecoes/{data}")
+    public ResponseEntity<ApiResponseBody<Void>> removerExcecao(@PathVariable("id") Long id,
+            @PathVariable("data") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
+        cronogramaSemanalService.removerExcecao(id, data);
+        return noContent();
+    }
 }
