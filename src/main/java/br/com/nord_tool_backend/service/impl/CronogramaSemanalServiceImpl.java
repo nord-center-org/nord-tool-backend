@@ -6,6 +6,7 @@ import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.domain.CronogramaSemanal;
 import br.com.nord_tool_backend.dto.CronogramaSemanalDto;
+import br.com.nord_tool_backend.dto.CronogramaSemanalExcecaoDto;
 import br.com.nord_tool_backend.form.CronogramaSemanalForm;
 import br.com.nord_tool_backend.repository.CronogramaSemanalRepository;
 import br.com.nord_tool_backend.service.CronogramaSemanalService;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,7 +25,8 @@ import java.util.stream.Collectors;
 public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     private final Logger log = LogManager.getLogger(CronogramaSemanalServiceImpl.class);
 
-    private final CronogramaSemanalRepository cronogramaSemanalRepository;
+    private final CronogramaSemanalRepository cronogramaSemanalRepository;
+
 
     private final AutorizacaoService autorizacao;
 
@@ -85,5 +88,29 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
         List<CronogramaSemanalDto> lsCronogramaSemanalDto = lsCronogramaSemanal.stream().map(CronogramaSemanalDto::converterToDto).collect(Collectors.toList());
         log.info("Finalizando método que lista Cronograma Semanal");
         return lsCronogramaSemanalDto;
+    }
+
+    @Override
+    public List<CronogramaSemanalExcecaoDto> listarExcecoes() {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.LEITURA);
+        return cronogramaSemanalRepository.listarExcecoes();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void incluirExcecao(Long id, LocalDate data) {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        CronogramaSemanal item = cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id);
+        if (!Boolean.TRUE.equals(item.getInCronogramaFixo())) {
+            throw new EntradaInvalidaException("Só compromissos fixos aceitam exceção por dia.");
+        }
+        cronogramaSemanalRepository.incluirExcecao(id, data);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removerExcecao(Long id, LocalDate data) {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        cronogramaSemanalRepository.removerExcecao(id, data);
     }
 }
