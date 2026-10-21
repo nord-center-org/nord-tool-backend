@@ -20,6 +20,12 @@ public class AcessoReadController implements BaseResponse {
 
     private final AcessoService service;
 
+    @Operation(summary = "Colaboradores da base antiga e o usuário vinculado a cada um")
+    @GetMapping("/colaboradores-legados")
+    public ResponseEntity<ApiResponseBody<java.util.List<br.com.nord_tool_backend.dto.ColaboradorLegadoDto>>> legados() {
+        return ok(service.listarColaboradoresLegados());
+    }
+
     @Operation(summary = "Usuários com acessos efetivos, perfis e módulos")
     @GetMapping
     public ResponseEntity<ApiResponseBody<AcessosDto>> listar() {

@@ -38,9 +38,16 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     private static final int QUANTIDADE_POR_PAGINA_PADRAO = 20;
     static final int MAX_POR_PAGINA = 100;
     static final int MAX_RECENTES = 50;
-    private final ControleChavesRepository controleChavesRepository;
+    private final ControleChavesRepository controleChavesRepository;
+
 
     private final AutorizacaoService autorizacao;
+
+    @Override
+    public List<br.com.nord_tool_backend.dto.PessoaControleChavesDto> listarPessoas() {
+        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.LEITURA);
+        return controleChavesRepository.listarPessoas();
+    }
 
     @Override
     public List<ObraControleChavesDto> listarObras() {
@@ -115,15 +122,18 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RetiradaControleChavesDto criarRetirada(NovaRetiradaControleChavesForm novaRetiradaControleChavesForm) {
-        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA);
-        if (novaRetiradaControleChavesForm == null
-                || !idValido(novaRetiradaControleChavesForm.getIdUserRetirada())
-                || !idValido(novaRetiradaControleChavesForm.getIdUserLiberacao())) {
-            throw erroValidacao("Retirante e liberador são obrigatórios e devem ser válidos");
+        br.com.nord_tool_backend.security.UsuarioAutenticado logado = autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA);
+        if (novaRetiradaControleChavesForm == null || !idValido(novaRetiradaControleChavesForm.getIdUserRetirada())) {
+            throw erroValidacao("Informe quem está retirando");
         }
         validarItemRetirada(novaRetiradaControleChavesForm);
+        if (!controleChavesRepository.usuarioAtivo(novaRetiradaControleChavesForm.getIdUserRetirada())) {
+            throw erroValidacao("Quem retira precisa ser um usuário ativo");
+        }
 
         RequisicaoChave requisicaoChave = novaRetiradaControleChavesForm.converterToDomain();
+        // Quem libera é sempre o usuário logado.
+        requisicaoChave.setIdUserLiberacao(logado.getId());
         requisicaoChave.setCdRetirada(gerarCodigoRetirada());
         requisicaoChave.setDtRetirada(LocalDateTime.now());
         requisicaoChave.setNmStatusRequisicao(StatusRequisicaoChaveEnum.ABERTO.name());
@@ -135,11 +145,12 @@ public class ControleChavesServiceImpl implements ControleChavesService {
     @Transactional(rollbackFor = Exception.class)
     public RetiradaControleChavesDto receberRetirada(Long idRequisicao,
                                                        RecebimentoControleChavesForm recebimentoControleChavesForm) {
-        autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA);
-        if (!idValido(idRequisicao) || recebimentoControleChavesForm == null
-                || !idValido(recebimentoControleChavesForm.getIdUserRecebimento())) {
-            throw erroValidacao("Retirada e usuário recebedor são obrigatórios e devem ser válidos");
+        br.com.nord_tool_backend.security.UsuarioAutenticado logado = autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA);
+        if (!idValido(idRequisicao)) {
+            throw erroValidacao("Retirada inválida");
         }
+        // Quem recebe é sempre o usuário logado.
+        Long idRecebedor = logado.getId();
 
         RequisicaoChaveConsulta atual = controleChavesRepository.buscarPorId(idRequisicao);
         validarConsistencia(atual);
@@ -147,12 +158,12 @@ public class ControleChavesServiceImpl implements ControleChavesService {
             throw erroValidacao("Somente retiradas abertas podem ser recebidas");
         }
 
-        controleChavesRepository.receberRetirada(idRequisicao, recebimentoControleChavesForm.getIdUserRecebimento(), LocalDateTime.now(),
+        controleChavesRepository.receberRetirada(idRequisicao, idRecebedor, LocalDateTime.now(),
                 StatusRequisicaoChaveEnum.RECEBIDO.name());
         RequisicaoChaveConsulta recebida = controleChavesRepository.buscarPorId(idRequisicao);
         validarConsistencia(recebida);
         if (recebida.getIdUserRecebimento() == null
-                || !recebida.getIdUserRecebimento().equals(recebimentoControleChavesForm.getIdUserRecebimento())) {
+                || !recebida.getIdUserRecebimento().equals(idRecebedor)) {
             throw erroValidacao("A retirada já foi recebida por outro usuário");
         }
         return RetiradaControleChavesDto.converterToDto(recebida);
@@ -217,10 +228,10 @@ public class ControleChavesServiceImpl implements ControleChavesService {
 
     private void validarConsistencia(RequisicaoChaveConsulta requisicaoChaveConsulta) {
         StatusRequisicaoChaveEnum status = validarStatus(requisicaoChaveConsulta.getNmStatusRequisicao());
-        boolean recebimentoInformado = requisicaoChaveConsulta.getDtRecebimento() != null
-                && requisicaoChaveConsulta.getIdUserRecebimento() != null;
-        boolean recebimentoAusente = requisicaoChaveConsulta.getDtRecebimento() == null
-                && requisicaoChaveConsulta.getIdUserRecebimento() == null;
+        boolean temRecebedor = Boolean.TRUE.equals(requisicaoChaveConsulta.getInRecebedor())
+                || requisicaoChaveConsulta.getIdUserRecebimento() != null;
+        boolean recebimentoInformado = requisicaoChaveConsulta.getDtRecebimento() != null && temRecebedor;
+        boolean recebimentoAusente = requisicaoChaveConsulta.getDtRecebimento() == null && !temRecebedor;
 
         if ((status == StatusRequisicaoChaveEnum.ABERTO && !recebimentoAusente)
                 || (status == StatusRequisicaoChaveEnum.RECEBIDO && !recebimentoInformado)) {

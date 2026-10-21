@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 
 public interface ControleChavesRepository {
     List<ObraControleChaves> listarObras();
+    /** Usuários ativos que podem retirar (base única). */
+    List<br.com.nord_tool_backend.dto.PessoaControleChavesDto> listarPessoas();
+    boolean usuarioAtivo(Long idUsuario);
     List<ApartamentoVistoria> listarApartamentos();
     List<Ferramenta> listarFerramentas();
     Long contarChavesEmCampo();

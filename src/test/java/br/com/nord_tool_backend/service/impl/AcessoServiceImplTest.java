@@ -178,4 +178,40 @@ class AcessoServiceImplTest {
         assertThrows(EntradaInvalidaException.class, () -> service.salvar(20L, form("USER", true, "XPTO", "LEITURA")));
         assertThrows(EntradaInvalidaException.class, () -> service.salvar(20L, form("USER", true, "MEDICOES", "TUDO")));
     }
+
+    @Test
+    void salvarDadosAparaEDeixaCelularVazioComoNulo() {
+        br.com.nord_tool_backend.form.DadosUsuarioForm f = new br.com.nord_tool_backend.form.DadosUsuarioForm();
+        f.setNmNome("  Ana Souza ");
+        f.setNrCelular("  ");
+        f.setIdEmpresa(3);
+        f.setIdCargo(4);
+        service.salvarDados(20L, f);
+        verify(repository).alterarDados(20L, "Ana Souza", null, 3, 4);
+        assertThrows(NaoEncontradoException.class, () -> service.salvarDados(77L, f));
+    }
+
+    @Test
+    void vincularColaboradorAntigo() {
+        br.com.nord_tool_backend.dto.ColaboradorLegadoDto ze = new br.com.nord_tool_backend.dto.ColaboradorLegadoDto(5L, "Zé", "Nord", "Pedreiro", null, null, null, 3);
+        when(repository.listarColaboradoresLegados()).thenReturn(Collections.singletonList(ze));
+
+        service.vincularColaborador(5L, 20L);
+        verify(repository).desvincularColaborador(5L);
+        verify(repository).vincularColaborador(5L, 20L);
+
+        service.vincularColaborador(5L, null);
+        verify(repository, org.mockito.Mockito.times(2)).desvincularColaborador(5L);
+
+        assertThrows(NaoEncontradoException.class, () -> service.vincularColaborador(9L, 20L));
+        assertThrows(NaoEncontradoException.class, () -> service.vincularColaborador(5L, 77L));
+    }
+
+    @Test
+    void dadosELegadosExigemAdmin() {
+        doThrow(new AcessoNegadoException("negado")).when(autorizacao).exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
+        assertThrows(AcessoNegadoException.class, () -> service.listarColaboradoresLegados());
+        assertThrows(AcessoNegadoException.class, () -> service.vincularColaborador(5L, 20L));
+        assertThrows(AcessoNegadoException.class, () -> service.salvarDados(20L, new br.com.nord_tool_backend.form.DadosUsuarioForm()));
+    }
 }

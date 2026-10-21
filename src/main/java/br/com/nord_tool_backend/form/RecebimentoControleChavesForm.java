@@ -13,6 +13,6 @@ import javax.validation.constraints.Positive;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RecebimentoControleChavesForm {
-    @NotNull @Positive
+    /** Ignorado: quem recebe é sempre o usuário logado. Mantido para clientes antigos. */
     private Long idUserRecebimento;
 }

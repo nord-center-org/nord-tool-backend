@@ -53,7 +53,7 @@ public class RetiradaControleChavesDto {
                 .build();
 
         RecebedorControleChavesDto recebedorControleChavesDto = null;
-        if (requisicaoChaveConsulta.getIdUserRecebimento() != null) {
+        if (Boolean.TRUE.equals(requisicaoChaveConsulta.getInRecebedor()) || requisicaoChaveConsulta.getIdUserRecebimento() != null) {
             recebedorControleChavesDto = RecebedorControleChavesDto.builder()
                     .idUserRecebimento(requisicaoChaveConsulta.getIdUserRecebimento())
                     .nmPessoaRecebedor(requisicaoChaveConsulta.getNmPessoaRecebedor())

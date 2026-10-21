@@ -19,4 +19,11 @@ public class Usuario extends GlobalDomain {
     private LocalDateTime dhUltimoLogin;
     /** Incrementada na troca de senha (e em revogações): tokens com versão anterior deixam de valer. */
     private Integer nrVersaoSessao;
+    private String nrCelular;
+    private Integer idEmpresa;
+    private String nmEmpresa;
+    private Integer idCargo;
+    private String nmCargo;
+    /** Colaborador antigo (tabela users) vinculado a este usuário. */
+    private Integer idUserLegado;
 }

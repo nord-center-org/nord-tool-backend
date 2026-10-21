@@ -60,6 +60,22 @@ class ControleChavesServiceImplTest {
     @Mock
     private ControleChavesRepository controleChavesRepository;
 
+    /** Usuário logado (quem libera e quem recebe). */
+    private static br.com.nord_tool_backend.security.UsuarioAutenticado logado(long id) {
+        return new br.com.nord_tool_backend.security.UsuarioAutenticado(id, "u@obra.com", "USER",
+                java.util.Collections.emptyMap(), 0, java.time.Instant.now());
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void logadoPorPadrao() {
+        org.mockito.Mockito.lenient().when(autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA)).thenReturn(logado(8L));
+        org.mockito.Mockito.lenient().when(controleChavesRepository.usuarioAtivo(7L)).thenReturn(true);
+    }
+
+    private void recebendoComo(long id) {
+        when(autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA)).thenReturn(logado(id));
+    }
+
     @Test
     void deveListarObrasExtraindoNomeEEliminandoDuplicadas() {
         when(controleChavesRepository.listarObras()).thenReturn(List.of(
@@ -256,6 +272,7 @@ class ControleChavesServiceImplTest {
 
     @Test
     void deveReceberRetiradaAbertaEDevolverDtoCompleto() {
+        recebendoComo(9L);
         when(controleChavesRepository.buscarPorId(20L)).thenReturn(
                 consulta(20L, "RET-20", "Obra Alfa 101", "Maria", "ABERTO", DT_RETIRADA, null, null),
                 consulta(20L, "RET-20", "Obra Alfa 101", "Maria", "RECEBIDO", DT_RETIRADA,
@@ -287,9 +304,7 @@ class ControleChavesServiceImplTest {
     void deveRejeitarRecebimentoComIdOuFormInvalido() {
         assertThrows(NordException.class, () -> controleChavesService.receberRetirada(0L,
                 RecebimentoControleChavesForm.builder().idUserRecebimento(9L).build()));
-        assertThrows(NordException.class, () -> controleChavesService.receberRetirada(20L, null));
-        assertThrows(NordException.class, () -> controleChavesService.receberRetirada(20L,
-                RecebimentoControleChavesForm.builder().idUserRecebimento(null).build()));
+        assertThrows(NordException.class, () -> controleChavesService.receberRetirada(null, null));
 
         verifyNoInteractions(controleChavesRepository);
     }
@@ -317,6 +332,7 @@ class ControleChavesServiceImplTest {
 
     @Test
     void deveReportarConflitoQuandoOutraPessoaRecebeuDuranteAtualizacao() {
+        recebendoComo(9L);
         when(controleChavesRepository.buscarPorId(20L)).thenReturn(
                 consulta(20L, "RET-20", "Obra Alfa 101", "Maria", "ABERTO", DT_RETIRADA, null, null),
                 consulta(20L, "RET-20", "Obra Alfa 101", "Maria", "RECEBIDO", DT_RETIRADA,
@@ -326,6 +342,51 @@ class ControleChavesServiceImplTest {
                 RecebimentoControleChavesForm.builder().idUserRecebimento(9L).build()));
 
         verify(controleChavesRepository).receberRetirada(eq(20L), eq(9L), any(LocalDateTime.class), eq("RECEBIDO"));
+    }
+
+    @Test
+    void quemLiberaEhSempreOLogadoMesmoQueOFormMandeOutro() {
+        when(controleChavesRepository.criarRetirada(any())).thenReturn(15L);
+        when(controleChavesRepository.buscarPorId(15L)).thenReturn(
+                consulta(15L, "RET-15", "Obra Alfa 101", "Maria", "ABERTO", DT_RETIRADA, null, null));
+        controleChavesService.criarRetirada(NovaRetiradaControleChavesForm.builder()
+                .nmTipoItem("APARTAMENTO").idApartamentoVistoria(101L).idUserRetirada(7L).idUserLiberacao(99L).build());
+        verify(controleChavesRepository).criarRetirada(org.mockito.ArgumentMatchers.argThat(r -> r.getIdUserLiberacao().equals(8L)));
+    }
+
+    @Test
+    void naoDeixaRetirarComUsuarioInativoOuInexistente() {
+        when(controleChavesRepository.usuarioAtivo(70L)).thenReturn(false);
+        assertThrows(NordException.class, () -> controleChavesService.criarRetirada(NovaRetiradaControleChavesForm.builder()
+                .nmTipoItem("APARTAMENTO").idApartamentoVistoria(101L).idUserRetirada(70L).build()));
+        verify(controleChavesRepository, never()).criarRetirada(any());
+    }
+
+    @Test
+    void recebimentoSemCorpoUsaOLogado() {
+        recebendoComo(9L);
+        when(controleChavesRepository.buscarPorId(20L)).thenReturn(
+                consulta(20L, "RET-20", "Obra Alfa 101", "Maria", "ABERTO", DT_RETIRADA, null, null),
+                consulta(20L, "RET-20", "Obra Alfa 101", "Maria", "RECEBIDO", DT_RETIRADA, DT_RECEBIMENTO, 9L));
+        controleChavesService.receberRetirada(20L, null);
+        verify(controleChavesRepository).receberRetirada(eq(20L), eq(9L), any(LocalDateTime.class), eq("RECEBIDO"));
+    }
+
+    @Test
+    void historicoAntigoComRecebedorSoNaBaseAntigaContinuaConsistente() {
+        RequisicaoChaveConsulta antiga = consulta(21L, "RET-21", "Obra Alfa 102", "Zé", "RECEBIDO", DT_RETIRADA, DT_RECEBIMENTO, null);
+        antiga.setInRecebedor(true);
+        antiga.setNmPessoaRecebedor("Zé antigo");
+        when(controleChavesRepository.listarHistorico()).thenReturn(List.of(antiga));
+        RetiradaControleChavesDto dto = controleChavesService.listarHistorico(null, null, null, 20, 0).get(0);
+        assertEquals("Zé antigo", dto.getRecebedorControleChavesDto().getNmPessoaRecebedor());
+    }
+
+    @Test
+    void listarPessoasExigeLeitura() {
+        when(controleChavesRepository.listarPessoas()).thenReturn(List.of(new br.com.nord_tool_backend.dto.PessoaControleChavesDto(7L, "Maria", "Encarregada", "Nord")));
+        assertEquals("Maria", controleChavesService.listarPessoas().get(0).getNmNome());
+        verify(autorizacao).exigir(Modulo.CONTROLE_CHAVES, Acao.LEITURA);
     }
 
     @Test

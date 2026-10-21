@@ -38,7 +38,7 @@ public class ControleChavesWriteController implements BaseResponse {
     @PatchMapping("/retiradas/{id}/recebimento")
     public ResponseEntity<ApiResponseBody<RetiradaControleChavesDto>> receberRetirada(
             @PathVariable("id") Long idRequisicao,
-            @Valid @RequestBody RecebimentoControleChavesForm recebimentoControleChavesForm) {
+            @Valid @RequestBody(required = false) RecebimentoControleChavesForm recebimentoControleChavesForm) {
         return ok(controleChavesService.receberRetirada(idRequisicao, recebimentoControleChavesForm));
     }
 }

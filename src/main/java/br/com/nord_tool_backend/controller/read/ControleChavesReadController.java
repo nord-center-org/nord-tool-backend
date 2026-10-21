@@ -27,6 +27,12 @@ public class ControleChavesReadController implements BaseResponse {
 
     private final ControleChavesService controleChavesService;
 
+    @Operation(summary = "Usuários ativos que podem retirar chave ou ferramenta")
+    @GetMapping("/pessoas")
+    public ResponseEntity<ApiResponseBody<List<br.com.nord_tool_backend.dto.PessoaControleChavesDto>>> listarPessoas() {
+        return ok(controleChavesService.listarPessoas());
+    }
+
     @Operation(summary = "Listar obras ativas no controle de chaves")
     @GetMapping("/obras")
     public ResponseEntity<ApiResponseBody<List<ObraControleChavesDto>>> listarObras() {
