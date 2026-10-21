@@ -12,6 +12,7 @@ import java.util.List;
 
 public interface ControleChavesService {
     List<ObraControleChavesDto> listarObras();
+    List<br.com.nord_tool_backend.dto.PessoaControleChavesDto> listarPessoas();
     List<ApartamentoControleChavesDto> listarApartamentos(String nmBusca, int nrQuantidadePorPagina, int nrPagina);
     List<FerramentaControleChavesDto> listarFerramentas(String nmBusca, int nrQuantidadePorPagina, int nrPagina);
     DashboardControleChavesDto buscarDashboard(int nrLimiteRecentes, String idObra);

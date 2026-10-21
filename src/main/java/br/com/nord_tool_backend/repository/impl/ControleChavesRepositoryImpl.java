@@ -26,6 +26,8 @@ public class ControleChavesRepositoryImpl implements ControleChavesRepository {
     private final NamedParameterJdbcTemplate jdbc;
     private final JdbcExecutor executor;
     private final String qListarObras;
+    private final String qListarPessoas;
+    private final String qUsuarioAtivo;
     private final String qListarApartamentos;
     private final String qListarFerramentas;
     private final String qContarEmCampo;
@@ -40,6 +42,8 @@ public class ControleChavesRepositoryImpl implements ControleChavesRepository {
         this.jdbc = jdbc;
         this.executor = executor;
         this.qListarObras = queries.get("SPS.CONTROLE_CHAVES.LISTAR_OBRAS");
+        this.qListarPessoas = queries.get("SPS.CONTROLE_CHAVES.LISTAR_PESSOAS");
+        this.qUsuarioAtivo = queries.get("SPS.CONTROLE_CHAVES.USUARIO_ATIVO");
         this.qListarApartamentos = queries.get("SPS.CONTROLE_CHAVES.LISTAR_APARTAMENTOS");
         this.qListarFerramentas = queries.get("SPS.CONTROLE_CHAVES.LISTAR_FERRAMENTAS");
         this.qContarEmCampo = queries.get("SPS.CONTROLE_CHAVES.COUNT_EM_CAMPO");
@@ -49,6 +53,20 @@ public class ControleChavesRepositoryImpl implements ControleChavesRepository {
         this.qBuscarPorId = queries.get("SPS.CONTROLE_CHAVES.BUSCAR_POR_ID");
         this.qInserir = queries.get("SPI.CONTROLE_CHAVES.INSERIR");
         this.qReceber = queries.get("SPU.CONTROLE_CHAVES.RECEBER");
+    }
+
+    @Override
+    public List<br.com.nord_tool_backend.dto.PessoaControleChavesDto> listarPessoas() {
+        return executor.executar("Listar pessoas do controle de chaves", () ->
+                jdbc.query(qListarPessoas, BeanPropertyRowMapper.newInstance(br.com.nord_tool_backend.dto.PessoaControleChavesDto.class)));
+    }
+
+    @Override
+    public boolean usuarioAtivo(Long idUsuario) {
+        return executor.executar("Conferir usuário", () -> {
+            Long n = jdbc.queryForObject(qUsuarioAtivo, new MapSqlParameterSource("id", idUsuario), Long.class);
+            return n != null && n > 0;
+        });
     }
 
     @Override

@@ -31,4 +31,6 @@ public class RequisicaoChaveConsulta {
     private String nmPessoaRecebedor;
     private String nmPermissaoRecebedor;
     private String nmStatusRequisicao;
+    /** Há recebedor (usuário ou colaborador antigo). */
+    private Boolean inRecebedor;
 }

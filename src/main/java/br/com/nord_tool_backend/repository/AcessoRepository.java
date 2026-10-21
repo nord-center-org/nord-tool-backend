@@ -18,4 +18,10 @@ public interface AcessoRepository {
     /** Troca perfil e situação e incrementa a versão da sessão (o usuário entra de novo com os acessos novos). */
     void alterarPerfilESituacao(Long idUsuario, Long idPerfil, boolean ativo);
     void substituirExcecoes(Long idUsuario, List<PerfilPermissao> excecoes);
+    void alterarDados(Long idUsuario, String nome, String celular, Integer idEmpresa, Integer idCargo);
+    List<br.com.nord_tool_backend.dto.ColaboradorLegadoDto> listarColaboradoresLegados();
+    /** Tira o vínculo do colaborador antigo de quem o tiver. */
+    void desvincularColaborador(Long idUserLegado);
+    /** Vincula, completa celular/empresa/cargo vazios do usuário e preenche o usuário nas retiradas antigas. */
+    void vincularColaborador(Long idUserLegado, Long idUsuario);
 }

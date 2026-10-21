@@ -28,8 +28,7 @@ public class NovaRetiradaControleChavesForm {
     @Positive
     private Long idUserRetirada;
 
-    @NotNull
-    @Positive
+    /** Ignorado: quem libera é sempre o usuário logado. Mantido para clientes antigos. */
     private Long idUserLiberacao;
 
     public RequisicaoChave converterToDomain() {

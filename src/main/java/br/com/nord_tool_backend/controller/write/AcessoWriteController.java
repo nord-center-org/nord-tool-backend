@@ -25,6 +25,20 @@ public class AcessoWriteController implements BaseResponse {
 
     private final AcessoService service;
 
+    @Operation(summary = "Salva nome, celular, empresa e cargo do usuário")
+    @PutMapping("/{id}/dados")
+    public ResponseEntity<ApiResponseBody<AcessoUsuarioDto>> salvarDados(@PathVariable Long id,
+            @Valid @RequestBody br.com.nord_tool_backend.form.DadosUsuarioForm form) {
+        return ok(service.salvarDados(id, form));
+    }
+
+    @Operation(summary = "Vincula um colaborador antigo a um usuário (idUsuario nulo desfaz) e completa o histórico de chaves")
+    @PutMapping("/colaboradores-legados/{idUser}")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.ColaboradorLegadoDto>> vincular(@PathVariable Long idUser,
+            @RequestBody br.com.nord_tool_backend.form.VinculoColaboradorForm form) {
+        return ok(service.vincularColaborador(idUser, form.getIdUsuario()));
+    }
+
     @Operation(summary = "Salva perfil, situação e nível por módulo do usuário (ele entra de novo com os acessos novos)")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponseBody<AcessoUsuarioDto>> salvar(@PathVariable Long id, @Valid @RequestBody AcessoUsuarioForm form) {

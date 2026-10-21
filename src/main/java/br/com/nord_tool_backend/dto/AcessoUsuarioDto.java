@@ -15,6 +15,11 @@ public class AcessoUsuarioDto {
     private String cdPerfil;
     private boolean inAtivo;
     private LocalDateTime dhUltimoLogin;
+    private String nrCelular;
+    private Integer idEmpresa;
+    private String nmEmpresa;
+    private Integer idCargo;
+    private String nmCargo;
     /** Nível efetivo por módulo (perfil + exceções do usuário); módulos sem acesso ficam fora. */
     private Map<String, String> acessos;
 }

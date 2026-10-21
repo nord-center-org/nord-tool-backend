@@ -6,6 +6,8 @@ import br.com.nord_tool_backend.domain.Usuario;
 import br.com.nord_tool_backend.dto.AcessoPerfilDto;
 import br.com.nord_tool_backend.dto.AcessoUsuarioDto;
 import br.com.nord_tool_backend.dto.AcessosDto;
+import br.com.nord_tool_backend.dto.ColaboradorLegadoDto;
+import br.com.nord_tool_backend.form.DadosUsuarioForm;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.exception.NaoEncontradoException;
 import br.com.nord_tool_backend.exception.NegocioException;
@@ -110,6 +112,46 @@ public class AcessoServiceImpl implements AcessoService {
         return dto(alvo, novas);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AcessoUsuarioDto salvarDados(Long idUsuario, DadosUsuarioForm form) {
+        autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
+        Usuario u = usuario(idUsuario);
+        String celular = form.getNrCelular() == null ? "" : form.getNrCelular().trim();
+        repository.alterarDados(idUsuario, form.getNmNome().trim(), celular.isEmpty() ? null : celular, form.getIdEmpresa(), form.getIdCargo());
+        Usuario atualizado = usuario(idUsuario);
+        Map<Long, List<PerfilPermissao>> doPerfil = repository.permissoesPorPerfil();
+        return dto(atualizado, efetivas(doPerfil.get(u.getIdPerfil()), repository.excecoesPorUsuario().get(idUsuario)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ColaboradorLegadoDto> listarColaboradoresLegados() {
+        autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
+        return repository.listarColaboradoresLegados();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ColaboradorLegadoDto vincularColaborador(Long idUserLegado, Long idUsuario) {
+        autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
+        ColaboradorLegadoDto legado = repository.listarColaboradoresLegados().stream()
+                .filter(c -> c.getIdUser().equals(idUserLegado)).findFirst()
+                .orElseThrow(() -> new NaoEncontradoException("Colaborador antigo não encontrado"));
+        repository.desvincularColaborador(idUserLegado);
+        if (idUsuario != null) {
+            usuario(idUsuario);
+            repository.vincularColaborador(idUserLegado, idUsuario);
+        }
+        return repository.listarColaboradoresLegados().stream()
+                .filter(c -> c.getIdUser().equals(legado.getIdUser())).findFirst().orElse(legado);
+    }
+
+    private Usuario usuario(Long id) {
+        return repository.listarUsuarios().stream().filter(x -> x.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new NaoEncontradoException("Usuário não encontrado"));
+    }
+
     // ---------- apoio ----------
 
     /** Só o que difere do perfil vira exceção. Módulo ausente no formulário mantém o nível do perfil. */
@@ -155,6 +197,7 @@ public class AcessoServiceImpl implements AcessoService {
 
     private static AcessoUsuarioDto dto(Usuario u, Map<Modulo, Acao> acessos) {
         return new AcessoUsuarioDto(u.getId(), u.getNmNome(), u.getNmEmail(), u.getCdPerfil(),
-                Boolean.TRUE.equals(u.getInAtivo()), u.getDhUltimoLogin(), texto(acessos));
+                Boolean.TRUE.equals(u.getInAtivo()), u.getDhUltimoLogin(), u.getNrCelular(), u.getIdEmpresa(),
+                u.getNmEmpresa(), u.getIdCargo(), u.getNmCargo(), texto(acessos));
     }
 }
