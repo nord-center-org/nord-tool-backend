@@ -26,4 +26,8 @@ public class Usuario extends GlobalDomain {
     private String nmCargo;
     /** Colaborador antigo (tabela users) vinculado a este usuário. */
     private Integer idUserLegado;
+    /** PENDENTE, APROVADO ou RECUSADO. */
+    private String cdSituacaoCadastro;
+    private Long idObraSolicitada;
+    private String nmObraSolicitada;
 }

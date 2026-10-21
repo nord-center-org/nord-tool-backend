@@ -4,6 +4,20 @@ spring:
       matching-strategy: ant_path_matcher
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  # E-mail (recuperação de senha e avisos de cadastro). Sem NORD_MAIL_USERNAME o envio fica desligado (só log).
+  # Gmail: NORD_MAIL_USERNAME=conta@gmail.com e NORD_MAIL_PASSWORD=<senha de app de 16 letras> (não a senha normal).
+  mail:
+    host: ${NORD_MAIL_HOST:smtp.gmail.com}
+    port: ${NORD_MAIL_PORT:587}
+    username: ${NORD_MAIL_USERNAME:}
+    password: ${NORD_MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   servlet:
     multipart:
       # Maior arquivo aceito: PDF de termo e contrato (15 MB). Cada tipo tem o seu limite em ArquivoValidador.
@@ -47,6 +61,11 @@ nord-tool:
     token: ${NORD_COTACAO_TOKEN:}
     ttl-seconds: ${NORD_COTACAO_TTL_SEGUNDOS:60}
     timeout-seconds: ${NORD_COTACAO_TIMEOUT_SEGUNDOS:5}
+  mail:
+    # Remetente exibido; padrão = NORD_MAIL_USERNAME.
+    from: ${NORD_MAIL_FROM:${NORD_MAIL_USERNAME:}}
+  # Endereço do frontend, usado no link de redefinição de senha (ex.: https://nordtool.up.railway.app).
+  app-url: ${NORD_APP_URL:}
   storage:
     # Provedor de arquivos: POSTGRES (provisório). Definitivo ainda a decidir (Drive/S3).
     provider: ${NORD_STORAGE_PROVIDER:POSTGRES}

@@ -20,6 +20,10 @@ public class AcessoUsuarioDto {
     private String nmEmpresa;
     private Integer idCargo;
     private String nmCargo;
+    /** PENDENTE (aguardando aprovação), APROVADO ou RECUSADO. */
+    private String cdSituacaoCadastro;
+    private Long idObraSolicitada;
+    private String nmObraSolicitada;
     /** Nível efetivo por módulo (perfil + exceções do usuário); módulos sem acesso ficam fora. */
     private Map<String, String> acessos;
 }

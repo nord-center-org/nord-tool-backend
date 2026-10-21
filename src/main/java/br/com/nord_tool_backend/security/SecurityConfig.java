@@ -64,7 +64,8 @@ public class SecurityConfig {
 
         http.authorizeRequests()
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .antMatchers(HttpMethod.POST, API + "/auth/login").permitAll()
+                .antMatchers(HttpMethod.POST, API + "/auth/login", API + "/auth/cadastro",
+                        API + "/auth/esqueci-senha", API + "/auth/redefinir-senha").permitAll()
                 .antMatchers(HttpMethod.GET, API + "/health", "/nord-tool/health").permitAll();
         if (local) {
             http.authorizeRequests().antMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();

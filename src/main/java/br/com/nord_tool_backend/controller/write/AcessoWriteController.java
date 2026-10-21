@@ -25,6 +25,13 @@ public class AcessoWriteController implements BaseResponse {
 
     private final AcessoService service;
 
+    @Operation(summary = "Aprova (com as fases) ou recusa um cadastro pendente")
+    @PutMapping("/{id}/cadastro")
+    public ResponseEntity<ApiResponseBody<AcessoUsuarioDto>> decidirCadastro(@PathVariable Long id,
+            @Valid @RequestBody br.com.nord_tool_backend.form.DecisaoCadastroForm form) {
+        return ok(service.decidirCadastro(id, form));
+    }
+
     @Operation(summary = "Salva nome, celular, empresa e cargo do usuário")
     @PutMapping("/{id}/dados")
     public ResponseEntity<ApiResponseBody<AcessoUsuarioDto>> salvarDados(@PathVariable Long id,

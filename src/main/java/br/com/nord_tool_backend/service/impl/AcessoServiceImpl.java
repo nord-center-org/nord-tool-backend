@@ -45,11 +45,14 @@ public class AcessoServiceImpl implements AcessoService {
     private final AcessoRepository repository;
     private final AutorizacaoService autorizacao;
     private final SessaoService sessao;
+    private final br.com.nord_tool_backend.service.EmailService email;
 
-    public AcessoServiceImpl(AcessoRepository repository, AutorizacaoService autorizacao, SessaoService sessao) {
+    public AcessoServiceImpl(AcessoRepository repository, AutorizacaoService autorizacao, SessaoService sessao,
+                             br.com.nord_tool_backend.service.EmailService email) {
         this.repository = repository;
         this.autorizacao = autorizacao;
         this.sessao = sessao;
+        this.email = email;
     }
 
     @Override
@@ -147,6 +150,32 @@ public class AcessoServiceImpl implements AcessoService {
                 .filter(c -> c.getIdUser().equals(legado.getIdUser())).findFirst().orElse(legado);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AcessoUsuarioDto decidirCadastro(Long idUsuario, br.com.nord_tool_backend.form.DecisaoCadastroForm form) {
+        autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
+        Usuario u = usuario(idUsuario);
+        if (!"PENDENTE".equals(u.getCdSituacaoCadastro())) {
+            throw new NegocioException("CADASTRO_JA_DECIDIDO", "Este cadastro já foi analisado");
+        }
+        boolean aprovar = Boolean.TRUE.equals(form.getAprovar());
+        List<Long> fases = form.getIdsFases() == null ? Collections.emptyList()
+                : new ArrayList<>(new java.util.LinkedHashSet<>(form.getIdsFases()));
+        if (aprovar && !fases.isEmpty() && repository.contarFases(fases) != fases.size()) {
+            throw new EntradaInvalidaException("Há fases inexistentes na lista");
+        }
+        repository.decidirCadastro(idUsuario, aprovar ? "APROVADO" : "RECUSADO", aprovar);
+        if (aprovar) repository.adicionarFases(idUsuario, fases);
+        sessao.invalidar(idUsuario);
+        if (aprovar) {
+            email.enviar(u.getNmEmail(), "NordTool — cadastro aprovado",
+                    "Olá, " + u.getNmNome() + ".\n\nSeu cadastro no NordTool foi aprovado. Já pode entrar com o seu e-mail e senha.");
+        }
+        Usuario atualizado = usuario(idUsuario);
+        Map<Long, List<PerfilPermissao>> doPerfil = repository.permissoesPorPerfil();
+        return dto(atualizado, efetivas(doPerfil.get(atualizado.getIdPerfil()), repository.excecoesPorUsuario().get(idUsuario)));
+    }
+
     private Usuario usuario(Long id) {
         return repository.listarUsuarios().stream().filter(x -> x.getId().equals(id)).findFirst()
                 .orElseThrow(() -> new NaoEncontradoException("Usuário não encontrado"));
@@ -198,6 +227,8 @@ public class AcessoServiceImpl implements AcessoService {
     private static AcessoUsuarioDto dto(Usuario u, Map<Modulo, Acao> acessos) {
         return new AcessoUsuarioDto(u.getId(), u.getNmNome(), u.getNmEmail(), u.getCdPerfil(),
                 Boolean.TRUE.equals(u.getInAtivo()), u.getDhUltimoLogin(), u.getNrCelular(), u.getIdEmpresa(),
-                u.getNmEmpresa(), u.getIdCargo(), u.getNmCargo(), texto(acessos));
+                u.getNmEmpresa(), u.getIdCargo(), u.getNmCargo(),
+                u.getCdSituacaoCadastro() == null ? "APROVADO" : u.getCdSituacaoCadastro(),
+                u.getIdObraSolicitada(), u.getNmObraSolicitada(), texto(acessos));
     }
 }
