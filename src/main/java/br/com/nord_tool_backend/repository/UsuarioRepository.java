@@ -15,6 +15,8 @@ public interface UsuarioRepository {
     List<PerfilPermissao> listarPermissoes(Long idPerfil);
     /** Exceções de permissão do usuário (tabela usuario_permissao). */
     List<PerfilPermissao> listarPermissoesUsuario(Long idUsuario);
+    /** Acessos mínimos do cargo (tabela cargo_permissao). */
+    List<PerfilPermissao> listarPermissoesCargo(Integer idCargo);
     Optional<Long> buscarIdPerfil(String cdPerfil);
     Usuario inserir(Usuario usuario);
     /** Incrementa o contador de falhas de forma atômica e devolve o novo valor. */

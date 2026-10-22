@@ -60,16 +60,22 @@ public class AcessoServiceImpl implements AcessoService {
     public AcessosDto listar() {
         autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
         Map<Long, List<PerfilPermissao>> doPerfil = repository.permissoesPorPerfil();
+        Map<Integer, List<PerfilPermissao>> doCargo = repository.permissoesPorCargo();
         Map<Long, List<PerfilPermissao>> doUsuario = repository.excecoesPorUsuario();
         List<AcessoUsuarioDto> usuarios = repository.listarUsuarios().stream()
-                .map(u -> dto(u, efetivas(doPerfil.get(u.getIdPerfil()), doUsuario.get(u.getId()))))
+                .map(u -> dto(u, efetivas(base(doPerfil, doCargo, u.getIdPerfil(), u.getIdCargo()), doUsuario.get(u.getId())),
+                        efetivas(base(doPerfil, doCargo, u.getIdPerfil(), u.getIdCargo()), null)))
                 .collect(Collectors.toList());
         List<AcessoPerfilDto> perfis = repository.listarPerfis().stream()
                 .map(p -> new AcessoPerfilDto(p.getCdPerfil(), p.getNmPerfil(),
                         texto(efetivas(doPerfil.get(p.getIdPerfil()), null))))
                 .collect(Collectors.toList());
         List<String> modulos = Stream.of(Modulo.values()).map(Modulo::name).collect(Collectors.toList());
-        return new AcessosDto(usuarios, perfis, modulos);
+        List<br.com.nord_tool_backend.dto.AcessoCargoDto> cargos = repository.listarCargos().stream()
+                .map(c -> new br.com.nord_tool_backend.dto.AcessoCargoDto(c.getId().intValue(), c.getNmCargo(),
+                        texto(efetivas(doCargo.getOrDefault(c.getId().intValue(), Collections.emptyList()), null))))
+                .collect(Collectors.toList());
+        return new AcessosDto(usuarios, perfis, modulos, cargos);
     }
 
     @Override
@@ -84,9 +90,10 @@ public class AcessoServiceImpl implements AcessoService {
                 .orElseThrow(() -> new EntradaInvalidaException("Perfil inválido"));
 
         Map<Long, List<PerfilPermissao>> doPerfil = repository.permissoesPorPerfil();
-        Map<Modulo, Acao> doNovoPerfil = efetivas(doPerfil.get(perfil.getIdPerfil()), null);
+        Map<Integer, List<PerfilPermissao>> doCargo = repository.permissoesPorCargo();
+        Map<Modulo, Acao> doNovoPerfil = efetivas(base(doPerfil, doCargo, perfil.getIdPerfil(), alvo.getIdCargo()), null);
         List<PerfilPermissao> excecoes = excecoes(form.getAcessos(), doNovoPerfil);
-        Map<Modulo, Acao> novas = efetivas(doPerfil.get(perfil.getIdPerfil()), excecoes);
+        Map<Modulo, Acao> novas = efetivas(base(doPerfil, doCargo, perfil.getIdPerfil(), alvo.getIdCargo()), excecoes);
         boolean ativo = Boolean.TRUE.equals(form.getInAtivo());
 
         if (idUsuario.equals(atual.getId())) {
@@ -96,10 +103,10 @@ public class AcessoServiceImpl implements AcessoService {
         Map<Long, List<PerfilPermissao>> doUsuario = repository.excecoesPorUsuario();
         boolean sobraAdmin = usuarios.stream().anyMatch(u -> u.getId().equals(idUsuario)
                 ? ativo && ehAdmin(novas)
-                : Boolean.TRUE.equals(u.getInAtivo()) && ehAdmin(efetivas(doPerfil.get(u.getIdPerfil()), doUsuario.get(u.getId()))));
+                : Boolean.TRUE.equals(u.getInAtivo()) && ehAdmin(efetivas(base(doPerfil, doCargo, u.getIdPerfil(), u.getIdCargo()), doUsuario.get(u.getId()))));
         if (!sobraAdmin) throw new NegocioException(CD_ULTIMO_ADMIN, "É preciso manter ao menos um administrador ativo");
 
-        Map<Modulo, Acao> anteriores = efetivas(doPerfil.get(alvo.getIdPerfil()), doUsuario.get(idUsuario));
+        Map<Modulo, Acao> anteriores = efetivas(base(doPerfil, doCargo, alvo.getIdPerfil(), alvo.getIdCargo()), doUsuario.get(idUsuario));
         boolean mudou = !Objects.equals(alvo.getIdPerfil(), perfil.getIdPerfil())
                 || Boolean.TRUE.equals(alvo.getInAtivo()) != ativo
                 || !anteriores.equals(novas)
@@ -122,9 +129,15 @@ public class AcessoServiceImpl implements AcessoService {
         Usuario u = usuario(idUsuario);
         String celular = form.getNrCelular() == null ? "" : form.getNrCelular().trim();
         repository.alterarDados(idUsuario, form.getNmNome().trim(), celular.isEmpty() ? null : celular, form.getIdEmpresa(), form.getIdCargo());
+        if (!Objects.equals(u.getIdCargo(), form.getIdCargo())) {
+            // O cargo dá acessos: com cargo novo a pessoa entra de novo já com o pacote dele.
+            repository.renovarSessao(idUsuario);
+            sessao.invalidar(idUsuario);
+        }
         Usuario atualizado = usuario(idUsuario);
         Map<Long, List<PerfilPermissao>> doPerfil = repository.permissoesPorPerfil();
-        return dto(atualizado, efetivas(doPerfil.get(u.getIdPerfil()), repository.excecoesPorUsuario().get(idUsuario)));
+        Map<Integer, List<PerfilPermissao>> doCargo = repository.permissoesPorCargo();
+        return dto(atualizado, efetivas(base(doPerfil, doCargo, atualizado.getIdPerfil(), atualizado.getIdCargo()), repository.excecoesPorUsuario().get(idUsuario)));
     }
 
     @Override
@@ -173,7 +186,51 @@ public class AcessoServiceImpl implements AcessoService {
         }
         Usuario atualizado = usuario(idUsuario);
         Map<Long, List<PerfilPermissao>> doPerfil = repository.permissoesPorPerfil();
-        return dto(atualizado, efetivas(doPerfil.get(atualizado.getIdPerfil()), repository.excecoesPorUsuario().get(idUsuario)));
+        Map<Integer, List<PerfilPermissao>> doCargo = repository.permissoesPorCargo();
+        return dto(atualizado, efetivas(base(doPerfil, doCargo, atualizado.getIdPerfil(), atualizado.getIdCargo()), repository.excecoesPorUsuario().get(idUsuario)));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public br.com.nord_tool_backend.dto.AcessoCargoDto salvarAcessosCargo(Integer idCargo, Map<String, String> acessos) {
+        autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
+        br.com.nord_tool_backend.domain.Cargo cargo = repository.listarCargos().stream().filter(c -> c.getId() != null && c.getId().intValue() == idCargo).findFirst()
+                .orElseThrow(() -> new NaoEncontradoException("Cargo não encontrado"));
+        List<PerfilPermissao> lista = new ArrayList<>();
+        for (Map.Entry<String, String> e : acessos.entrySet()) {
+            Modulo modulo = Modulo.de(e.getKey()).orElseThrow(() -> new EntradaInvalidaException("Módulo inválido: " + e.getKey()));
+            Acao acao = acaoValida(e.getValue());
+            if (acao != Acao.NENHUM) lista.add(new PerfilPermissao(modulo.name(), acao.name()));
+        }
+        lista.sort((a, b) -> a.getCdModulo().compareTo(b.getCdModulo()));
+        repository.substituirAcessosCargo(idCargo, lista);
+        // Quem tem o cargo entra de novo já com o pacote novo.
+        for (Long id : repository.renovarSessoesDoCargo(idCargo)) sessao.invalidar(id);
+        return new br.com.nord_tool_backend.dto.AcessoCargoDto(idCargo, cargo.getNmCargo(), texto(efetivas(lista, null)));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AcessoUsuarioDto definirSuperior(Long idUsuario, Long idSuperior) {
+        autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
+        List<Usuario> todos = repository.listarUsuarios();
+        Usuario u = todos.stream().filter(x -> x.getId().equals(idUsuario)).findFirst()
+                .orElseThrow(() -> new NaoEncontradoException("Usuário não encontrado"));
+        if (idSuperior != null) {
+            if (idSuperior.equals(idUsuario)) throw new EntradaInvalidaException("A pessoa não pode ser superior dela mesma");
+            Map<Long, Long> superiorDe = new java.util.HashMap<>();
+            todos.forEach(x -> superiorDe.put(x.getId(), x.getIdSuperior()));
+            if (!superiorDe.containsKey(idSuperior)) throw new NaoEncontradoException("Superior não encontrado");
+            // Subindo a partir do novo superior não pode chegar de volta nesta pessoa (evita ciclo).
+            Long atual = idSuperior;
+            for (int passos = 0; atual != null && passos <= todos.size(); passos++) {
+                if (atual.equals(idUsuario)) throw new EntradaInvalidaException("Isso criaria um ciclo: o superior escolhido está abaixo desta pessoa");
+                atual = superiorDe.get(atual);
+            }
+        }
+        repository.definirSuperior(idUsuario, idSuperior);
+        u.setIdSuperior(idSuperior);
+        return dto(u, Collections.emptyMap());
     }
 
     private Usuario usuario(Long id) {
@@ -210,6 +267,18 @@ public class AcessoServiceImpl implements AcessoService {
         return a.equals(novas);
     }
 
+    /**
+     * Padrão de um usuário: o que o cargo dá (por módulo) vem antes do que o perfil dá, então o cargo prevalece
+     * sobre o perfil no mesmo módulo e as exceções do usuário prevalecem sobre os dois.
+     */
+    static List<PerfilPermissao> base(Map<Long, List<PerfilPermissao>> doPerfil, Map<Integer, List<PerfilPermissao>> doCargo,
+                                      Long idPerfil, Integer idCargo) {
+        List<PerfilPermissao> lista = new ArrayList<>();
+        if (idCargo != null) lista.addAll(doCargo.getOrDefault(idCargo, Collections.emptyList()));
+        lista.addAll(doPerfil.getOrDefault(idPerfil, Collections.emptyList()));
+        return lista;
+    }
+
     private static Map<Modulo, Acao> efetivas(List<PerfilPermissao> doPerfil, List<PerfilPermissao> doUsuario) {
         return PermissaoCalculator.resolver(doPerfil, doUsuario);
     }
@@ -225,10 +294,17 @@ public class AcessoServiceImpl implements AcessoService {
     }
 
     private static AcessoUsuarioDto dto(Usuario u, Map<Modulo, Acao> acessos) {
-        return new AcessoUsuarioDto(u.getId(), u.getNmNome(), u.getNmEmail(), u.getCdPerfil(),
+        return dto(u, acessos, null);
+    }
+
+    private static AcessoUsuarioDto dto(Usuario u, Map<Modulo, Acao> acessos, Map<Modulo, Acao> padrao) {
+        AcessoUsuarioDto d = new AcessoUsuarioDto(u.getId(), u.getNmNome(), u.getNmEmail(), u.getCdPerfil(),
                 Boolean.TRUE.equals(u.getInAtivo()), u.getDhUltimoLogin(), u.getNrCelular(), u.getIdEmpresa(),
                 u.getNmEmpresa(), u.getIdCargo(), u.getNmCargo(),
                 u.getCdSituacaoCadastro() == null ? "APROVADO" : u.getCdSituacaoCadastro(),
                 u.getIdObraSolicitada(), u.getNmObraSolicitada(), texto(acessos));
+        d.setIdSuperior(u.getIdSuperior());
+        d.setAcessosPadrao(padrao == null ? null : texto(padrao));
+        return d;
     }
 }

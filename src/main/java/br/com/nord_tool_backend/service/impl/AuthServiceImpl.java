@@ -158,8 +158,10 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private Map<Modulo, Acao> permissoes(Usuario usuario) {
-        return PermissaoCalculator.resolver(usuarioRepository.listarPermissoes(usuario.getIdPerfil()),
-                usuarioRepository.listarPermissoesUsuario(usuario.getId()));
+        // O cargo (por módulo) vem antes do perfil: dá os acessos mínimos de quem tem aquele cargo.
+        List<PerfilPermissao> base = new java.util.ArrayList<>(usuarioRepository.listarPermissoesCargo(usuario.getIdCargo()));
+        base.addAll(usuarioRepository.listarPermissoes(usuario.getIdPerfil()));
+        return PermissaoCalculator.resolver(base, usuarioRepository.listarPermissoesUsuario(usuario.getId()));
     }
 
     private LoginResponseDto responder(Usuario usuario, Instant agora, Instant inicioSessao) {

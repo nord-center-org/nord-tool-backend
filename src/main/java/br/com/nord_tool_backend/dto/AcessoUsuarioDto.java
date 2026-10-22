@@ -26,4 +26,15 @@ public class AcessoUsuarioDto {
     private String nmObraSolicitada;
     /** Nível efetivo por módulo (perfil + exceções do usuário); módulos sem acesso ficam fora. */
     private Map<String, String> acessos;
+    /** Superior direto (hierarquia). */
+    private Long idSuperior;
+    /** O que perfil + cargo dão, sem as exceções do usuário (base para "personalizado"). */
+    private Map<String, String> acessosPadrao;
+
+    public AcessoUsuarioDto(Long id, String nmNome, String nmEmail, String cdPerfil, boolean inAtivo, LocalDateTime dhUltimoLogin,
+                            String nrCelular, Integer idEmpresa, String nmEmpresa, Integer idCargo, String nmCargo,
+                            String cdSituacaoCadastro, Long idObraSolicitada, String nmObraSolicitada, Map<String, String> acessos) {
+        this(id, nmNome, nmEmail, cdPerfil, inAtivo, dhUltimoLogin, nrCelular, idEmpresa, nmEmpresa, idCargo, nmCargo,
+                cdSituacaoCadastro, idObraSolicitada, nmObraSolicitada, acessos, null, null);
+    }
 }

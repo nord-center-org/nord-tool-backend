@@ -12,4 +12,6 @@ public class AcessosDto {
     private List<AcessoPerfilDto> perfis;
     /** Códigos dos módulos controlados, na ordem do enum. */
     private List<String> modulos;
+    /** Acessos mínimos de cada cargo. */
+    private List<AcessoCargoDto> cargos;
 }

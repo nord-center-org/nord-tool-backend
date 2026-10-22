@@ -9,6 +9,8 @@ public interface AcessoService {
     AcessoUsuarioDto salvar(Long idUsuario, AcessoUsuarioForm form);
     /** Aprova (com as fases em que a pessoa entra) ou recusa um cadastro pendente. */
     AcessoUsuarioDto decidirCadastro(Long idUsuario, br.com.nord_tool_backend.form.DecisaoCadastroForm form);
+    br.com.nord_tool_backend.dto.AcessoCargoDto salvarAcessosCargo(Integer idCargo, java.util.Map<String, String> acessos);
+    AcessoUsuarioDto definirSuperior(Long idUsuario, Long idSuperior);
     AcessoUsuarioDto salvarDados(Long idUsuario, br.com.nord_tool_backend.form.DadosUsuarioForm form);
     java.util.List<br.com.nord_tool_backend.dto.ColaboradorLegadoDto> listarColaboradoresLegados();
     /** Vincula o colaborador antigo ao usuário (null desfaz) e completa o histórico de chaves. */

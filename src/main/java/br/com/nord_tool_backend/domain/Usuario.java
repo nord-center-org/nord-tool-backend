@@ -30,4 +30,5 @@ public class Usuario extends GlobalDomain {
     private String cdSituacaoCadastro;
     private Long idObraSolicitada;
     private String nmObraSolicitada;
+    private Long idSuperior;
 }
