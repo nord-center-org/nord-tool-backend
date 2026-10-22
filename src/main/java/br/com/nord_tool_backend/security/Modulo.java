@@ -18,6 +18,7 @@ public enum Modulo {
     CADASTROS,
     MEDICOES,
     RELATORIO_FOTOGRAFICO,
+    MAPEAMENTOS,
     ADMINISTRACAO;
 
     public static final String CURINGA = "*";
