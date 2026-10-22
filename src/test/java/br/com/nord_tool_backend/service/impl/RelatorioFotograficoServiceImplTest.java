@@ -237,7 +237,7 @@ class RelatorioFotograficoServiceImplTest {
     }
 
     @Test
-    void fotoValidaImagemESobeVersao() {
+    void fotoValidaImagemENaoMexeNaVersao() {
         when(repository.relatorioDoItem(5L)).thenReturn(Optional.of(1L));
         when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         assertThrows(EntradaInvalidaException.class, () -> service.adicionarFoto(5L, "a.txt", "texto".getBytes(), null));
@@ -245,7 +245,8 @@ class RelatorioFotograficoServiceImplTest {
         when(repository.inserirFoto(5L, 500L, "Fachada norte")).thenReturn(90L);
         when(repository.buscarFoto(90L)).thenReturn(Optional.of(foto(90L, 5L, 500L)));
         service.adicionarFoto(5L, "a.jpg", JPEG, " Fachada norte ");
-        verify(repository).tocar(1L);
+        verify(repository).inserirFoto(5L, 500L, "Fachada norte");
+        verify(repository, never()).alterar(any(), anyInt());
     }
 
     @Test

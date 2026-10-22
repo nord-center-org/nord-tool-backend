@@ -41,9 +41,6 @@ public interface RelatorioFotograficoRepository {
 
     int alterarStatus(Long id, String cdStatus, int nrVersao);
 
-    /** Sobe a versão do relatório (mudança em fotos), para quem está com a tela aberta notar. */
-    void tocar(Long id);
-
     int deletar(Long id, int nrVersao);
 
     Long inserirItem(RelatorioItemDto item);

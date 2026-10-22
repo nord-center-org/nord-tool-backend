@@ -144,13 +144,6 @@ public class RelatorioFotograficoRepositoryImpl implements RelatorioFotograficoR
     }
 
     @Override
-    public void tocar(Long id) {
-        executor.executar("Erro ao atualizar relatório", () -> {
-            jdbc.update(q("SPU.RELATORIO.TOCAR"), new MapSqlParameterSource("id", id));
-        });
-    }
-
-    @Override
     public int deletar(Long id, int nrVersao) {
         return executor.executar("Erro ao excluir relatório fotográfico", () ->
                 jdbc.update(q("SPD.RELATORIO.DELETAR"), new MapSqlParameterSource().addValue("id", id).addValue("nrVersao", nrVersao)));

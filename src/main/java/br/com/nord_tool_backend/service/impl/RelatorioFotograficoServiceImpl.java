@@ -38,7 +38,8 @@ import java.util.stream.Collectors;
 
 /**
  * Relatório fotográfico: modelos (ADMIN do módulo), relatórios por fase (ESCRITA) e fotos no
- * armazenamento comum. Relatório concluído não muda até ser reaberto.
+ * armazenamento comum. Relatório concluído não muda até ser reaberto. Fotos não mexem na versão do relatório
+ * (nrVersao protege cabeçalho e itens), para quem está editando o texto não levar 409 ao enviar foto.
  */
 @Service
 public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoService {
@@ -194,7 +195,6 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         String contentType = ArquivoValidador.validarImagem(nome, bytes);
         Long idArquivo = armazenamento.salvar(nome, contentType, bytes);
         Long idFoto = repository.inserirFoto(idItem, idArquivo, legenda);
-        repository.tocar(idRelatorio);
         return foto(idFoto);
     }
 
@@ -206,7 +206,6 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         editavel(f.getIdRelatorio());
         int ordem = form.getNrOrdem() == null ? f.getNrOrdem() : form.getNrOrdem();
         repository.alterarFoto(idFoto, texto(form.getTxLegenda()), ordem);
-        repository.tocar(f.getIdRelatorio());
         return foto(idFoto);
     }
 
@@ -217,7 +216,6 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         RelatorioFotoDto f = fotoNoEscopo(idFoto);
         editavel(f.getIdRelatorio());
         repository.deletarFoto(idFoto);
-        repository.tocar(f.getIdRelatorio());
         apagarArquivos(java.util.Collections.singletonList(f.getIdArquivo()));
     }
 
