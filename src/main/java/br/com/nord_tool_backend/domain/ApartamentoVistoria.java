@@ -38,5 +38,7 @@ public class ApartamentoVistoria extends GlobalDomain implements Serializable{
     private Integer qtFotosTermo;
     private Integer nrPaginasTermo;
     private Integer nrPaginasComFoto;
+    /** Fase da obra a que o apartamento pertence. */
+    private Long idFase;
 
 }
