@@ -44,4 +44,9 @@ public class CronogramaSemanalReadController implements BaseResponse {
     public ResponseEntity<ApiResponseBody<List<CronogramaSemanalExcecaoDto>>> listarExcecoes() {
         return ok(cronogramaSemanalService.listarExcecoes());
     }
+
+    @GetMapping("/pessoas")
+    public ResponseEntity<ApiResponseBody<List<br.com.nord_tool_backend.dto.PessoaCronogramaDto>>> pessoas() {
+        return ok(cronogramaSemanalService.listarPessoas());
+    }
 }

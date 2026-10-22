@@ -32,6 +32,11 @@ public class CronogramaSemanalDto {
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime dtAgendamento;
     private Boolean flFixo;
+    private Long idDono;
+    private String nmDono;
+    /** false = compartilhado comigo por outra pessoa (só leitura). */
+    private Boolean flProprio;
+    private java.util.List<Long> idsCompartilhados;
 
     public static CronogramaSemanalDto converterToDto(CronogramaSemanal cronogramaSemanal ) {
         return CronogramaSemanalDto.builder()
@@ -48,6 +53,16 @@ public class CronogramaSemanalDto {
                 .nmTag(cronogramaSemanal.getNmTag())
                 .dtAgendamento(cronogramaSemanal.getDtAgendamento())
                 .flFixo(cronogramaSemanal.getInCronogramaFixo())
+                .idDono(cronogramaSemanal.getIdDono())
+                .nmDono(cronogramaSemanal.getNmDono())
+                .flProprio(!Boolean.FALSE.equals(cronogramaSemanal.getInProprio()))
+                .idsCompartilhados(ids(cronogramaSemanal.getTxCompartilhados()))
                 .build();
+    }
+
+    private static java.util.List<Long> ids(String csv) {
+        if (csv == null || csv.trim().isEmpty()) return new java.util.ArrayList<>();
+        return java.util.Arrays.stream(csv.split(",")).map(String::trim).filter(x -> !x.isEmpty())
+                .map(Long::valueOf).collect(java.util.stream.Collectors.toList());
     }
 }

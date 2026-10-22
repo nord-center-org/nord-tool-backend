@@ -16,4 +16,6 @@ public interface CronogramaSemanalService {
     List<CronogramaSemanalExcecaoDto> listarExcecoes();
     void incluirExcecao(Long id, LocalDate data);
     void removerExcecao(Long id, LocalDate data);
+    CronogramaSemanalDto compartilhar(Long id, List<Long> idsUsuarios);
+    List<br.com.nord_tool_backend.dto.PessoaCronogramaDto> listarPessoas();
 }

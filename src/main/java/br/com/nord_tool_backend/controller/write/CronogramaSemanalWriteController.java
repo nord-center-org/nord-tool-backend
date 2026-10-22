@@ -65,4 +65,10 @@ public class CronogramaSemanalWriteController implements BaseResponse {
         cronogramaSemanalService.removerExcecao(id, data);
         return noContent();
     }
+
+    @PutMapping("/{id}/compartilhamento")
+    public ResponseEntity<ApiResponseBody<CronogramaSemanalDto>> compartilhar(@PathVariable("id") Long id,
+            @Valid @RequestBody br.com.nord_tool_backend.form.CompartilhamentoForm form) {
+        return ok(cronogramaSemanalService.compartilhar(id, form.getIdsUsuarios()));
+    }
 }

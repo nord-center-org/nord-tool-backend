@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -101,6 +102,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     public void incluirExcecao(Long id, LocalDate data) {
         autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
         CronogramaSemanal item = cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id);
+        exigirDono(item);
         if (!Boolean.TRUE.equals(item.getInCronogramaFixo())) {
             throw new EntradaInvalidaException("Só compromissos fixos aceitam exceção por dia.");
         }
@@ -111,6 +113,41 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Transactional(rollbackFor = Exception.class)
     public void removerExcecao(Long id, LocalDate data) {
         autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        exigirDono(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id));
         cronogramaSemanalRepository.removerExcecao(id, data);
+    }
+
+    static final int MAX_COMPARTILHAMENTOS = 200;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CronogramaSemanalDto compartilhar(Long id, List<Long> idsUsuarios) {
+        br.com.nord_tool_backend.security.UsuarioAutenticado u = autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        CronogramaSemanal item = cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id);
+        exigirDono(item);
+        java.util.LinkedHashSet<Long> destinos = new java.util.LinkedHashSet<>();
+        for (Long d : idsUsuarios == null ? new ArrayList<Long>() : idsUsuarios) {
+            if (d != null && !d.equals(u.getId())) destinos.add(d);
+        }
+        if (destinos.size() > MAX_COMPARTILHAMENTOS) throw new EntradaInvalidaException("Compartilhe com no máximo " + MAX_COMPARTILHAMENTOS + " pessoas");
+        if (!destinos.isEmpty() && cronogramaSemanalRepository.contarUsuariosAtivos(destinos) != destinos.size()) {
+            throw new EntradaInvalidaException("Há pessoas inativas ou inexistentes na lista");
+        }
+        cronogramaSemanalRepository.compartilhar(id, new ArrayList<>(destinos));
+        return CronogramaSemanalDto.converterToDto(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<br.com.nord_tool_backend.dto.PessoaCronogramaDto> listarPessoas() {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.LEITURA);
+        return cronogramaSemanalRepository.listarPessoas();
+    }
+
+    /** Compartilhado comigo é só leitura: exceções e compartilhamento são do dono. */
+    private static void exigirDono(CronogramaSemanal item) {
+        if (Boolean.FALSE.equals(item.getInProprio())) {
+            throw new br.com.nord_tool_backend.exception.AcessoNegadoException("Só quem criou o item pode alterá-lo");
+        }
     }
 }
