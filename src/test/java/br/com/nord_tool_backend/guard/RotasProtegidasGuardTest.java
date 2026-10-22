@@ -52,7 +52,8 @@ class RotasProtegidasGuardTest {
     }
 
     private static final Set<String> PUBLICAS = new TreeSet<>(Arrays.asList(
-            "POST /api/v1/nord-tool/auth/login", "GET /nord-tool/health"));
+            "POST /api/v1/nord-tool/auth/login", "POST /api/v1/nord-tool/auth/cadastro",
+            "POST /api/v1/nord-tool/auth/esqueci-senha", "POST /api/v1/nord-tool/auth/redefinir-senha", "GET /nord-tool/health"));
 
     @Autowired MockMvc mvc;
     @MockBean SessaoService sessaoService;

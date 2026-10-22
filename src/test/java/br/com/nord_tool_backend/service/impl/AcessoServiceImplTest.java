@@ -50,6 +50,7 @@ class AcessoServiceImplTest {
     private AcessoRepository repository;
     private AutorizacaoService autorizacao;
     private SessaoService sessao;
+    private br.com.nord_tool_backend.service.EmailService email;
     private AcessoServiceImpl service;
     private final List<Usuario> usuarios = new ArrayList<>();
     private final Map<Long, List<PerfilPermissao>> excecoes = new HashMap<>();
@@ -59,7 +60,8 @@ class AcessoServiceImplTest {
         repository = mock(AcessoRepository.class);
         autorizacao = mock(AutorizacaoService.class);
         sessao = mock(SessaoService.class);
-        service = new AcessoServiceImpl(repository, autorizacao, sessao);
+        email = mock(br.com.nord_tool_backend.service.EmailService.class);
+        service = new AcessoServiceImpl(repository, autorizacao, sessao, email);
         usuarios.add(usuario(10, "Admin", ADMIN, "ADMIN", true));
         usuarios.add(usuario(20, "Ana", USER, "USER", true));
         when(repository.listarUsuarios()).thenReturn(usuarios);
@@ -213,5 +215,48 @@ class AcessoServiceImplTest {
         assertThrows(AcessoNegadoException.class, () -> service.listarColaboradoresLegados());
         assertThrows(AcessoNegadoException.class, () -> service.vincularColaborador(5L, 20L));
         assertThrows(AcessoNegadoException.class, () -> service.salvarDados(20L, new br.com.nord_tool_backend.form.DadosUsuarioForm()));
+    }
+
+    @Test
+    void aprovarCadastroPendenteIncluiNasFasesEAvisaPorEmail() {
+        Usuario pendente = usuario(40, "Novo", USER, "USER", true);
+        pendente.setCdSituacaoCadastro("PENDENTE");
+        usuarios.add(pendente);
+        br.com.nord_tool_backend.form.DecisaoCadastroForm f = new br.com.nord_tool_backend.form.DecisaoCadastroForm();
+        f.setAprovar(true);
+        f.setIdsFases(Arrays.asList(7L, 8L, 7L));
+        when(repository.contarFases(Arrays.asList(7L, 8L))).thenReturn(2);
+        service.decidirCadastro(40L, f);
+        verify(repository).decidirCadastro(40L, "APROVADO", true);
+        verify(repository).adicionarFases(40L, Arrays.asList(7L, 8L));
+        verify(sessao).invalidar(40L);
+        verify(email).enviar(eq("novo@obra.com"), any(), any());
+    }
+
+    @Test
+    void recusarDesativaENaoIncluiFases() {
+        Usuario pendente = usuario(41, "Outro", USER, "USER", true);
+        pendente.setCdSituacaoCadastro("PENDENTE");
+        usuarios.add(pendente);
+        br.com.nord_tool_backend.form.DecisaoCadastroForm f = new br.com.nord_tool_backend.form.DecisaoCadastroForm();
+        f.setAprovar(false);
+        f.setIdsFases(Collections.singletonList(7L));
+        service.decidirCadastro(41L, f);
+        verify(repository).decidirCadastro(41L, "RECUSADO", false);
+        verify(repository, never()).adicionarFases(anyLong(), any());
+        verify(email, never()).enviar(any(), any(), any());
+    }
+
+    @Test
+    void naoDecideDuasVezesNemComFaseInexistente() {
+        br.com.nord_tool_backend.form.DecisaoCadastroForm f = new br.com.nord_tool_backend.form.DecisaoCadastroForm();
+        f.setAprovar(true);
+        assertThrows(NegocioException.class, () -> service.decidirCadastro(20L, f)); // Ana já é APROVADO (nulo = aprovado)
+        Usuario pendente = usuario(42, "Mais um", USER, "USER", true);
+        pendente.setCdSituacaoCadastro("PENDENTE");
+        usuarios.add(pendente);
+        f.setIdsFases(Collections.singletonList(99L));
+        when(repository.contarFases(Collections.singletonList(99L))).thenReturn(0);
+        assertThrows(EntradaInvalidaException.class, () -> service.decidirCadastro(42L, f));
     }
 }

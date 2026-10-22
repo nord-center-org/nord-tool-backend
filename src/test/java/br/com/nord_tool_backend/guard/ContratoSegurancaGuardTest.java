@@ -87,6 +87,7 @@ class ContratoSegurancaGuardTest {
     @Autowired MockMvc mvc;
     @Autowired JwtService jwt;
     @MockBean AuthService authService;
+    @MockBean br.com.nord_tool_backend.service.CadastroService cadastroService;
     @MockBean SessaoService sessaoService;
 
     @BeforeEach

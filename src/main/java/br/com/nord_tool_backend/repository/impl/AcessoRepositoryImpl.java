@@ -42,7 +42,7 @@ public class AcessoRepositoryImpl implements AcessoRepository {
         this.qInserirExcecao = queries.get("SPI.ACESSO.EXCECAO");
         this.q = queries;
         for (String chave : new String[]{"SPU.ACESSO.DADOS", "SPS.ACESSO.LEGADOS", "SPU.ACESSO.DESVINCULAR", "SPU.ACESSO.VINCULAR",
-                "SPU.ACESSO.HISTORICO_RETIRADA", "SPU.ACESSO.HISTORICO_LIBERACAO", "SPU.ACESSO.HISTORICO_RECEBIMENTO"}) {
+                "SPU.ACESSO.HISTORICO_RETIRADA", "SPU.ACESSO.HISTORICO_LIBERACAO", "SPU.ACESSO.HISTORICO_RECEBIMENTO", "SPU.ACESSO.DECIDIR_CADASTRO", "SPI.ACESSO.FASE", "SPS.ACESSO.CONTAR_FASES"}) {
             queries.get(chave);
         }
     }
@@ -83,6 +83,29 @@ public class AcessoRepositoryImpl implements AcessoRepository {
                 jdbc.update(qInserirExcecao, new MapSqlParameterSource().addValue("id", idUsuario)
                         .addValue("cdModulo", e.getCdModulo()).addValue("cdAcao", e.getCdAcao()));
             }
+        });
+    }
+
+    @Override
+    public void decidirCadastro(Long idUsuario, String situacao, boolean ativo) {
+        executor.executar("Decidir cadastro", () -> jdbc.update(q.get("SPU.ACESSO.DECIDIR_CADASTRO"), new MapSqlParameterSource()
+                .addValue("id", idUsuario).addValue("situacao", situacao).addValue("ativo", ativo)));
+    }
+
+    @Override
+    public void adicionarFases(Long idUsuario, List<Long> idsFases) {
+        executor.executar("Incluir usuário nas fases", () -> {
+            for (Long idFase : idsFases) {
+                jdbc.update(q.get("SPI.ACESSO.FASE"), new MapSqlParameterSource().addValue("id", idUsuario).addValue("idFase", idFase));
+            }
+        });
+    }
+
+    @Override
+    public int contarFases(List<Long> idsFases) {
+        return executor.executar("Conferir fases", () -> {
+            Integer n = jdbc.queryForObject(q.get("SPS.ACESSO.CONTAR_FASES"), new MapSqlParameterSource("ids", idsFases), Integer.class);
+            return n == null ? 0 : n;
         });
     }
 

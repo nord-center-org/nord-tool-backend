@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.exception.NegocioException;
 import br.com.nord_tool_backend.domain.PerfilPermissao;
 import br.com.nord_tool_backend.domain.Usuario;
 import br.com.nord_tool_backend.dto.LoginResponseDto;
@@ -45,6 +46,8 @@ public class AuthServiceImpl implements AuthService {
     static final int MAX_TENTATIVAS_EMAIL = 5;
     static final String MSG_CREDENCIAIS = "E-mail ou senha inválidos";
     static final String MSG_SESSAO_ENCERRADA = "Sessão encerrada. Faça login novamente.";
+    static final String CD_CADASTRO_PENDENTE = "CADASTRO_PENDENTE";
+    static final String MSG_CADASTRO_PENDENTE = "Seu cadastro está aguardando a aprovação do administrador da obra.";
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -85,9 +88,13 @@ public class AuthServiceImpl implements AuthService {
             registrarFalha(usuario.getId(), agora);
             throw credenciaisInvalidas();
         }
-        if (!Boolean.TRUE.equals(usuario.getInAtivo())) {
+        if (!Boolean.TRUE.equals(usuario.getInAtivo()) || "RECUSADO".equals(usuario.getCdSituacaoCadastro())) {
             log.info("Login recusado: conta inativa ({})", usuario.getId());
             throw credenciaisInvalidas();
+        }
+        // Só depois da senha certa: quem se cadastrou sabe que está aguardando a aprovação.
+        if ("PENDENTE".equals(usuario.getCdSituacaoCadastro())) {
+            throw new NegocioException(CD_CADASTRO_PENDENTE, MSG_CADASTRO_PENDENTE);
         }
 
         usuarioRepository.registrarLoginSucesso(usuario.getId());

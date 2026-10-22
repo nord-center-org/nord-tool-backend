@@ -25,6 +25,7 @@ import javax.validation.Valid;
 public class AuthWriteController implements BaseResponse {
 
     private final AuthService authService;
+    private final br.com.nord_tool_backend.service.CadastroService cadastroService;
 
     @PostMapping("/login")
     @Operation(summary = "Autentica por e-mail e senha e devolve o JWT")
@@ -32,6 +33,27 @@ public class AuthWriteController implements BaseResponse {
                                                                    HttpServletRequest request) {
         // Atrás de proxy, o IP real vem de X-Forwarded-For via server.forward-headers-strategy (perfil railway).
         return ok(authService.login(form, request.getRemoteAddr()));
+    }
+
+    @PostMapping("/cadastro")
+    @Operation(summary = "Cria a conta (fica aguardando a aprovação do admin, sem nenhum acesso)")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.MensagemDto>> cadastrar(
+            @Valid @RequestBody br.com.nord_tool_backend.form.CadastroForm form, HttpServletRequest request) {
+        return created(cadastroService.cadastrar(form, request.getRemoteAddr()));
+    }
+
+    @PostMapping("/esqueci-senha")
+    @Operation(summary = "Envia por e-mail um link para criar nova senha (resposta igual exista ou não o e-mail)")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.MensagemDto>> esqueciSenha(
+            @Valid @RequestBody br.com.nord_tool_backend.form.EsqueciSenhaForm form, HttpServletRequest request) {
+        return ok(cadastroService.esqueciSenha(form, request.getRemoteAddr()));
+    }
+
+    @PostMapping("/redefinir-senha")
+    @Operation(summary = "Cria a nova senha com o link do e-mail (uso único, 30 minutos)")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.MensagemDto>> redefinirSenha(
+            @Valid @RequestBody br.com.nord_tool_backend.form.RedefinirSenhaForm form, HttpServletRequest request) {
+        return ok(cadastroService.redefinirSenha(form, request.getRemoteAddr()));
     }
 
     @PostMapping("/refresh")
