@@ -28,6 +28,7 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     private final String qEstadoSessao;
     private final String qPermissoes;
     private final String qPermissoesUsuario;
+    private final String qPermissoesCargo;
     private final String qIdPerfil;
     private final String qInserir;
     private final String qIncrementarFalha;
@@ -43,6 +44,7 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
         this.qEstadoSessao = queries.get("SPS.USUARIO.ESTADO_SESSAO");
         this.qPermissoes = queries.get("SPS.USUARIO.PERMISSOES");
         this.qPermissoesUsuario = queries.get("SPS.USUARIO.PERMISSOES_USUARIO");
+        this.qPermissoesCargo = queries.get("SPS.USUARIO.PERMISSOES_CARGO");
         this.qIdPerfil = queries.get("SPS.USUARIO.ID_PERFIL_POR_CODIGO");
         this.qInserir = queries.get("SPI.USUARIO.INSERIR");
         this.qIncrementarFalha = queries.get("SPU.USUARIO.INCREMENTAR_FALHA");
@@ -77,6 +79,14 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     public List<PerfilPermissao> listarPermissoesUsuario(Long idUsuario) {
         return executor.executar("Listar permissões do usuário", () ->
                 jdbc.query(qPermissoesUsuario, new MapSqlParameterSource("idUsuario", idUsuario),
+                        BeanPropertyRowMapper.newInstance(PerfilPermissao.class)));
+    }
+
+    @Override
+    public List<PerfilPermissao> listarPermissoesCargo(Integer idCargo) {
+        if (idCargo == null) return java.util.Collections.emptyList();
+        return executor.executar("Listar acessos do cargo", () ->
+                jdbc.query(qPermissoesCargo, new MapSqlParameterSource("idCargo", idCargo),
                         BeanPropertyRowMapper.newInstance(PerfilPermissao.class)));
     }
 

@@ -259,4 +259,62 @@ class AcessoServiceImplTest {
         when(repository.contarFases(Collections.singletonList(99L))).thenReturn(0);
         assertThrows(EntradaInvalidaException.class, () -> service.decidirCadastro(42L, f));
     }
+
+    @Test
+    void cargoDaAcessoMinimoEExcecaoEhSoODiferenteDoCargo() {
+        usuarios.get(1).setIdCargo(4);
+        Map<Integer, List<PerfilPermissao>> doCargo = new HashMap<>();
+        doCargo.put(4, Collections.singletonList(new PerfilPermissao("MEDICOES", "LEITURA")));
+        when(repository.permissoesPorCargo()).thenReturn(doCargo);
+
+        assertEquals("LEITURA", service.listar().getUsuarios().get(1).getAcessos().get("MEDICOES"));
+        assertEquals("LEITURA", service.listar().getUsuarios().get(1).getAcessosPadrao().get("MEDICOES"));
+
+        // Manter o que o cargo dá não vira exceção; subir para Escrita vira.
+        service.salvar(20L, form("USER", true, "MEDICOES", "LEITURA", "CAIXINHA", "NENHUM"));
+        verify(repository, never()).substituirExcecoes(anyLong(), any());
+        service.salvar(20L, form("USER", true, "MEDICOES", "ESCRITA"));
+        verify(repository).substituirExcecoes(20L, Collections.singletonList(new PerfilPermissao("MEDICOES", "ESCRITA")));
+    }
+
+    @Test
+    void salvarAcessosDoCargoGuardaSoOQueDaERenovaSessoes() {
+        br.com.nord_tool_backend.domain.Cargo c = new br.com.nord_tool_backend.domain.Cargo();
+        c.setId(4L);
+        c.setNmCargo("Encarregado");
+        when(repository.listarCargos()).thenReturn(Collections.singletonList(c));
+        when(repository.renovarSessoesDoCargo(4)).thenReturn(Arrays.asList(20L, 30L));
+        Map<String, String> acessos = new HashMap<>();
+        acessos.put("MEDICOES", "escrita");
+        acessos.put("CAIXINHA", "NENHUM");
+        assertEquals("ESCRITA", service.salvarAcessosCargo(4, acessos).getAcessos().get("MEDICOES"));
+        verify(repository).substituirAcessosCargo(4, Collections.singletonList(new PerfilPermissao("MEDICOES", "ESCRITA")));
+        verify(sessao).invalidar(20L);
+        verify(sessao).invalidar(30L);
+        assertThrows(NaoEncontradoException.class, () -> service.salvarAcessosCargo(9, acessos));
+        acessos.put("XPTO", "LEITURA");
+        assertThrows(EntradaInvalidaException.class, () -> service.salvarAcessosCargo(4, acessos));
+    }
+
+    @Test
+    void superiorNaoAceitaCicloNemAPropriaPessoa() {
+        usuarios.get(1).setIdSuperior(10L); // Ana responde ao Admin
+        service.definirSuperior(20L, 10L);
+        verify(repository).definirSuperior(20L, 10L);
+        assertThrows(EntradaInvalidaException.class, () -> service.definirSuperior(10L, 20L)); // Admin abaixo da Ana: ciclo
+        assertThrows(EntradaInvalidaException.class, () -> service.definirSuperior(20L, 20L));
+        assertThrows(NaoEncontradoException.class, () -> service.definirSuperior(20L, 99L));
+        service.definirSuperior(20L, null);
+        verify(repository).definirSuperior(20L, null);
+    }
+
+    @Test
+    void trocarCargoNosDadosRenovaASessao() {
+        br.com.nord_tool_backend.form.DadosUsuarioForm f = new br.com.nord_tool_backend.form.DadosUsuarioForm();
+        f.setNmNome("Ana");
+        f.setIdCargo(4);
+        service.salvarDados(20L, f);
+        verify(repository).renovarSessao(20L);
+        verify(sessao).invalidar(20L);
+    }
 }

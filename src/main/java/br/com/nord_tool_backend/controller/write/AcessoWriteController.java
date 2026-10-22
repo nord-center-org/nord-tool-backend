@@ -25,6 +25,20 @@ public class AcessoWriteController implements BaseResponse {
 
     private final AcessoService service;
 
+    @Operation(summary = "Define os acessos mínimos de um cargo (valem para todo usuário do cargo)")
+    @PutMapping("/cargos/{idCargo}")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.AcessoCargoDto>> salvarCargo(@PathVariable Integer idCargo,
+            @Valid @RequestBody br.com.nord_tool_backend.form.AcessosCargoForm form) {
+        return ok(service.salvarAcessosCargo(idCargo, form.getAcessos()));
+    }
+
+    @Operation(summary = "Define o superior direto do usuário (nulo tira); não aceita ciclo")
+    @PutMapping("/{id}/superior")
+    public ResponseEntity<ApiResponseBody<AcessoUsuarioDto>> definirSuperior(@PathVariable Long id,
+            @RequestBody br.com.nord_tool_backend.form.SuperiorForm form) {
+        return ok(service.definirSuperior(id, form.getIdSuperior()));
+    }
+
     @Operation(summary = "Aprova (com as fases) ou recusa um cadastro pendente")
     @PutMapping("/{id}/cadastro")
     public ResponseEntity<ApiResponseBody<AcessoUsuarioDto>> decidirCadastro(@PathVariable Long id,

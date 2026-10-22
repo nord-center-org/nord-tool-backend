@@ -42,7 +42,7 @@ public class AcessoRepositoryImpl implements AcessoRepository {
         this.qInserirExcecao = queries.get("SPI.ACESSO.EXCECAO");
         this.q = queries;
         for (String chave : new String[]{"SPU.ACESSO.DADOS", "SPS.ACESSO.LEGADOS", "SPU.ACESSO.DESVINCULAR", "SPU.ACESSO.VINCULAR",
-                "SPU.ACESSO.HISTORICO_RETIRADA", "SPU.ACESSO.HISTORICO_LIBERACAO", "SPU.ACESSO.HISTORICO_RECEBIMENTO", "SPU.ACESSO.DECIDIR_CADASTRO", "SPI.ACESSO.FASE", "SPS.ACESSO.CONTAR_FASES"}) {
+                "SPU.ACESSO.HISTORICO_RETIRADA", "SPU.ACESSO.HISTORICO_LIBERACAO", "SPU.ACESSO.HISTORICO_RECEBIMENTO", "SPU.ACESSO.DECIDIR_CADASTRO", "SPI.ACESSO.FASE", "SPS.ACESSO.CONTAR_FASES", "SPS.ACESSO.PERMISSOES_CARGOS", "SPS.ACESSO.CARGOS", "SPD.ACESSO.CARGO", "SPI.ACESSO.CARGO", "SPU.ACESSO.SESSOES_CARGO", "SPU.ACESSO.SESSAO", "SPU.ACESSO.SUPERIOR"}) {
             queries.get(chave);
         }
     }
@@ -84,6 +84,52 @@ public class AcessoRepositoryImpl implements AcessoRepository {
                         .addValue("cdModulo", e.getCdModulo()).addValue("cdAcao", e.getCdAcao()));
             }
         });
+    }
+
+    @Override
+    public Map<Integer, List<PerfilPermissao>> permissoesPorCargo() {
+        return executor.executar("Listar acessos dos cargos", () -> {
+            Map<Integer, List<PerfilPermissao>> mapa = new HashMap<>();
+            jdbc.query(q.get("SPS.ACESSO.PERMISSOES_CARGOS"), rs -> {
+                mapa.computeIfAbsent(rs.getInt("id"), k -> new ArrayList<>())
+                        .add(new PerfilPermissao(rs.getString("cdModulo"), rs.getString("cdAcao")));
+            });
+            return mapa;
+        });
+    }
+
+    @Override
+    public List<br.com.nord_tool_backend.domain.Cargo> listarCargos() {
+        return executor.executar("Listar cargos", () -> jdbc.query(q.get("SPS.ACESSO.CARGOS"),
+                BeanPropertyRowMapper.newInstance(br.com.nord_tool_backend.domain.Cargo.class)));
+    }
+
+    @Override
+    public void substituirAcessosCargo(Integer idCargo, List<PerfilPermissao> acessos) {
+        executor.executar("Salvar acessos do cargo", () -> {
+            jdbc.update(q.get("SPD.ACESSO.CARGO"), new MapSqlParameterSource("idCargo", idCargo));
+            for (PerfilPermissao p : acessos) {
+                jdbc.update(q.get("SPI.ACESSO.CARGO"), new MapSqlParameterSource().addValue("idCargo", idCargo)
+                        .addValue("cdModulo", p.getCdModulo()).addValue("cdAcao", p.getCdAcao()));
+            }
+        });
+    }
+
+    @Override
+    public List<Long> renovarSessoesDoCargo(Integer idCargo) {
+        return executor.executar("Renovar sessões do cargo", () ->
+                jdbc.queryForList(q.get("SPU.ACESSO.SESSOES_CARGO"), new MapSqlParameterSource("idCargo", idCargo), Long.class));
+    }
+
+    @Override
+    public void renovarSessao(Long idUsuario) {
+        executor.executar("Renovar sessão", () -> jdbc.update(q.get("SPU.ACESSO.SESSAO"), new MapSqlParameterSource("id", idUsuario)));
+    }
+
+    @Override
+    public void definirSuperior(Long idUsuario, Long idSuperior) {
+        executor.executar("Definir superior", () -> jdbc.update(q.get("SPU.ACESSO.SUPERIOR"),
+                new MapSqlParameterSource().addValue("id", idUsuario).addValue("idSuperior", idSuperior)));
     }
 
     @Override

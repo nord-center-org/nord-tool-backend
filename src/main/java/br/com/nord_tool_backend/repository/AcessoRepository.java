@@ -21,6 +21,13 @@ public interface AcessoRepository {
     void decidirCadastro(Long idUsuario, String situacao, boolean ativo);
     void adicionarFases(Long idUsuario, List<Long> idsFases);
     int contarFases(List<Long> idsFases);
+    Map<Integer, List<PerfilPermissao>> permissoesPorCargo();
+    List<br.com.nord_tool_backend.domain.Cargo> listarCargos();
+    void substituirAcessosCargo(Integer idCargo, List<PerfilPermissao> acessos);
+    /** Sobe a versão da sessão de quem tem o cargo e devolve os ids. */
+    List<Long> renovarSessoesDoCargo(Integer idCargo);
+    void renovarSessao(Long idUsuario);
+    void definirSuperior(Long idUsuario, Long idSuperior);
     void alterarDados(Long idUsuario, String nome, String celular, Integer idEmpresa, Integer idCargo);
     List<br.com.nord_tool_backend.dto.ColaboradorLegadoDto> listarColaboradoresLegados();
     /** Tira o vínculo do colaborador antigo de quem o tiver. */
