@@ -27,7 +27,6 @@ import br.com.nord_tool_backend.storage.ArquivoValidador;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -46,7 +45,9 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
 
     static final String RASCUNHO = "RASCUNHO";
     static final String CONCLUIDO = "CONCLUIDO";
-    static final Set<Integer> LAYOUTS = new HashSet<>(Arrays.asList(1, 2, 4, 6));
+    static final Set<String> FONTES = new HashSet<>(Arrays.asList("HELVETICA", "TIMES", "COURIER"));
+    static final String FUNDO = "fundo";
+    static final String ICONE = "icone";
     static final int MAX_FOTOS = 200;
     static final String MSG_CONFLITO = "O relatório mudou. Sincronize e tente novamente.";
 
@@ -123,7 +124,7 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         if (modelo != null && Boolean.FALSE.equals(modelo.getInAtivo())) throw new EntradaInvalidaException("Este modelo está desativado");
 
         RelatorioFotograficoDto r = cabecalho(form);
-        if (form.getNrFotosPagina() == null) r.setNrFotosPagina(modelo == null ? 2 : modelo.getNrFotosPagina());
+        if (r.getCdLayout() == null) usarLayout(r, modelo == null ? "R2" : modelo.getCdLayout());
         r.setIdModelo(modelo == null ? null : modelo.getId());
         r.setIdAutor(u.getId());
         Long id = repository.inserir(r, contexto.faseParaCriar(null));
@@ -150,7 +151,7 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         RelatorioFotograficoDto atual = editavel(id);
         RelatorioFotograficoDto r = cabecalho(form);
         r.setId(id);
-        if (r.getNrFotosPagina() == null) r.setNrFotosPagina(atual.getNrFotosPagina());
+        if (r.getCdLayout() == null) usarLayout(r, atual.getCdLayout());
         if (repository.alterar(r, versao) == 0) throw new ConflitoException(MSG_CONFLITO);
         if (form.getItens() != null) sincronizarItens(id, form.getItens());
         return completo(id);
@@ -224,8 +225,60 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
     public ArquivoDownload baixarFoto(Long idFoto) {
         autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
         RelatorioFotoDto f = fotoNoEscopo(idFoto);
-        long versao = f.getDhCriacao() == null ? 0L : f.getDhCriacao().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-        return new ArquivoDownload(armazenamento.abrir(f.getIdArquivo()), versao);
+        // A versão (ETag) acompanha o arquivo: ao cortar/girar a foto troca de arquivo e o cache do navegador é renovado.
+        return new ArquivoDownload(armazenamento.abrir(f.getIdArquivo()), f.getIdArquivo());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RelatorioFotoDto trocarImagemFoto(Long idFoto, String nome, byte[] bytes) {
+        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        RelatorioFotoDto f = fotoNoEscopo(idFoto);
+        editavel(f.getIdRelatorio());
+        String contentType = ArquivoValidador.validarImagem(nome, bytes);
+        Long novo = armazenamento.salvar(nome, contentType, bytes);
+        repository.trocarImagemFoto(idFoto, novo);
+        apagarArquivos(java.util.Collections.singletonList(f.getIdArquivo()));
+        return foto(idFoto);
+    }
+
+    // ---------- imagens do modelo ----------
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RelatorioModeloDto salvarImagemModelo(Long idModelo, String tipo, String nome, byte[] bytes) {
+        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ADMIN);
+        boolean fundo = ehFundo(tipo);
+        RelatorioModeloDto m = modelo(idModelo);
+        String contentType = ArquivoValidador.validarImagem(nome, bytes);
+        Long novo = armazenamento.salvar(nome, contentType, bytes);
+        repository.alterarImagemModelo(idModelo, fundo, novo);
+        Long antigo = fundo ? m.getIdArquivoFundo() : m.getIdArquivoIcone();
+        if (antigo != null) apagarArquivos(java.util.Collections.singletonList(antigo));
+        return modelo(idModelo);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RelatorioModeloDto removerImagemModelo(Long idModelo, String tipo) {
+        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ADMIN);
+        boolean fundo = ehFundo(tipo);
+        RelatorioModeloDto m = modelo(idModelo);
+        Long antigo = fundo ? m.getIdArquivoFundo() : m.getIdArquivoIcone();
+        repository.alterarImagemModelo(idModelo, fundo, null);
+        if (antigo != null) apagarArquivos(java.util.Collections.singletonList(antigo));
+        return modelo(idModelo);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ArquivoDownload baixarImagemModelo(Long idModelo, String tipo) {
+        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
+        boolean fundo = ehFundo(tipo);
+        RelatorioModeloDto m = modelo(idModelo);
+        Long id = fundo ? m.getIdArquivoFundo() : m.getIdArquivoIcone();
+        if (id == null) throw new NaoEncontradoException("O modelo não tem essa imagem");
+        return new ArquivoDownload(armazenamento.abrir(id), id);
     }
 
     // ---------- apoio ----------
@@ -312,7 +365,16 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         RelatorioModeloDto m = new RelatorioModeloDto();
         m.setNmModelo(f.getNmModelo().trim());
         m.setTxDescricao(texto(f.getTxDescricao()));
-        m.setNrFotosPagina(layout(f.getNrFotosPagina()));
+        String layout = RelatorioLayouts.resolver(f.getCdLayout(), f.getNrFotosPagina());
+        m.setCdLayout(layout == null ? "R2" : layout);
+        m.setNrFotosPagina(RelatorioLayouts.FOTOS.get(m.getCdLayout()));
+        String fonte = f.getCdFonte() == null || f.getCdFonte().trim().isEmpty() ? "HELVETICA" : f.getCdFonte().trim().toUpperCase();
+        if (!FONTES.contains(fonte)) throw new EntradaInvalidaException("Fonte inválida");
+        m.setCdFonte(fonte);
+        m.setInCabecalho(f.getInCabecalho() == null || f.getInCabecalho());
+        int opacidade = f.getNrOpacidadeFundo() == null ? 12 : f.getNrOpacidadeFundo();
+        if (opacidade < 3 || opacidade > 60) throw new EntradaInvalidaException("A opacidade do fundo deve ficar entre 3% e 60%");
+        m.setNrOpacidadeFundo(opacidade);
         m.setInAtivo(f.getInAtivo() == null || f.getInAtivo());
         return m;
     }
@@ -335,7 +397,8 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         r.setNmTitulo(f.getNmTitulo().trim());
         r.setNmLocal(texto(f.getNmLocal()));
         r.setDtRelatorio(f.getDtRelatorio());
-        r.setNrFotosPagina(f.getNrFotosPagina() == null ? null : layout(f.getNrFotosPagina()));
+        String layout = RelatorioLayouts.resolver(f.getCdLayout(), f.getNrFotosPagina());
+        if (layout != null) usarLayout(r, layout);
         return r;
     }
 
@@ -349,9 +412,16 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         return i;
     }
 
-    private static int layout(Integer n) {
-        if (n == null || !LAYOUTS.contains(n)) throw new EntradaInvalidaException("Fotos por página deve ser 1, 2, 4 ou 6");
-        return n;
+    private static void usarLayout(RelatorioFotograficoDto r, String layout) {
+        String codigo = RelatorioLayouts.FOTOS.containsKey(layout) ? layout : "R2";
+        r.setCdLayout(codigo);
+        r.setNrFotosPagina(RelatorioLayouts.FOTOS.get(codigo));
+    }
+
+    private static boolean ehFundo(String tipo) {
+        if (FUNDO.equals(tipo)) return true;
+        if (ICONE.equals(tipo)) return false;
+        throw new EntradaInvalidaException("Tipo de imagem inválido (use fundo ou icone)");
     }
 
     private static String texto(String s) {

@@ -50,4 +50,11 @@ public class RelatorioFotograficoReadController implements BaseResponse {
                                          @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
         return ArquivoResponse.imagem(service.baixarFoto(idFoto), ifNoneMatch);
     }
+
+    @Operation(summary = "Imagem do modelo: fundo (marca d'água) ou icone (canto superior direito)")
+    @GetMapping("/modelos/{id}/imagens/{tipo}")
+    public ResponseEntity<byte[]> imagemModelo(@PathVariable Long id, @PathVariable String tipo,
+                                               @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
+        return ArquivoResponse.imagem(service.baixarImagemModelo(id, tipo), ifNoneMatch);
+    }
 }

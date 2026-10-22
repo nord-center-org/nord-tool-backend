@@ -11,6 +11,8 @@ public class RelatorioFotoDto {
     private Long idItem;
     private Integer nrOrdem;
     private String txLegenda;
+    /** Muda quando a imagem é trocada (cortar/girar): serve para o navegador não usar a imagem antiga. */
+    private Long idImagem;
     @JsonIgnore
     private Long idArquivo;
     @JsonIgnore

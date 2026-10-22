@@ -83,6 +83,7 @@ class RelatorioFotograficoServiceImplTest {
         m.setId(3L);
         m.setNmModelo("Vistoria de fachada");
         m.setNrFotosPagina(4);
+        m.setCdLayout("R4");
         m.setInAtivo(ativo);
         return m;
     }
@@ -172,6 +173,7 @@ class RelatorioFotograficoServiceImplTest {
         ArgumentCaptor<RelatorioFotograficoDto> r = ArgumentCaptor.forClass(RelatorioFotograficoDto.class);
         verify(repository).inserir(r.capture(), eq(11L));
         assertEquals(4, r.getValue().getNrFotosPagina());
+        assertEquals("R4", r.getValue().getCdLayout());
         assertEquals(7L, r.getValue().getIdAutor());
         verify(repository, times(2)).inserirItem(any());
     }
@@ -288,5 +290,69 @@ class RelatorioFotograficoServiceImplTest {
         service.excluir(1L, 1);
         verify(armazenamento).apagar(500L);
         verify(armazenamento).apagar(501L);
+    }
+
+    @Test
+    void layoutPorCodigoDefineQuantidadeDeFotos() {
+        when(repository.inserir(any(), eq(11L))).thenReturn(1L);
+        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        RelatorioFotograficoForm f = form("Paisagem");
+        f.setCdLayout("p3");
+        service.criar(f);
+        ArgumentCaptor<RelatorioFotograficoDto> r = ArgumentCaptor.forClass(RelatorioFotograficoDto.class);
+        verify(repository).inserir(r.capture(), eq(11L));
+        assertEquals("P3", r.getValue().getCdLayout());
+        assertEquals(3, r.getValue().getNrFotosPagina());
+        RelatorioFotograficoForm ruim = form("X");
+        ruim.setCdLayout("Z9");
+        assertThrows(EntradaInvalidaException.class, () -> service.criar(ruim));
+    }
+
+    @Test
+    void modeloValidaFonteEOpacidade() {
+        RelatorioModeloForm f = new RelatorioModeloForm();
+        f.setNmModelo("X");
+        f.setCdLayout("R3L");
+        f.setCdFonte("comic");
+        assertThrows(EntradaInvalidaException.class, () -> service.criarModelo(f));
+        f.setCdFonte("times");
+        f.setNrOpacidadeFundo(90);
+        assertThrows(EntradaInvalidaException.class, () -> service.criarModelo(f));
+        f.setNrOpacidadeFundo(20);
+        when(repository.inserirModelo(any())).thenReturn(3L);
+        when(repository.listarModelos()).thenReturn(Collections.singletonList(modelo(true)));
+        service.criarModelo(f);
+        ArgumentCaptor<RelatorioModeloDto> m = ArgumentCaptor.forClass(RelatorioModeloDto.class);
+        verify(repository).inserirModelo(m.capture());
+        assertEquals("TIMES", m.getValue().getCdFonte());
+        assertEquals(3, m.getValue().getNrFotosPagina());
+        assertEquals(Boolean.TRUE, m.getValue().getInCabecalho());
+    }
+
+    @Test
+    void trocarImagemDaFotoApagaOArquivoAntigo() {
+        when(repository.buscarFoto(90L)).thenReturn(Optional.of(foto(90L, 5L, 500L)));
+        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(armazenamento.salvar("a.jpg", "image/jpeg", JPEG)).thenReturn(600L);
+        service.trocarImagemFoto(90L, "a.jpg", JPEG);
+        verify(repository).trocarImagemFoto(90L, 600L);
+        verify(armazenamento).apagar(500L);
+        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "CONCLUIDO")));
+        assertThrows(NegocioException.class, () -> service.trocarImagemFoto(90L, "a.jpg", JPEG));
+    }
+
+    @Test
+    void imagemDoModeloSubstituiARemoveETipoEValidado() {
+        RelatorioModeloDto m = modelo(true);
+        m.setIdArquivoIcone(700L);
+        when(repository.listarModelos()).thenReturn(Collections.singletonList(m));
+        when(armazenamento.salvar("logo.jpg", "image/jpeg", JPEG)).thenReturn(800L);
+        service.salvarImagemModelo(3L, "icone", "logo.jpg", JPEG);
+        verify(repository).alterarImagemModelo(3L, false, 800L);
+        verify(armazenamento).apagar(700L);
+        assertThrows(EntradaInvalidaException.class, () -> service.salvarImagemModelo(3L, "capa", "logo.jpg", JPEG));
+        assertThrows(NaoEncontradoException.class, () -> service.baixarImagemModelo(3L, "fundo"));
+        service.removerImagemModelo(3L, "icone");
+        verify(repository).alterarImagemModelo(3L, false, null);
     }
 }

@@ -187,11 +187,28 @@ public class RelatorioFotograficoRepositoryImpl implements RelatorioFotograficoR
                 jdbc.update(q("SPD.RELATORIO.FOTO.DELETAR"), new MapSqlParameterSource("id", idFoto)));
     }
 
+    @Override
+    public int alterarImagemModelo(Long idModelo, boolean fundo, Long idArquivo) {
+        return executor.executar("Erro ao salvar imagem do modelo", () ->
+                jdbc.update(q(fundo ? "SPU.RELATORIO.MODELO.FUNDO" : "SPU.RELATORIO.MODELO.ICONE"),
+                        new MapSqlParameterSource("id", idModelo).addValue("idArquivo", idArquivo, java.sql.Types.BIGINT)));
+    }
+
+    @Override
+    public int trocarImagemFoto(Long idFoto, Long idArquivo) {
+        return executor.executar("Erro ao trocar a imagem da foto", () ->
+                jdbc.update(q("SPU.RELATORIO.FOTO.IMAGEM"), new MapSqlParameterSource("id", idFoto).addValue("idArquivo", idArquivo)));
+    }
+
     private static MapSqlParameterSource valoresModelo(RelatorioModeloDto m) {
         return new MapSqlParameterSource()
                 .addValue("nmModelo", m.getNmModelo())
                 .addValue("txDescricao", m.getTxDescricao())
                 .addValue("nrFotosPagina", m.getNrFotosPagina())
+                .addValue("cdLayout", m.getCdLayout())
+                .addValue("cdFonte", m.getCdFonte())
+                .addValue("inCabecalho", m.getInCabecalho())
+                .addValue("nrOpacidadeFundo", m.getNrOpacidadeFundo())
                 .addValue("inAtivo", m.getInAtivo());
     }
 
@@ -200,7 +217,8 @@ public class RelatorioFotograficoRepositoryImpl implements RelatorioFotograficoR
                 .addValue("nmTitulo", r.getNmTitulo())
                 .addValue("nmLocal", r.getNmLocal())
                 .addValue("dtRelatorio", Date.valueOf(r.getDtRelatorio()))
-                .addValue("nrFotosPagina", r.getNrFotosPagina());
+                .addValue("nrFotosPagina", r.getNrFotosPagina())
+                .addValue("cdLayout", r.getCdLayout());
     }
 
     private static MapSqlParameterSource valoresItem(RelatorioItemDto i) {

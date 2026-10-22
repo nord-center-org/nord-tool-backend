@@ -84,6 +84,28 @@ public class RelatorioFotograficoWriteController implements BaseResponse {
         return created(service.adicionarFoto(idItem, nome, bytes(arquivo), txLegenda));
     }
 
+    @Operation(summary = "Troca a imagem da foto (depois de cortar/girar); legenda e ordem ficam")
+    @PutMapping(value = "/fotos/{idFoto}/imagem", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponseBody<RelatorioFotoDto>> trocarImagem(@PathVariable Long idFoto,
+            @RequestParam("arquivo") MultipartFile arquivo) {
+        String nome = arquivo.getOriginalFilename() == null ? "foto.jpg" : arquivo.getOriginalFilename();
+        return ok(service.trocarImagemFoto(idFoto, nome, bytes(arquivo)));
+    }
+
+    @Operation(summary = "Envia a imagem do modelo: fundo (marca d'água) ou icone (ADMIN do módulo)")
+    @PostMapping(value = "/modelos/{id}/imagens/{tipo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponseBody<RelatorioModeloDto>> imagemModelo(@PathVariable Long id, @PathVariable String tipo,
+            @RequestParam("arquivo") MultipartFile arquivo) {
+        String nome = arquivo.getOriginalFilename() == null ? "imagem.png" : arquivo.getOriginalFilename();
+        return ok(service.salvarImagemModelo(id, tipo, nome, bytes(arquivo)));
+    }
+
+    @Operation(summary = "Remove a imagem do modelo (fundo ou icone)")
+    @DeleteMapping("/modelos/{id}/imagens/{tipo}")
+    public ResponseEntity<ApiResponseBody<RelatorioModeloDto>> removerImagemModelo(@PathVariable Long id, @PathVariable String tipo) {
+        return ok(service.removerImagemModelo(id, tipo));
+    }
+
     @Operation(summary = "Altera legenda e/ou ordem da foto")
     @PutMapping("/fotos/{idFoto}")
     public ResponseEntity<ApiResponseBody<RelatorioFotoDto>> alterarFoto(@PathVariable Long idFoto, @Valid @RequestBody RelatorioFotoForm form) {
