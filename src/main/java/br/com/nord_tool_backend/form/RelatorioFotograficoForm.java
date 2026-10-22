@@ -22,8 +22,11 @@ public class RelatorioFotograficoForm {
     @NotNull(message = "Informe a data do relatório")
     private LocalDate dtRelatorio;
 
-    /** Vazio = o do modelo (ou 2). */
+    /** Compatibilidade: sem cdLayout, vale o layout "R" + este número. Os dois vazios = o do modelo (ou R2). */
     private Integer nrFotosPagina;
+
+    @Size(max = 10, message = "Layout inválido")
+    private String cdLayout;
 
     /** Só na criação: copia os itens do modelo quando a lista de itens vier vazia. */
     private Long idModelo;

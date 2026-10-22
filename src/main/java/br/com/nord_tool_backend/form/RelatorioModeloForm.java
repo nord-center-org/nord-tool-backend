@@ -4,7 +4,6 @@ import lombok.Data;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +17,18 @@ public class RelatorioModeloForm {
     @Size(max = 500, message = "A descrição deve ter no máximo 500 caracteres")
     private String txDescricao;
 
-    @NotNull(message = "Informe quantas fotos por página")
+    /** Compatibilidade: sem cdLayout, vale o layout "R" + este número. */
     private Integer nrFotosPagina;
+
+    @Size(max = 10, message = "Layout inválido")
+    private String cdLayout;
+
+    @Size(max = 20, message = "Fonte inválida")
+    private String cdFonte;
+
+    private Boolean inCabecalho;
+
+    private Integer nrOpacidadeFundo;
 
     private Boolean inAtivo;
 

@@ -54,4 +54,9 @@ public interface RelatorioFotograficoRepository {
     int alterarFoto(Long idFoto, String txLegenda, int nrOrdem);
 
     int deletarFoto(Long idFoto);
+
+    /** fundo = true: marca d'água; false: ícone do canto. idArquivo nulo remove. */
+    int alterarImagemModelo(Long idModelo, boolean fundo, Long idArquivo);
+
+    int trocarImagemFoto(Long idFoto, Long idArquivo);
 }

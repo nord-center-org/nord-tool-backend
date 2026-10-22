@@ -17,6 +17,8 @@ public class RelatorioFotograficoDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate dtRelatorio;
     private Integer nrFotosPagina;
+    /** Layout da página no PDF (ver RelatorioLayouts). */
+    private String cdLayout;
     /** RASCUNHO ou CONCLUIDO. */
     private String cdStatus;
     private Long idModelo;

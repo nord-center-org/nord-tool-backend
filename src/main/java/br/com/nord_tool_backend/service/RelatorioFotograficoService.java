@@ -38,4 +38,14 @@ public interface RelatorioFotograficoService {
     void excluirFoto(Long idFoto);
 
     ArquivoDownload baixarFoto(Long idFoto);
+
+    /** Troca a imagem da foto (depois de cortar/girar), mantendo legenda e ordem. */
+    RelatorioFotoDto trocarImagemFoto(Long idFoto, String nome, byte[] bytes);
+
+    /** tipo: "fundo" (marca d'água) ou "icone" (canto superior direito). */
+    RelatorioModeloDto salvarImagemModelo(Long idModelo, String tipo, String nome, byte[] bytes);
+
+    RelatorioModeloDto removerImagemModelo(Long idModelo, String tipo);
+
+    ArquivoDownload baixarImagemModelo(Long idModelo, String tipo);
 }
