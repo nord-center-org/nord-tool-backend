@@ -17,6 +17,7 @@ public enum Modulo {
     CASAMENTO,
     CADASTROS,
     MEDICOES,
+    RELATORIO_FOTOGRAFICO,
     ADMINISTRACAO;
 
     public static final String CURINGA = "*";
