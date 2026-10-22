@@ -25,6 +25,8 @@ import java.util.Optional;
 public class CaixinhaRepositoryImpl implements CaixinhaRepository {
 
     private static final String ORDEM_LANCAMENTOS = " ORDER BY l.dt_lancamento DESC, l.id_lancamento DESC";
+    /** Só os lançamentos do dono (ou sem dono, para Admin do módulo). Parâmetros vêm de {@link #dono}. */
+    private static final String DONO_LANCAMENTO = " AND (l.id_usuario_dono = :idDono OR (:verSemDono AND l.id_usuario_dono IS NULL))";
 
     private final NamedParameterJdbcTemplate jdbc;
     private final JdbcExecutor executor;
@@ -49,7 +51,11 @@ public class CaixinhaRepositoryImpl implements CaixinhaRepository {
     private final String qCompInserir;
     private final String qCompDeletar;
 
-    public CaixinhaRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries) {
+    private final br.com.nord_tool_backend.service.AutorizacaoService autorizacao;
+
+    public CaixinhaRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries,
+                                  br.com.nord_tool_backend.service.AutorizacaoService autorizacao) {
+        this.autorizacao = autorizacao;
         this.jdbc = jdbc;
         this.executor = executor;
         this.qRespListar = queries.get("SPS.CAIXINHA.RESPONSAVEL.LISTAR");
@@ -76,13 +82,13 @@ public class CaixinhaRepositoryImpl implements CaixinhaRepository {
     @Override
     public List<CaixinhaResponsavel> listarResponsaveis() {
         return executor.executar("Erro ao listar responsáveis", () ->
-                jdbc.query(qRespListar, BeanPropertyRowMapper.newInstance(CaixinhaResponsavel.class)));
+                jdbc.query(qRespListar, dono(new MapSqlParameterSource()), BeanPropertyRowMapper.newInstance(CaixinhaResponsavel.class)));
     }
 
     @Override
     public Optional<CaixinhaResponsavel> buscarResponsavel(Long id) {
         return executor.executar("Erro ao buscar responsável", () ->
-                jdbc.query(qRespBuscar, new MapSqlParameterSource("id", id),
+                jdbc.query(qRespBuscar, dono(new MapSqlParameterSource("id", id)),
                         BeanPropertyRowMapper.newInstance(CaixinhaResponsavel.class)).stream().findFirst());
     }
 
@@ -90,21 +96,36 @@ public class CaixinhaRepositoryImpl implements CaixinhaRepository {
     public Long inserirResponsavel(CaixinhaResponsavel r) {
         return executor.executar("Erro ao salvar responsável", () -> {
             KeyHolder keys = new GeneratedKeyHolder();
-            jdbc.update(qRespInserir, new BeanPropertySqlParameterSource(r), keys, new String[]{"id_responsavel"});
+            jdbc.update(qRespInserir, dono(new BeanPropertySqlParameterSource(r)), keys, new String[]{"id_responsavel"});
             return keys.getKey().longValue();
         });
     }
 
     @Override
     public void alterarResponsavel(CaixinhaResponsavel r) {
-        executor.executar("Erro ao alterar responsável", () -> jdbc.update(qRespAlterar, new BeanPropertySqlParameterSource(r)));
+        executor.executar("Erro ao alterar responsável", () -> jdbc.update(qRespAlterar, dono(new BeanPropertySqlParameterSource(r))));
+    }
+
+    /**
+     * Caixinha individual: cada query recebe o dono (usuário logado). Admin do módulo também vê os registros
+     * sem dono, que vieram de antes da caixinha individual.
+     */
+    private MapSqlParameterSource dono(MapSqlParameterSource params) {
+        br.com.nord_tool_backend.security.UsuarioAutenticado u = autorizacao.exigirAutenticado();
+        return params.addValue("idDono", u.getId())
+                .addValue("verSemDono", u.acao(br.com.nord_tool_backend.security.Modulo.CAIXINHA)
+                        .atende(br.com.nord_tool_backend.security.Acao.ADMIN));
+    }
+
+    private SqlParameterSource dono(SqlParameterSource base) {
+        return new br.com.nord_tool_backend.repository.jdbc.ParametrosComEscopo(base, dono(new MapSqlParameterSource()));
     }
 
     // ---------- lançamentos ----------
 
     @Override
     public List<CaixinhaLancamento> listarLancamentos(CaixinhaFiltro filtro) {
-        MapSqlParameterSource params = new MapSqlParameterSource();
+        MapSqlParameterSource params = dono(new MapSqlParameterSource());
         String sql = qLancListar + condicoes(filtro, params) + ORDEM_LANCAMENTOS;
         return executor.executar("Erro ao listar lançamentos", () ->
                 jdbc.query(sql, params, BeanPropertyRowMapper.newInstance(CaixinhaLancamento.class)));
@@ -113,21 +134,21 @@ public class CaixinhaRepositoryImpl implements CaixinhaRepository {
     @Override
     public Optional<CaixinhaLancamento> buscarLancamento(Long id) {
         return executor.executar("Erro ao buscar lançamento", () ->
-                jdbc.query(qLancBuscar, new MapSqlParameterSource("id", id),
+                jdbc.query(qLancBuscar, dono(new MapSqlParameterSource("id", id)),
                         BeanPropertyRowMapper.newInstance(CaixinhaLancamento.class)).stream().findFirst());
     }
 
     @Override
     public Optional<Long> buscarLancamentoPorRequisicao(String cdRequisicao) {
         return executor.executar("Erro ao buscar lançamento", () ->
-                jdbc.queryForList(qLancRequisicao, new MapSqlParameterSource("cdRequisicao", cdRequisicao), Long.class)
+                jdbc.queryForList(qLancRequisicao, dono(new MapSqlParameterSource("cdRequisicao", cdRequisicao)), Long.class)
                         .stream().findFirst());
     }
 
     @Override
     public Optional<Long> inserirLancamento(CaixinhaLancamento l) {
         return executor.executar("Erro ao salvar lançamento", () ->
-                jdbc.queryForList(qLancInserir, new MapSqlParameterSource()
+                jdbc.queryForList(qLancInserir, dono(new MapSqlParameterSource())
                         .addValue("cdRequisicao", l.getCdRequisicao())
                         .addValue("dtLancamento", Date.valueOf(l.getDtLancamento()))
                         .addValue("idResponsavel", l.getIdResponsavel())
@@ -141,7 +162,7 @@ public class CaixinhaRepositoryImpl implements CaixinhaRepository {
     @Override
     public int alterarLancamento(CaixinhaLancamento l, int nrVersao) {
         return executor.executar("Erro ao alterar lançamento", () ->
-                jdbc.update(qLancAlterar, new MapSqlParameterSource()
+                jdbc.update(qLancAlterar, dono(new MapSqlParameterSource())
                         .addValue("id", l.getId())
                         .addValue("dtLancamento", Date.valueOf(l.getDtLancamento()))
                         .addValue("idResponsavel", l.getIdResponsavel())
@@ -155,19 +176,19 @@ public class CaixinhaRepositoryImpl implements CaixinhaRepository {
     @Override
     public int marcarLancamento(Long id, boolean lancado, boolean pago, int nrVersao) {
         return executor.executar("Erro ao atualizar lançamento", () ->
-                jdbc.update(qLancMarcar, new MapSqlParameterSource().addValue("id", id)
+                jdbc.update(qLancMarcar, dono(new MapSqlParameterSource()).addValue("id", id)
                         .addValue("inLancado", lancado).addValue("inPago", pago).addValue("nrVersao", nrVersao)));
     }
 
     @Override
     public int deletarLancamento(Long id, int nrVersao) {
         return executor.executar("Erro ao excluir lançamento", () ->
-                jdbc.update(qLancDeletar, new MapSqlParameterSource().addValue("id", id).addValue("nrVersao", nrVersao)));
+                jdbc.update(qLancDeletar, dono(new MapSqlParameterSource()).addValue("id", id).addValue("nrVersao", nrVersao)));
     }
 
     @Override
     public Totais resumir(CaixinhaFiltro filtro) {
-        MapSqlParameterSource params = new MapSqlParameterSource();
+        MapSqlParameterSource params = dono(new MapSqlParameterSource());
         String sql = qLancResumo + condicoes(filtro, params);
         return executor.executar("Erro ao calcular o resumo da Caixinha", () ->
                 jdbc.queryForObject(sql, params, (rs, i) -> new Totais(
@@ -176,8 +197,8 @@ public class CaixinhaRepositoryImpl implements CaixinhaRepository {
 
     /** Condições AND dos filtros; valores sempre por parâmetro nomeado (sem concatenar texto do cliente). */
     private static String condicoes(CaixinhaFiltro filtro, MapSqlParameterSource params) {
-        StringBuilder sb = new StringBuilder();
-        if (filtro == null) return "";
+        StringBuilder sb = new StringBuilder(DONO_LANCAMENTO);
+        if (filtro == null) return sb.toString();
         if (filtro.getResponsavel() != null && !filtro.getResponsavel().trim().isEmpty()) {
             sb.append(" AND r.nm_responsavel = :responsavel");
             params.addValue("responsavel", filtro.getResponsavel().trim());
@@ -209,7 +230,7 @@ public class CaixinhaRepositoryImpl implements CaixinhaRepository {
     @Override
     public Optional<CaixinhaComprovante> buscarComprovante(Long id) {
         return executor.executar("Erro ao buscar comprovante", () ->
-                jdbc.query(qCompBuscar, new MapSqlParameterSource("id", id),
+                jdbc.query(qCompBuscar, dono(new MapSqlParameterSource("id", id)),
                         BeanPropertyRowMapper.newInstance(CaixinhaComprovante.class)).stream().findFirst());
     }
 
