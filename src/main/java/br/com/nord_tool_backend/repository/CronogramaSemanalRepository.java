@@ -16,4 +16,8 @@ public interface CronogramaSemanalRepository {
     List<CronogramaSemanalExcecaoDto> listarExcecoes();
     void incluirExcecao(Long id, LocalDate data);
     void removerExcecao(Long id, LocalDate data);
+    /** Substitui com quem o item está compartilhado. */
+    void compartilhar(Long id, List<Long> idsUsuarios);
+    List<br.com.nord_tool_backend.dto.PessoaCronogramaDto> listarPessoas();
+    int contarUsuariosAtivos(java.util.Collection<Long> ids);
 }
