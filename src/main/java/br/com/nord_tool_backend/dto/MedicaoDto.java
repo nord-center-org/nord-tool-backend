@@ -24,9 +24,10 @@ public class MedicaoDto {
     private String nmStatus;
     /** Revisão para controle de concorrência: devolver na edição/troca de status/exclusão. */
     private Integer nrVersao;
+    private Long idFase;
 
     public static MedicaoDto de(Medicao m) {
         return new MedicaoDto(m.getId(), m.getNrMedicao(), m.getCdContrato(), m.getNmRazaoSocial(), m.getNrContrato(),
-                m.getDtMedicao(), m.getVlMedicao(), m.getTxMemorial(), m.getCdStatus(), m.getNmStatus(), m.getNrVersao());
+                m.getDtMedicao(), m.getVlMedicao(), m.getTxMemorial(), m.getCdStatus(), m.getNmStatus(), m.getNrVersao(), m.getIdFase());
     }
 }

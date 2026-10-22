@@ -114,6 +114,14 @@ public class ObraServiceImpl implements ObraService {
         return FaseDto.de(f, ids);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public br.com.nord_tool_backend.dto.VinculoFaseDto vincularApartamentos() {
+        autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
+        int ligados = repository.vincularApartamentosPorSigla();
+        return new br.com.nord_tool_backend.dto.VinculoFaseDto(ligados, repository.contarApartamentosSemFase());
+    }
+
     // ---------- apoio ----------
 
     private Obra obraExistente(Long id) {

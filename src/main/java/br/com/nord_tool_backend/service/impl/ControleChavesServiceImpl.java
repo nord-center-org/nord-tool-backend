@@ -127,6 +127,10 @@ public class ControleChavesServiceImpl implements ControleChavesService {
             throw erroValidacao("Informe quem está retirando");
         }
         validarItemRetirada(novaRetiradaControleChavesForm);
+        if (!controleChavesRepository.itemNoEscopo(
+                novaRetiradaControleChavesForm.getIdApartamentoVistoria(), novaRetiradaControleChavesForm.getIdFerramenta())) {
+            throw erroValidacao("O item escolhido não pertence às suas fases");
+        }
         if (!controleChavesRepository.usuarioAtivo(novaRetiradaControleChavesForm.getIdUserRetirada())) {
             throw erroValidacao("Quem retira precisa ser um usuário ativo");
         }

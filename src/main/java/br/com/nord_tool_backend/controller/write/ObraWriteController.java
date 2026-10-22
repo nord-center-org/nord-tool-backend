@@ -53,6 +53,12 @@ public class ObraWriteController implements BaseResponse {
         return ok(service.alterarFase(id, form));
     }
 
+    @Operation(summary = "Liga os apartamentos antigos às fases pela sigla do código (N1-01-0101 → fase N1)")
+    @PostMapping("/obras/vincular-apartamentos")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.VinculoFaseDto>> vincular() {
+        return ok(service.vincularApartamentos());
+    }
+
     @Operation(summary = "Define quem participa da fase (lista completa)")
     @PutMapping("/fases/{id}/usuarios")
     public ResponseEntity<ApiResponseBody<FaseDto>> definirUsuarios(@PathVariable Long id, @Valid @RequestBody FaseUsuariosForm form) {

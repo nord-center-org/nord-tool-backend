@@ -27,6 +27,8 @@ public class ControleChavesRepositoryImpl implements ControleChavesRepository {
     private final JdbcExecutor executor;
     private final String qListarObras;
     private final String qListarPessoas;
+    private final br.com.nord_tool_backend.service.ContextoFaseService contexto;
+    private final SqlQueries queries;
     private final String qUsuarioAtivo;
     private final String qListarApartamentos;
     private final String qListarFerramentas;
@@ -38,9 +40,14 @@ public class ControleChavesRepositoryImpl implements ControleChavesRepository {
     private final String qInserir;
     private final String qReceber;
 
-    public ControleChavesRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries) {
+    public ControleChavesRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries,
+                                        br.com.nord_tool_backend.service.ContextoFaseService contexto) {
         this.jdbc = jdbc;
         this.executor = executor;
+        this.contexto = contexto;
+        this.queries = queries;
+        queries.get("SPS.CONTROLE_CHAVES.APARTAMENTO_NO_ESCOPO");
+        queries.get("SPS.CONTROLE_CHAVES.FERRAMENTA_NO_ESCOPO");
         this.qListarObras = queries.get("SPS.CONTROLE_CHAVES.LISTAR_OBRAS");
         this.qListarPessoas = queries.get("SPS.CONTROLE_CHAVES.LISTAR_PESSOAS");
         this.qUsuarioAtivo = queries.get("SPS.CONTROLE_CHAVES.USUARIO_ATIVO");
@@ -62,6 +69,15 @@ public class ControleChavesRepositoryImpl implements ControleChavesRepository {
     }
 
     @Override
+    public boolean itemNoEscopo(Long idApartamento, Long idFerramenta) {
+        return executor.executar("Conferir item da retirada", () -> {
+            String sql = idApartamento != null ? queries.get("SPS.CONTROLE_CHAVES.APARTAMENTO_NO_ESCOPO") : queries.get("SPS.CONTROLE_CHAVES.FERRAMENTA_NO_ESCOPO");
+            Long n = jdbc.queryForObject(sql, contexto.escopo().aplicar(new MapSqlParameterSource("id", idApartamento != null ? idApartamento : idFerramenta)), Long.class);
+            return n != null && n > 0;
+        });
+    }
+
+    @Override
     public boolean usuarioAtivo(Long idUsuario) {
         return executor.executar("Conferir usuário", () -> {
             Long n = jdbc.queryForObject(qUsuarioAtivo, new MapSqlParameterSource("id", idUsuario), Long.class);
@@ -78,13 +94,13 @@ public class ControleChavesRepositoryImpl implements ControleChavesRepository {
     @Override
     public List<ApartamentoVistoria> listarApartamentos() {
         return executor.executar("Listar apartamentos do controle de chaves", () ->
-                jdbc.query(qListarApartamentos, BeanPropertyRowMapper.newInstance(ApartamentoVistoria.class)));
+                jdbc.query(qListarApartamentos, contexto.escopo().aplicar(new MapSqlParameterSource()), BeanPropertyRowMapper.newInstance(ApartamentoVistoria.class)));
     }
 
     @Override
     public List<Ferramenta> listarFerramentas() {
         return executor.executar("Listar ferramentas do controle de chaves", () ->
-                jdbc.query(qListarFerramentas, BeanPropertyRowMapper.newInstance(Ferramenta.class)));
+                jdbc.query(qListarFerramentas, contexto.escopo().aplicar(new MapSqlParameterSource()), BeanPropertyRowMapper.newInstance(Ferramenta.class)));
     }
 
     @Override
@@ -105,13 +121,13 @@ public class ControleChavesRepositoryImpl implements ControleChavesRepository {
     @Override
     public List<RequisicaoChaveConsulta> listarHistorico() {
         return executor.executar("Listar histórico do controle de chaves", () ->
-                jdbc.query(qListarHistorico, BeanPropertyRowMapper.newInstance(RequisicaoChaveConsulta.class)));
+                jdbc.query(qListarHistorico, contexto.escopo().aplicar(new MapSqlParameterSource()), BeanPropertyRowMapper.newInstance(RequisicaoChaveConsulta.class)));
     }
 
     @Override
     public RequisicaoChaveConsulta buscarPorId(Long idRequisicao) {
         return executor.executar("Buscar requisição de chave", () ->
-                jdbc.queryForObject(qBuscarPorId, new MapSqlParameterSource("idRequisicao", idRequisicao),
+                jdbc.queryForObject(qBuscarPorId, contexto.escopo().aplicar(new MapSqlParameterSource("idRequisicao", idRequisicao)),
                         BeanPropertyRowMapper.newInstance(RequisicaoChaveConsulta.class)));
     }
 

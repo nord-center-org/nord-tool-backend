@@ -15,4 +15,6 @@ public interface ObraService {
     FaseDto criarFase(Long idObra, FaseForm form);
     FaseDto alterarFase(Long id, FaseForm form);
     FaseDto definirUsuarios(Long idFase, FaseUsuariosForm form);
+    /** Liga os apartamentos antigos às fases pela sigla do código. */
+    br.com.nord_tool_backend.dto.VinculoFaseDto vincularApartamentos();
 }

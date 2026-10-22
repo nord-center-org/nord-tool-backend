@@ -70,6 +70,7 @@ class ControleChavesServiceImplTest {
     void logadoPorPadrao() {
         org.mockito.Mockito.lenient().when(autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA)).thenReturn(logado(8L));
         org.mockito.Mockito.lenient().when(controleChavesRepository.usuarioAtivo(7L)).thenReturn(true);
+        org.mockito.Mockito.lenient().when(controleChavesRepository.itemNoEscopo(any(), any())).thenReturn(true);
     }
 
     private void recebendoComo(long id) {
@@ -448,5 +449,13 @@ class ControleChavesServiceImplTest {
         when(autorizacao.exigir(Modulo.CONTROLE_CHAVES, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
         assertThrows(AcessoNegadoException.class, () -> controleChavesService.criarRetirada(null));
         verifyNoInteractions(controleChavesRepository);
+    }
+
+    @Test
+    void naoRetiraItemDeFaseQueAPessoaNaoVe() {
+        when(controleChavesRepository.itemNoEscopo(101L, null)).thenReturn(false);
+        assertThrows(NordException.class, () -> controleChavesService.criarRetirada(NovaRetiradaControleChavesForm.builder()
+                .nmTipoItem("APARTAMENTO").idApartamentoVistoria(101L).idUserRetirada(7L).build()));
+        verify(controleChavesRepository, never()).criarRetirada(any());
     }
 }

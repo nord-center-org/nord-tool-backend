@@ -22,4 +22,7 @@ public interface ObraRepository {
     void substituirUsuariosDaFase(Long idFase, List<Long> idsUsuarios);
     /** Quantos destes ids existem em usuario. */
     int contarUsuarios(List<Long> ids);
+    /** Liga apartamentos sem fase pela sigla; devolve quantos foram ligados. */
+    int vincularApartamentosPorSigla();
+    int contarApartamentosSemFase();
 }

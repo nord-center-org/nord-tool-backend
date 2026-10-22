@@ -30,7 +30,7 @@ public class ObraRepositoryImpl implements ObraRepository {
         // Falha cedo se alguma query sumir do catálogo.
         for (String chave : new String[]{"SPS.OBRA.LISTAR", "SPS.OBRA.BUSCAR", "SPI.OBRA.INSERIR", "SPU.OBRA.ALTERAR",
                 "SPS.FASE.LISTAR", "SPS.FASE.BUSCAR", "SPI.FASE.INSERIR", "SPU.FASE.ALTERAR", "SPS.FASE.USUARIOS",
-                "SPD.FASE.USUARIOS", "SPI.FASE.USUARIO", "SPS.FASE.CONTAR_USUARIOS"}) {
+                "SPD.FASE.USUARIOS", "SPI.FASE.USUARIO", "SPS.FASE.CONTAR_USUARIOS", "SPU.OBRA.VINCULAR_APARTAMENTOS", "SPS.OBRA.SEM_FASE"}) {
             queries.get(chave);
         }
     }
@@ -105,6 +105,20 @@ public class ObraRepositoryImpl implements ObraRepository {
         if (ids.isEmpty()) return 0;
         return executor.executar("Conferir usuários", () -> {
             Integer n = jdbc.queryForObject(q.get("SPS.FASE.CONTAR_USUARIOS"), new MapSqlParameterSource("ids", ids), Integer.class);
+            return n == null ? 0 : n;
+        });
+    }
+
+    @Override
+    public int vincularApartamentosPorSigla() {
+        return executor.executar("Ligar apartamentos às fases", () ->
+                jdbc.update(q.get("SPU.OBRA.VINCULAR_APARTAMENTOS"), new MapSqlParameterSource()));
+    }
+
+    @Override
+    public int contarApartamentosSemFase() {
+        return executor.executar("Contar apartamentos sem fase", () -> {
+            Integer n = jdbc.queryForObject(q.get("SPS.OBRA.SEM_FASE"), new MapSqlParameterSource(), Integer.class);
             return n == null ? 0 : n;
         });
     }

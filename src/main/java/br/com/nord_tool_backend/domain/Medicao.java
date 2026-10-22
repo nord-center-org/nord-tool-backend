@@ -22,4 +22,5 @@ public class Medicao extends GlobalDomain {
     private String nmStatus;
     private Integer nrVersao;
     private LocalDateTime dhAlteracao;
+    private Long idFase;
 }

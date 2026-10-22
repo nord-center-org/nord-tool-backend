@@ -39,6 +39,8 @@ public class ApartamentoVistoriaDto {
     private Integer qtFotosTermo;
     private Integer nrPaginasTermo;
     private Integer nrPaginasComFoto;
+    /** Fase da obra a que o apartamento pertence. */
+    private Long idFase;
 
     public static ApartamentoVistoriaDto converterToDto(ApartamentoVistoria apartamentoVistoria ) {
         return ApartamentoVistoriaDto.builder()
@@ -60,6 +62,7 @@ public class ApartamentoVistoriaDto {
                 .qtFotosTermo(apartamentoVistoria.getQtFotosTermo())
                 .nrPaginasTermo(apartamentoVistoria.getNrPaginasTermo())
                 .nrPaginasComFoto(apartamentoVistoria.getNrPaginasComFoto())
+                .idFase(apartamentoVistoria.getIdFase())
                 .build();
     }
 }

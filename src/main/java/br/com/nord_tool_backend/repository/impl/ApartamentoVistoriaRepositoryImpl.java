@@ -9,6 +9,8 @@ import br.com.nord_tool_backend.dto.ApartamentoVistoriaFiltroDto;
 import br.com.nord_tool_backend.repository.ApartamentoVistoriaRepository;
 import br.com.nord_tool_backend.repository.jdbc.JdbcExecutor;
 import br.com.nord_tool_backend.repository.jdbc.JdbcSuporte;
+import br.com.nord_tool_backend.repository.jdbc.ParametrosComEscopo;
+import br.com.nord_tool_backend.service.ContextoFaseService;
 import br.com.nord_tool_backend.repository.jdbc.SqlQueries;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.namedparam.BeanPropertySqlParameterSource;
@@ -29,6 +31,8 @@ public class ApartamentoVistoriaRepositoryImpl implements ApartamentoVistoriaRep
 
     private final NamedParameterJdbcTemplate jdbc;
     private final JdbcExecutor executor;
+    /** Fases que a requisição pode ver e fase dos apartamentos novos. */
+    private final ContextoFaseService contexto;
     private final String qInserir;
     private final String qAlterar;
     private final String qDeletar;
@@ -38,9 +42,11 @@ public class ApartamentoVistoriaRepositoryImpl implements ApartamentoVistoriaRep
     private final String qInfoGeral;
     private final Map<ApartamentoVistoriaFiltroEnum, String> qFiltros = new EnumMap<>(ApartamentoVistoriaFiltroEnum.class);
 
-    public ApartamentoVistoriaRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries) {
+    public ApartamentoVistoriaRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries,
+                                             ContextoFaseService contexto) {
         this.jdbc = jdbc;
         this.executor = executor;
+        this.contexto = contexto;
         this.qInserir = queries.get("SPI.APARTAMENTO_VISTORIA");
         this.qAlterar = queries.get("SPU.APARTAMENTO_VISTORIA");
         this.qDeletar = queries.get("SPD.APARTAMENTO_VISTORIA.WHERE.ID");
@@ -56,6 +62,8 @@ public class ApartamentoVistoriaRepositoryImpl implements ApartamentoVistoriaRep
     @Override
     public ApartamentoVistoriaDto salvarApartamentoVistoria(ApartamentoVistoria apartamentoVistoria) {
         return executor.executar("Salvar apartamento", () -> {
+            // Entra na fase do cabeçalho X-Fase, da sigla do código (N1-...) ou na única fase do usuário.
+            apartamentoVistoria.setIdFase(contexto.faseParaCriar(apartamentoVistoria.getNmApartamentoVistoria()));
             apartamentoVistoria.setId(JdbcSuporte.inserir(jdbc, qInserir,
                     new BeanPropertySqlParameterSource(apartamentoVistoria), "id_apartamento_vistoria"));
             return ApartamentoVistoriaDto.converterToDto(apartamentoVistoria);
@@ -65,31 +73,33 @@ public class ApartamentoVistoriaRepositoryImpl implements ApartamentoVistoriaRep
     @Override
     public ApartamentoVistoriaDto alterarApartamentoVistoria(ApartamentoVistoria apartamentoVistoria) {
         return executor.executar("Alterar apartamento", () -> {
-            jdbc.update(qAlterar, new BeanPropertySqlParameterSource(apartamentoVistoria));
+            jdbc.update(qAlterar, new ParametrosComEscopo(new BeanPropertySqlParameterSource(apartamentoVistoria),
+                    contexto.escopo().aplicar(new MapSqlParameterSource())));
             return ApartamentoVistoriaDto.converterToDto(apartamentoVistoria);
         });
     }
 
     @Override
     public void deletarApartamentoVistoria(Long id) {
-        executor.executar("Excluir apartamento", () -> jdbc.update(qDeletar, new MapSqlParameterSource("id", id)));
+        executor.executar("Excluir apartamento", () -> jdbc.update(qDeletar, contexto.escopo().aplicar(new MapSqlParameterSource("id", id))));
     }
 
     @Override
     public ApartamentoVistoria buscarApartamentoVistoria(Long id) {
         return executor.executar("Buscar apartamento", () ->
-                jdbc.queryForObject(qBuscar, new MapSqlParameterSource("id", id),
+                jdbc.queryForObject(qBuscar, contexto.escopo().aplicar(new MapSqlParameterSource("id", id)),
                         BeanPropertyRowMapper.newInstance(ApartamentoVistoria.class)));
     }
 
     @Override
     public List<ApartamentoVistoria> listarApartamentoVistoria() {
         return executor.executar("Listar apartamentos", () ->
-                jdbc.query(qListar, BeanPropertyRowMapper.newInstance(ApartamentoVistoria.class)));
+                jdbc.query(qListar, contexto.escopo().aplicar(new MapSqlParameterSource()), BeanPropertyRowMapper.newInstance(ApartamentoVistoria.class)));
     }
 
     @Override
     public void salvarEmLote(List<ApartamentoVistoria> apartamentos) {
+        apartamentos.forEach(a -> a.setIdFase(contexto.faseParaCriar(a.getNmApartamentoVistoria())));
         executor.executar("Salvar apartamentos da planilha", () ->
                 jdbc.batchUpdate(qInserir, SqlParameterSourceUtils.createBatch(apartamentos.toArray())));
     }
@@ -111,6 +121,7 @@ public class ApartamentoVistoriaRepositoryImpl implements ApartamentoVistoriaRep
         params.addValue("dtRevistoriaVigente", parseDataPermitida(filtro.getDtRevistoriaVigente()), Types.DATE);
         params.addValue("nrPagina", nrPagina);
         params.addValue("nrQuantidadePorPagina", nrQuantidadePorPagina);
+        contexto.escopo().aplicar(params);
 
         // Só fragmentos constantes: a query do catálogo, o ORDER BY montado a partir dos enums e a paginação parametrizada.
         String sql = qFiltros.get(ApartamentoVistoriaFiltroEnum.para(filtraTodos)) + ordenacao.sql() + qPaginacao;
@@ -124,6 +135,7 @@ public class ApartamentoVistoriaRepositoryImpl implements ApartamentoVistoriaRep
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("dtiApartamentoVistoriaFiltro", parseDataPermitida(dtiApartamentoVistoriaFiltro), Types.DATE)
                 .addValue("dtfApartamentoVistoriaFiltro", parseDataPermitida(dtfApartamentoVistoriaFiltro), Types.DATE);
+        contexto.escopo().aplicar(params);
         return executor.executar("Listar informações gerais dos apartamentos", () ->
                 jdbc.query(qInfoGeral, params, BeanPropertyRowMapper.newInstance(InfoGeralApartamentoVistoria.class)));
     }

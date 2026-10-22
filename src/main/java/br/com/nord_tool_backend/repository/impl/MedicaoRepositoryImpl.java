@@ -19,6 +19,7 @@ public class MedicaoRepositoryImpl implements MedicaoRepository {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final JdbcExecutor executor;
+    private final br.com.nord_tool_backend.service.ContextoFaseService contexto;
     private final String qListar;
     private final String qBuscar;
     private final String qInserir;
@@ -27,8 +28,10 @@ public class MedicaoRepositoryImpl implements MedicaoRepository {
     private final String qDeletar;
     private final String qStatusListar;
 
-    public MedicaoRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries) {
+    public MedicaoRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries,
+                                 br.com.nord_tool_backend.service.ContextoFaseService contexto) {
         this.jdbc = jdbc;
+        this.contexto = contexto;
         this.executor = executor;
         this.qListar = queries.get("SPS.MEDICAO.LISTAR");
         this.qBuscar = queries.get("SPS.MEDICAO.BUSCAR");
@@ -42,39 +45,39 @@ public class MedicaoRepositoryImpl implements MedicaoRepository {
     @Override
     public List<Medicao> listar() {
         return executor.executar("Erro ao listar medições", () ->
-                jdbc.query(qListar, BeanPropertyRowMapper.newInstance(Medicao.class)));
+                jdbc.query(qListar, contexto.escopo().aplicar(new MapSqlParameterSource()), BeanPropertyRowMapper.newInstance(Medicao.class)));
     }
 
     @Override
     public Optional<Medicao> buscar(Long id) {
         return executor.executar("Erro ao buscar medição", () ->
-                jdbc.query(qBuscar, new MapSqlParameterSource("id", id), BeanPropertyRowMapper.newInstance(Medicao.class))
+                jdbc.query(qBuscar, contexto.escopo().aplicar(new MapSqlParameterSource("id", id)), BeanPropertyRowMapper.newInstance(Medicao.class))
                         .stream().findFirst());
     }
 
     @Override
     public Long inserir(Medicao m) {
         return executor.executar("Erro ao salvar medição", () ->
-                jdbc.queryForObject(qInserir, valores(m), Long.class));
+                jdbc.queryForObject(qInserir, valores(m).addValue("idFase", contexto.faseParaCriar(null), java.sql.Types.BIGINT), Long.class));
     }
 
     @Override
     public int alterar(Medicao m, int nrVersao) {
         return executor.executar("Erro ao alterar medição", () ->
-                jdbc.update(qAlterar, valores(m).addValue("id", m.getId()).addValue("nrVersao", nrVersao)));
+                jdbc.update(qAlterar, contexto.escopo().aplicar(valores(m).addValue("id", m.getId()).addValue("nrVersao", nrVersao))));
     }
 
     @Override
     public int alterarStatus(Long id, String cdStatus, int nrVersao) {
         return executor.executar("Erro ao alterar o status da medição", () ->
-                jdbc.update(qAlterarStatus, new MapSqlParameterSource().addValue("id", id)
-                        .addValue("cdStatus", cdStatus).addValue("nrVersao", nrVersao)));
+                jdbc.update(qAlterarStatus, contexto.escopo().aplicar(new MapSqlParameterSource().addValue("id", id)
+                        .addValue("cdStatus", cdStatus).addValue("nrVersao", nrVersao))));
     }
 
     @Override
     public int deletar(Long id, int nrVersao) {
         return executor.executar("Erro ao excluir medição", () ->
-                jdbc.update(qDeletar, new MapSqlParameterSource().addValue("id", id).addValue("nrVersao", nrVersao)));
+                jdbc.update(qDeletar, contexto.escopo().aplicar(new MapSqlParameterSource().addValue("id", id).addValue("nrVersao", nrVersao))));
     }
 
     @Override

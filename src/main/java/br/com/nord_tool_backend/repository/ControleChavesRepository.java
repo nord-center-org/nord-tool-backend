@@ -14,6 +14,8 @@ public interface ControleChavesRepository {
     /** Usuários ativos que podem retirar (base única). */
     List<br.com.nord_tool_backend.dto.PessoaControleChavesDto> listarPessoas();
     boolean usuarioAtivo(Long idUsuario);
+    /** O apartamento (ou a ferramenta) está numa fase que a pessoa pode ver? */
+    boolean itemNoEscopo(Long idApartamento, Long idFerramenta);
     List<ApartamentoVistoria> listarApartamentos();
     List<Ferramenta> listarFerramentas();
     Long contarChavesEmCampo();
