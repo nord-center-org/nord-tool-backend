@@ -97,6 +97,19 @@ class CadastroServiceImplTest {
     }
 
     @Test
+    void cadastroSemCodigoDaObraFicaPendenteParaOAdminDefinir() {
+        CadastroForm f = form();
+        f.setCdObra("  ");
+        service.cadastrar(f, "1.1.1.1");
+        verify(repository, never()).buscarObraAtivaPorCodigo(any());
+        verify(repository).inserirPendente("João Encarregado", "joao@obra.com", "HASH", null, null);
+        CadastroForm semCampo = form();
+        semCampo.setCdObra(null);
+        service.cadastrar(semCampo, "1.1.1.1");
+        verify(repository, org.mockito.Mockito.times(2)).inserirPendente("João Encarregado", "joao@obra.com", "HASH", null, null);
+    }
+
+    @Test
     void cadastroRecusaCodigoInvalidoESenhaFraca() {
         when(repository.buscarObraAtivaPorCodigo(anyString())).thenReturn(Optional.empty());
         assertThrows(EntradaInvalidaException.class, () -> service.cadastrar(form(), "ip"));

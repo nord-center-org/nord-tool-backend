@@ -49,7 +49,7 @@ public class CadastroRepositoryImpl implements CadastroRepository {
     public Long inserirPendente(String nome, String email, String hash, String celular, Long idObra) {
         return executor.executar("Salvar cadastro", () -> jdbc.queryForObject(q.get("SPI.CADASTRO.USUARIO"), new MapSqlParameterSource()
                 .addValue("nome", nome).addValue("email", email).addValue("hash", hash)
-                .addValue("celular", celular).addValue("idObra", idObra), Long.class));
+                .addValue("celular", celular).addValue("idObra", idObra, java.sql.Types.BIGINT), Long.class));
     }
 
     @Override
