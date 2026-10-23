@@ -21,7 +21,7 @@ public class CadastroForm {
     @Pattern(regexp = "^$|^[0-9()+\\- ]{8,20}$", message = "Celular inválido")
     private String nrCelular;
 
-    @NotBlank(message = "Informe o código da obra")
+    /** Opcional: sem código, o administrador escolhe a obra e as fases ao aprovar. */
     @Size(max = 20, message = "Código da obra inválido")
     private String cdObra;
 

@@ -77,8 +77,10 @@ public class CadastroServiceImpl implements CadastroService {
         PoliticaSenha.validar(form.getSenha()).ifPresent(motivo -> {
             throw new EntradaInvalidaException("Senha inválida: " + motivo);
         });
-        Obra obra = repository.buscarObraAtivaPorCodigo(form.getCdObra().trim())
-                .orElseThrow(() -> new EntradaInvalidaException("Código da obra inválido. Confira com o responsável da obra."));
+        // O código da obra é opcional: se vier, precisa existir; se não vier, o admin define a obra na aprovação.
+        String codigo = form.getCdObra() == null ? "" : form.getCdObra().trim();
+        Obra obra = codigo.isEmpty() ? null : repository.buscarObraAtivaPorCodigo(codigo)
+                .orElseThrow(() -> new EntradaInvalidaException("Código da obra inválido. Confira com o responsável da obra ou deixe em branco."));
         String mail = form.getNmEmail().trim().toLowerCase(Locale.ROOT);
         if (repository.emailExiste(mail)) {
             // Mesma resposta de um cadastro novo: não revela que o e-mail já existe. A pessoa é avisada por e-mail.
@@ -88,8 +90,9 @@ public class CadastroServiceImpl implements CadastroService {
             return new MensagemDto(MSG_CADASTRO);
         }
         String celular = form.getNrCelular() == null || form.getNrCelular().isBlank() ? null : form.getNrCelular().trim();
-        repository.inserirPendente(form.getNmNome().trim(), mail, passwordEncoder.encode(form.getSenha()), celular, obra.getId());
-        log.info("Novo cadastro pendente na obra {}", obra.getId());
+        Long idObra = obra == null ? null : obra.getId();
+        repository.inserirPendente(form.getNmNome().trim(), mail, passwordEncoder.encode(form.getSenha()), celular, idObra);
+        log.info("Novo cadastro pendente (obra {})", idObra == null ? "a definir" : idObra);
         return new MensagemDto(MSG_CADASTRO);
     }
 
