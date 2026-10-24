@@ -8,7 +8,7 @@ COPY src ./src
 # Os testes rodam no CI (pipeline-dev.yml); a imagem só empacota.
 RUN mvn -B -q clean package -DskipTests
 
-FROM eclipse-temurin:11-jre-jammy@sha256:1adc4db6079f9a35c45f36b0907dd94232a0b9b409a4088a7fe0c77b14e99294
+FROM eclipse-temurin:11-jre-jammy@sha256:ee9a1cf7847cb4b1f8176f4e96167f89a1148497500b75032575cb43dc69b42d
 RUN groupadd --system --gid 10001 nord && useradd --system --uid 10001 --gid nord --no-create-home nord
 WORKDIR /app
 COPY --from=build --chown=nord:nord /build/target/*.jar app.jar
