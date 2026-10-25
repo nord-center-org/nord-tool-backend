@@ -20,6 +20,9 @@
     <properties>
         <java.version>11</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- O SDK da Anthropic (Lugia) exige Kotlin 1.9 e OkHttp 4.12; o Spring Boot 2.7 gerencia versões mais antigas. -->
+        <kotlin.version>1.9.25</kotlin.version>
+        <okhttp.version>4.12.0</okhttp.version>
     </properties>
 
     <!-- Gerenciamento de dependências para sobresscrever a versão legada com warning -->
@@ -135,6 +138,13 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Lugia (chat multi-IA): SDK oficial da Anthropic (Claude e agentes). OpenAI e Gemini via HTTP. -->
+        <dependency>
+            <groupId>com.anthropic</groupId>
+            <artifactId>anthropic-java</artifactId>
+            <version>3.3.0</version>
         </dependency>
     </dependencies>
 

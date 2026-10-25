@@ -40,6 +40,10 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 | `nord-tool.caixinha.max-comprovante-bytes` | limite do PDF de comprovante da Caixinha | 5 MB |
 | `NORD_COTACAO_TOKEN` | token da brapi.dev (plano gratuito) para a cotação dos fundos; sem ele só alguns tickers respondem. Nunca é exposto pela API | — |
 | `NORD_COTACAO_URL` `NORD_COTACAO_TTL_SEGUNDOS` `NORD_COTACAO_TIMEOUT_SEGUNDOS` | provedor de cotação, cache (evita estourar o limite gratuito) e timeout | `https://brapi.dev/api` · `60` · `5` |
+| `ANTHROPIC_API_KEY` `OPENAI_API_KEY` `GEMINI_API_KEY` | Lugia: chaves de Claude, ChatGPT e Gemini (cada provedor aparece com chave + modelo). A da Anthropic também liga o agente | — |
+| `LUGIA_MODELOS_CLAUDE` `LUGIA_MODELOS_OPENAI` `LUGIA_MODELOS_GEMINI` | modelos no seletor, separados por vírgula (OpenAI sem padrão) | `claude-opus-5-5,claude-sonnet-5-5` · — · `gemini-flash-latest` |
+| `LUGIA_GITHUB_TOKEN` | Lugia, modo Executar: token *fine-grained* do GitHub com **Contents** e **Pull requests** (leitura e escrita) nos repositórios da organização. Vai para o vault da Anthropic; nunca para o container do agente | — |
+| `LUGIA_MODELO_AGENTE` `LUGIA_REPOSITORIOS` `LUGIA_ANEXO_MAX_MB` | modelo do agente, repositórios montados (`owner/repo,...`) e tamanho máximo de anexo | `claude-opus-5-5` · os 5 do NordTool · `10` |
 
 ### Primeiro acesso (Railway)
 1. Aplique os scripts do `nord-tool-scripts-sql` (colunas de sessão e `usuario_permissao`) antes de publicar o backend.
@@ -50,6 +54,11 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 1. Gere a nova chave (`openssl rand -base64 48`) e acrescente: `NORD_JWT_KEYS=k1:<antiga>;k2:<nova>`, mantendo `NORD_JWT_ACTIVE_KID=k1`; publique.
 2. Troque `NORD_JWT_ACTIVE_KID=k2` e publique: tokens novos saem com `k2`, os antigos seguem válidos até expirar.
 3. Depois do limite da sessão (`NORD_SESSION_MAX_HOURS`), remova `k1`. Em incidente, remova a chave antiga já no passo 1 (todas as sessões caem).
+
+## **Lugia (chat multi-IA e agente)**
+`/api/v1/nord-tool/lugia`: chat com Claude (SDK oficial da Anthropic), ChatGPT e Gemini (HTTP), com histórico em `lugia_conversa`/`lugia_mensagem` e anexos (imagem e PDF). `POST /lugia/chat` responde em Server-Sent Events (`conversa`, `texto`, `ferramenta`, `fim`, `erro`), escrevendo direto na resposta da própria requisição. Com `modo: "agente"` (exige `ADMIN` no módulo `LUGIA`) o pedido vai para um agente Claude (Managed Agents) com os repositórios montados: ele segue o `nord-center-infra-agent`, abre PR para `develop` e faz o merge quando o CI passa. Agente, ambiente e vault são criados no primeiro uso e os ids ficam em `lugia_configuracao`; mudar o prompt do agente cria uma nova versão.
+
+**Acesso**: módulo `LUGIA` (`LEITURA` conversa; `ADMIN` também executa).
 
 ## **Financeiro**
 `/api/v1/nord-tool/financeiro`: lançamentos (extrato com filtros por mês, período, pessoa, categoria, tipo, situação e texto; criação idempotente por `cdRequisicao`, parcelamento mensal com `qtParcelas`, controle de versão por `nrVersao`), pessoas (de quem é o lançamento) e categorias. A **conta do mês** (`GET /financeiro/mes/{yyyy-MM}`) substitui a planilha de fechamento: saldo anterior (do mês anterior fechado), entradas e saídas reais ou projetadas por categoria (média dos meses anteriores, valor fixo das recorrências ou ritmo de gasto da fatura do cartão; a fatura "do mês M" é a das compras de M: o ciclo vai do dia seguinte ao fechamento de M até o fechamento de M+1, então a fatura de setembro fecha em outubro e vence em 10/10), saldo final e a folga em relação à meta de saldo (verde/vermelho). `POST /mes/{yyyy-MM}/fechar` grava o saldo real, trava os lançamentos do mês e gera os fixos do mês seguinte; `/reabrir` desfaz (só o último mês fechado). Recorrências em `/recorrencias` e parâmetros (meta, meses da média, dia de fechamento da fatura) em `/configuracao`. Respostas saem com `Cache-Control: no-store`.

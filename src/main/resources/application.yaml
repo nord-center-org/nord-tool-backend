@@ -69,3 +69,21 @@ nord-tool:
   storage:
     # Provedor de arquivos: POSTGRES (provisório). Definitivo ainda a decidir (Drive/S3).
     provider: ${NORD_STORAGE_PROVIDER:POSTGRES}
+  lugia:
+    # Chat multi-IA. Cada provedor aparece com chave + ao menos um modelo. Chaves só pelo ambiente.
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    openai-api-key: ${OPENAI_API_KEY:}
+    gemini-api-key: ${GEMINI_API_KEY:}
+    modelos-claude: ${LUGIA_MODELOS_CLAUDE:claude-opus-5-5,claude-sonnet-5-5}
+    # Sem padrão para a OpenAI: os ids mudam com frequência; use os que a sua chave acessa.
+    modelos-openai: ${LUGIA_MODELOS_OPENAI:}
+    modelos-gemini: ${LUGIA_MODELOS_GEMINI:gemini-flash-latest}
+    anexo-max-mb: ${LUGIA_ANEXO_MAX_MB:10}
+    # Agente executor (ADMIN do módulo LUGIA): token fine-grained do GitHub com Contents e Pull requests (leitura e escrita)
+    # nos repositórios da organização. Agente, ambiente e vault são criados no primeiro uso e guardados em lugia_configuracao.
+    github-token: ${LUGIA_GITHUB_TOKEN:}
+    repositorios: ${LUGIA_REPOSITORIOS:}
+    modelo-agente: ${LUGIA_MODELO_AGENTE:claude-opus-5-5}
+    agente-id: ${LUGIA_AGENTE_ID:}
+    ambiente-id: ${LUGIA_AMBIENTE_ID:}
+    vault-id: ${LUGIA_VAULT_ID:}
