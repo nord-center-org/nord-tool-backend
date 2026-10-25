@@ -52,7 +52,7 @@ public class LugiaOpenAiProvider implements LugiaIaProvider {
         Integer[] uso = {null, null};
         String[] falha = {null};
         try {
-            LugiaSseHttp.postar(URL, Collections.singletonMap("Authorization", "Bearer " + props.getOpenaiApiKey()),
+            LugiaSseHttp.postarComRetentativa(URL, Collections.singletonMap("Authorization", "Bearer " + props.getOpenaiApiKey()),
                     json.writeValueAsString(corpo), dado -> {
                         JsonNode ev = ler(dado);
                         String tipo = ev.path("type").asText();

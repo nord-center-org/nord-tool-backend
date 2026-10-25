@@ -55,7 +55,7 @@ public class LugiaGeminiProvider implements LugiaIaProvider {
         Integer[] uso = {null, null};
         try {
             String url = String.format(URL, URLEncoder.encode(modelo, StandardCharsets.UTF_8));
-            LugiaSseHttp.postar(url, Collections.singletonMap("x-goog-api-key", props.getGeminiApiKey()),
+            LugiaSseHttp.postarComRetentativa(url, Collections.singletonMap("x-goog-api-key", props.getGeminiApiKey()),
                     json.writeValueAsString(corpo), dado -> {
                         JsonNode ev = ler(dado);
                         JsonNode candidato = ev.path("candidates").path(0);
