@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 /**
  * Configuração da Lugia ({@code nord-tool.lugia.*}). As chaves vêm só do ambiente (ANTHROPIC_API_KEY,
- * OPENAI_API_KEY, GEMINI_API_KEY, LUGIA_GITHUB_TOKEN) e nunca vão para log ou resposta.
+ * OPENAI_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, LUGIA_GITHUB_TOKEN) e nunca vão para log ou resposta.
  */
 @Component
 public class LugiaProperties {
@@ -29,6 +29,10 @@ public class LugiaProperties {
     private final String agenteId;
     private final String ambienteId;
     private final String vaultId;
+    private final String groqApiKey;
+    private final List<String> modelosGroq;
+    private final String openrouterApiKey;
+    private final List<String> modelosOpenrouter;
 
     public LugiaProperties(
             @Value("${nord-tool.lugia.anthropic-api-key:}") String anthropicApiKey,
@@ -43,7 +47,11 @@ public class LugiaProperties {
             @Value("${nord-tool.lugia.modelo-agente:claude-opus-5-5}") String modeloAgente,
             @Value("${nord-tool.lugia.agente-id:}") String agenteId,
             @Value("${nord-tool.lugia.ambiente-id:}") String ambienteId,
-            @Value("${nord-tool.lugia.vault-id:}") String vaultId) {
+            @Value("${nord-tool.lugia.vault-id:}") String vaultId,
+            @Value("${nord-tool.lugia.groq-api-key:}") String groqApiKey,
+            @Value("${nord-tool.lugia.modelos-groq:openai/gpt-oss-120b,llama-3.1-8b-instant}") String modelosGroq,
+            @Value("${nord-tool.lugia.openrouter-api-key:}") String openrouterApiKey,
+            @Value("${nord-tool.lugia.modelos-openrouter:}") String modelosOpenrouter) {
         this.anthropicApiKey = limpo(anthropicApiKey);
         this.openaiApiKey = limpo(openaiApiKey);
         this.geminiApiKey = limpo(geminiApiKey);
@@ -58,6 +66,10 @@ public class LugiaProperties {
         this.agenteId = limpo(agenteId);
         this.ambienteId = limpo(ambienteId);
         this.vaultId = limpo(vaultId);
+        this.groqApiKey = limpo(groqApiKey);
+        this.modelosGroq = lista(modelosGroq);
+        this.openrouterApiKey = limpo(openrouterApiKey);
+        this.modelosOpenrouter = lista(modelosOpenrouter);
     }
 
     /** Repositórios montados na sessão do agente (owner/repo). */
@@ -90,4 +102,8 @@ public class LugiaProperties {
     public String getAgenteId() { return agenteId; }
     public String getAmbienteId() { return ambienteId; }
     public String getVaultId() { return vaultId; }
+    public String getGroqApiKey() { return groqApiKey; }
+    public List<String> getModelosGroq() { return modelosGroq; }
+    public String getOpenrouterApiKey() { return openrouterApiKey; }
+    public List<String> getModelosOpenrouter() { return modelosOpenrouter; }
 }

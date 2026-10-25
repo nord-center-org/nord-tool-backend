@@ -78,6 +78,11 @@ nord-tool:
     # Sem padrão para a OpenAI: os ids mudam com frequência; use os que a sua chave acessa.
     modelos-openai: ${LUGIA_MODELOS_OPENAI:}
     modelos-gemini: ${LUGIA_MODELOS_GEMINI:gemini-flash-latest}
+    # Gratuitos: Groq (rápido, sem cartão) e OpenRouter (modelos com ":free"). Só texto.
+    groq-api-key: ${GROQ_API_KEY:}
+    modelos-groq: ${LUGIA_MODELOS_GROQ:openai/gpt-oss-120b,llama-3.1-8b-instant}
+    openrouter-api-key: ${OPENROUTER_API_KEY:}
+    modelos-openrouter: ${LUGIA_MODELOS_OPENROUTER:}
     anexo-max-mb: ${LUGIA_ANEXO_MAX_MB:10}
     # Agente executor (ADMIN do módulo LUGIA): token fine-grained do GitHub com Contents e Pull requests (leitura e escrita)
     # nos repositórios da organização. Agente, ambiente e vault são criados no primeiro uso e guardados em lugia_configuracao.

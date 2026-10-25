@@ -41,6 +41,8 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 | `NORD_COTACAO_TOKEN` | token da brapi.dev (plano gratuito) para a cotação dos fundos; sem ele só alguns tickers respondem. Nunca é exposto pela API | — |
 | `NORD_COTACAO_URL` `NORD_COTACAO_TTL_SEGUNDOS` `NORD_COTACAO_TIMEOUT_SEGUNDOS` | provedor de cotação, cache (evita estourar o limite gratuito) e timeout | `https://brapi.dev/api` · `60` · `5` |
 | `ANTHROPIC_API_KEY` `OPENAI_API_KEY` `GEMINI_API_KEY` | Lugia: chaves de Claude, ChatGPT e Gemini (cada provedor aparece com chave + modelo). A da Anthropic também liga o agente | — |
+| `GROQ_API_KEY` `OPENROUTER_API_KEY` | Lugia, provedores gratuitos (só texto): Groq (rápido, sem cartão, console.groq.com) e OpenRouter (modelos com `:free`) | — |
+| `LUGIA_MODELOS_GROQ` `LUGIA_MODELOS_OPENROUTER` | modelos desses provedores, separados por vírgula | `openai/gpt-oss-120b,llama-3.1-8b-instant` · — |
 | `LUGIA_MODELOS_CLAUDE` `LUGIA_MODELOS_OPENAI` `LUGIA_MODELOS_GEMINI` | modelos no seletor, separados por vírgula (OpenAI sem padrão) | `claude-opus-5-5,claude-sonnet-5-5` · — · `gemini-flash-latest` |
 | `LUGIA_GITHUB_TOKEN` | Lugia, modo Executar: token *fine-grained* do GitHub com **Contents** e **Pull requests** (leitura e escrita) nos repositórios da organização. Vai para o vault da Anthropic; nunca para o container do agente | — |
 | `LUGIA_MODELO_AGENTE` `LUGIA_REPOSITORIOS` `LUGIA_ANEXO_MAX_MB` | modelo do agente, repositórios montados (`owner/repo,...`) e tamanho máximo de anexo | `claude-opus-5-5` · os 5 do NordTool · `10` |
@@ -56,7 +58,7 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 3. Depois do limite da sessão (`NORD_SESSION_MAX_HOURS`), remova `k1`. Em incidente, remova a chave antiga já no passo 1 (todas as sessões caem).
 
 ## **Lugia (chat multi-IA e agente)**
-`/api/v1/nord-tool/lugia`: chat com Claude (SDK oficial da Anthropic), ChatGPT e Gemini (HTTP), com histórico em `lugia_conversa`/`lugia_mensagem` e anexos (imagem e PDF). `POST /lugia/chat` responde em Server-Sent Events (`conversa`, `texto`, `ferramenta`, `fim`, `erro`), escrevendo direto na resposta da própria requisição. Com `modo: "agente"` (exige `ADMIN` no módulo `LUGIA`) o pedido vai para um agente Claude (Managed Agents) com os repositórios montados: ele segue o `nord-center-infra-agent`, abre PR para `develop` e faz o merge quando o CI passa. Agente, ambiente e vault são criados no primeiro uso e os ids ficam em `lugia_configuracao`; mudar o prompt do agente cria uma nova versão.
+`/api/v1/nord-tool/lugia`: chat com Claude (SDK oficial da Anthropic), ChatGPT, Gemini, Groq e OpenRouter (HTTP; erros 429/5xx repetem até duas vezes antes de responder), com histórico em `lugia_conversa`/`lugia_mensagem` e anexos (imagem e PDF). `POST /lugia/chat` responde em Server-Sent Events (`conversa`, `texto`, `ferramenta`, `fim`, `erro`), escrevendo direto na resposta da própria requisição. Com `modo: "agente"` (exige `ADMIN` no módulo `LUGIA`) o pedido vai para um agente Claude (Managed Agents) com os repositórios montados: ele segue o `nord-center-infra-agent`, abre PR para `develop` e faz o merge quando o CI passa. Agente, ambiente e vault são criados no primeiro uso e os ids ficam em `lugia_configuracao`; mudar o prompt do agente cria uma nova versão.
 
 **Acesso**: módulo `LUGIA` (`LEITURA` conversa; `ADMIN` também executa).
 

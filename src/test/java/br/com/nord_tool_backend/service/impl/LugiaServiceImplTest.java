@@ -86,7 +86,7 @@ class LugiaServiceImplTest {
 
     private static LugiaProperties propriedades() {
         return new LugiaProperties("sk-ant", "", "", "claude-opus-5-5", "", "gemini-flash-latest", 1,
-                "ghp", "", "claude-opus-5-5", "", "", "");
+                "ghp", "", "claude-opus-5-5", "", "", "", "", "", "", "");
     }
 
     private UsuarioAutenticado logado(Acao nivel) {

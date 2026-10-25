@@ -31,6 +31,30 @@ final class LugiaSseHttp {
         }
     }
 
+    /** Esperas antes de tentar de novo quando o provedor está sobrecarregado (429/500/502/503/504). */
+    static final long[] ESPERAS_MS = {1500, 4000};
+
+    /**
+     * Como {@link #postar}, mas repete quando o provedor responde sobrecarregado. Seguro porque o erro chega
+     * no status, antes de qualquer pedaço da resposta ter sido entregue.
+     */
+    static void postarComRetentativa(String url, Map<String, String> cabecalhos, String corpo, Consumer<String> aoDado)
+            throws IOException, InterruptedException {
+        for (int tentativa = 0; ; tentativa++) {
+            try {
+                postar(url, cabecalhos, corpo, aoDado);
+                return;
+            } catch (ErroHttp e) {
+                if (!temporario(e.status) || tentativa >= ESPERAS_MS.length) throw e;
+                Thread.sleep(ESPERAS_MS[tentativa]);
+            }
+        }
+    }
+
+    static boolean temporario(int status) {
+        return status == 429 || status == 500 || status == 502 || status == 503 || status == 504;
+    }
+
     static void postar(String url, Map<String, String> cabecalhos, String corpo, Consumer<String> aoDado)
             throws IOException, InterruptedException {
         HttpRequest.Builder pedido = HttpRequest.newBuilder(URI.create(url))
@@ -64,6 +88,9 @@ final class LugiaSseHttp {
             boolean chave = e.getMessage() != null && e.getMessage().contains("API key");
             if (status == 401 || status == 403 || chave) return "Chave do " + provedor + " inválida no servidor.";
             if (status == 400 || status == 404) return "O " + provedor + " recusou o pedido (verifique o modelo e os anexos).";
+            if (status == 503 || status == 502 || status == 504 || status == 500) {
+                return "O " + provedor + " está sobrecarregado agora (comum no plano gratuito). Tente de novo em instantes ou troque de modelo.";
+            }
             return "Falha no " + provedor + " (" + status + ").";
         }
         return "Não foi possível falar com o " + provedor + " agora.";
