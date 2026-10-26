@@ -34,4 +34,9 @@ public interface AcessoRepository {
     void desvincularColaborador(Long idUserLegado);
     /** Vincula, completa celular/empresa/cargo vazios do usuário e preenche o usuário nas retiradas antigas. */
     void vincularColaborador(Long idUserLegado, Long idUsuario);
+    boolean emailEmUso(String email, Long idUsuario);
+    /** Troca o e-mail e sobe a versão da sessão. */
+    void alterarEmail(Long idUsuario, String email);
+    /** Troca a senha pela provisória (hash), marca a troca obrigatória e derruba as sessões. */
+    void definirSenhaProvisoria(Long idUsuario, String hash, java.time.LocalDateTime ate);
 }

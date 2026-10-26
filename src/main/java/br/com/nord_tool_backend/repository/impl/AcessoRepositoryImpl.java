@@ -195,4 +195,23 @@ public class AcessoRepositoryImpl implements AcessoRepository {
             return mapa;
         });
     }
+
+    @Override
+    public boolean emailEmUso(String email, Long idUsuario) {
+        Integer qt = executor.executar("Verificar e-mail", () -> jdbc.queryForObject(q.get("SPS.ACESSO.EMAIL_EM_USO"),
+                new MapSqlParameterSource("email", email).addValue("id", idUsuario), Integer.class));
+        return qt != null && qt > 0;
+    }
+
+    @Override
+    public void alterarEmail(Long idUsuario, String email) {
+        executor.executar("Alterar e-mail", () -> jdbc.update(q.get("SPU.ACESSO.EMAIL"),
+                new MapSqlParameterSource("id", idUsuario).addValue("email", email)));
+    }
+
+    @Override
+    public void definirSenhaProvisoria(Long idUsuario, String hash, java.time.LocalDateTime ate) {
+        executor.executar("Definir senha provisória", () -> jdbc.update(q.get("SPU.ACESSO.SENHA_PROVISORIA"),
+                new MapSqlParameterSource("id", idUsuario).addValue("hash", hash).addValue("ate", java.sql.Timestamp.valueOf(ate))));
+    }
 }

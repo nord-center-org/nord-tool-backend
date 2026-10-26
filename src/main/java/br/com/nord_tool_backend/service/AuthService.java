@@ -17,4 +17,8 @@ public interface AuthService {
 
     /** Troca a senha, encerra as demais sessões e devolve um token novo para a sessão atual. */
     LoginResponseDto alterarSenha(AlterarSenhaForm form);
+    /** Depois do reset pelo admin: confere e-mail + senha provisória, grava a senha nova e já entra. */
+    LoginResponseDto definirSenha(br.com.nord_tool_backend.form.DefinirSenhaForm form, String ip);
+    /** Troca o próprio e-mail (com a senha atual) e devolve um token novo. */
+    LoginResponseDto alterarEmail(br.com.nord_tool_backend.form.AlterarEmailForm form);
 }

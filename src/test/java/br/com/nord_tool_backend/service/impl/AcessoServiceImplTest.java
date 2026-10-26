@@ -61,7 +61,7 @@ class AcessoServiceImplTest {
         autorizacao = mock(AutorizacaoService.class);
         sessao = mock(SessaoService.class);
         email = mock(br.com.nord_tool_backend.service.EmailService.class);
-        service = new AcessoServiceImpl(repository, autorizacao, sessao, email);
+        service = new AcessoServiceImpl(repository, autorizacao, sessao, email, new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4), java.time.Clock.systemUTC());
         usuarios.add(usuario(10, "Admin", ADMIN, "ADMIN", true));
         usuarios.add(usuario(20, "Ana", USER, "USER", true));
         when(repository.listarUsuarios()).thenReturn(usuarios);
@@ -316,5 +316,57 @@ class AcessoServiceImplTest {
         service.salvarDados(20L, f);
         verify(repository).renovarSessao(20L);
         verify(sessao).invalidar(20L);
+    }
+
+    // ---------- e-mail e reset de senha ----------
+
+    private static br.com.nord_tool_backend.form.DadosUsuarioForm dados(String nome, String email) {
+        br.com.nord_tool_backend.form.DadosUsuarioForm f = new br.com.nord_tool_backend.form.DadosUsuarioForm();
+        f.setNmNome(nome);
+        f.setNmEmail(email);
+        return f;
+    }
+
+    @Test
+    void adminTrocaOEmailDoUsuarioEAsSessoesCaem() {
+        service.salvarDados(20L, dados("Ana", "ana.nova@obra.com"));
+        verify(repository).alterarEmail(20L, "ana.nova@obra.com");
+        verify(sessao).invalidar(20L);
+    }
+
+    @Test
+    void emailIgualOuVazioNaoTrocaEEmailDeOutroERecusado() {
+        service.salvarDados(20L, dados("Ana", "ana@obra.com"));
+        service.salvarDados(20L, dados("Ana", null));
+        verify(repository, never()).alterarEmail(anyLong(), any());
+
+        when(repository.emailEmUso("admin@obra.com", 20L)).thenReturn(true);
+        assertThrows(br.com.nord_tool_backend.exception.EntradaInvalidaException.class, () -> service.salvarDados(20L, dados("Ana", "admin@obra.com")));
+        verify(repository, never()).alterarEmail(anyLong(), any());
+    }
+
+    @Test
+    void resetDeSenhaGeraProvisoriaGuardaSoOHashEDerrubaAsSessoes() {
+        when(email.configurado()).thenReturn(true);
+        when(email.enviar(eq("ana@obra.com"), any(), any())).thenReturn(true);
+
+        br.com.nord_tool_backend.dto.SenhaProvisoriaDto r = service.resetarSenha(20L);
+
+        assertTrue(r.getSenhaProvisoria().matches("[" + AcessoServiceImpl.ALFABETO_PROVISORIA + "]{" + AcessoServiceImpl.TAMANHO_PROVISORIA + "}"));
+        assertTrue(r.isEmailEnviado());
+        org.mockito.ArgumentCaptor<String> hash = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(repository).definirSenhaProvisoria(eq(20L), hash.capture(), eq(r.getDhValidaAte()));
+        assertTrue(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().matches(r.getSenhaProvisoria(), hash.getValue()));
+        verify(sessao).invalidar(20L);
+    }
+
+    @Test
+    void adminNaoResetaAPropriaSenhaESemSmtpAProvisoriaSoApareceNaTela() {
+        assertThrows(NegocioException.class, () -> service.resetarSenha(10L));
+        verify(repository, never()).definirSenhaProvisoria(anyLong(), any(), any());
+
+        when(email.configurado()).thenReturn(false);
+        assertFalse(service.resetarSenha(20L).isEmailEnviado());
+        verify(email, never()).enviar(any(), any(), any());
     }
 }

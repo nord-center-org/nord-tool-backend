@@ -56,6 +56,20 @@ public class AuthWriteController implements BaseResponse {
         return ok(cadastroService.redefinirSenha(form, request.getRemoteAddr()));
     }
 
+    @PostMapping("/definir-senha")
+    @Operation(summary = "Depois do reset pelo admin: e-mail + senha provisória + senha nova; já devolve o JWT")
+    public ResponseEntity<ApiResponseBody<LoginResponseDto>> definirSenha(
+            @Valid @RequestBody br.com.nord_tool_backend.form.DefinirSenhaForm form, HttpServletRequest request) {
+        return ok(authService.definirSenha(form, request.getRemoteAddr()));
+    }
+
+    @PostMapping("/alterar-email")
+    @Operation(summary = "Troca o próprio e-mail (confirma com a senha atual) e devolve token novo")
+    public ResponseEntity<ApiResponseBody<LoginResponseDto>> alterarEmail(
+            @Valid @RequestBody br.com.nord_tool_backend.form.AlterarEmailForm form) {
+        return ok(authService.alterarEmail(form));
+    }
+
     @PostMapping("/refresh")
     @Operation(summary = "Renova o token (versão de sessão e limite absoluto desde o login)")
     public ResponseEntity<ApiResponseBody<LoginResponseDto>> refresh() {

@@ -31,4 +31,7 @@ public class Usuario extends GlobalDomain {
     private Long idObraSolicitada;
     private String nmObraSolicitada;
     private Long idSuperior;
+    /** Senha resetada pelo admin: entra com a provisória e cria a nova no mesmo login. */
+    private Boolean inTrocarSenha;
+    private LocalDateTime dhSenhaProvisoriaAte;
 }

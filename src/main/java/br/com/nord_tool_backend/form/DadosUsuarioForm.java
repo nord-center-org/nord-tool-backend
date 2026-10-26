@@ -2,6 +2,7 @@ package br.com.nord_tool_backend.form;
 
 import lombok.Data;
 
+import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
@@ -14,6 +15,11 @@ public class DadosUsuarioForm {
 
     @Pattern(regexp = "^$|^[0-9()+\\- ]{8,20}$", message = "Celular inválido")
     private String nrCelular;
+
+    /** Opcional: quando vem e é diferente do atual, troca o e-mail de login. */
+    @Email(message = "E-mail inválido")
+    @Size(max = 150, message = "O e-mail deve ter no máximo 150 caracteres")
+    private String nmEmail;
 
     private Integer idEmpresa;
     private Integer idCargo;

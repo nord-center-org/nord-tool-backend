@@ -53,6 +53,12 @@ public class AcessoWriteController implements BaseResponse {
         return ok(service.salvarDados(id, form));
     }
 
+    @Operation(summary = "Reseta a senha: gera uma provisória (72 h) e a pessoa cria a nova no próximo login")
+    @org.springframework.web.bind.annotation.PostMapping("/{id}/resetar-senha")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.SenhaProvisoriaDto>> resetarSenha(@PathVariable Long id) {
+        return ok(service.resetarSenha(id));
+    }
+
     @Operation(summary = "Vincula um colaborador antigo a um usuário (idUsuario nulo desfaz) e completa o histórico de chaves")
     @PutMapping("/colaboradores-legados/{idUser}")
     public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.ColaboradorLegadoDto>> vincular(@PathVariable Long idUser,

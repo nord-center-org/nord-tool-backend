@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -312,5 +313,106 @@ class AuthServiceImplTest {
         assertThrows(NaoAutenticadoException.class, () -> service.me());
         assertEquals(AuthServiceImpl.MSG_SESSAO_ENCERRADA,
                 assertThrows(NaoAutenticadoException.class, () -> service.alterarSenha(troca(SENHA, "nova-senha-segura-1"))).getMessage());
+    }
+
+    // ---------- senha provisória (reset pelo admin) e troca de e-mail ----------
+
+    private Usuario comProvisoria(String provisoria, LocalDateTime ate) {
+        Usuario u = usuario(true, null, 3);
+        u.setNmSenhaHash(encoder.encode(provisoria));
+        u.setInTrocarSenha(true);
+        u.setDhSenhaProvisoriaAte(ate);
+        return u;
+    }
+
+    private static br.com.nord_tool_backend.form.DefinirSenhaForm definir(String provisoria, String nova) {
+        br.com.nord_tool_backend.form.DefinirSenhaForm f = new br.com.nord_tool_backend.form.DefinirSenhaForm();
+        f.setEmail("admin@nord.com");
+        f.setSenhaProvisoria(provisoria);
+        f.setNovaSenha(nova);
+        return f;
+    }
+
+    @Test
+    void loginComSenhaProvisoriaPedeASenhaNovaSemEntrar() {
+        Usuario provisorio = comProvisoria("ABCDE23456", AGORA_LOCAL.plusHours(1));
+        when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(provisorio));
+
+        br.com.nord_tool_backend.exception.NegocioException e = assertThrows(br.com.nord_tool_backend.exception.NegocioException.class,
+                () -> service.login(form("admin@nord.com", "abcde 23456"), IP));
+
+        assertEquals(AuthServiceImpl.CD_TROCAR_SENHA, e.getCdErro());
+        verify(repository, never()).registrarLoginSucesso(anyLong());
+    }
+
+    @Test
+    void senhaProvisoriaVencidaNaoServe() {
+        Usuario provisorio = comProvisoria("ABCDE23456", AGORA_LOCAL.minusMinutes(1));
+        when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(provisorio));
+
+        br.com.nord_tool_backend.exception.NegocioException e = assertThrows(br.com.nord_tool_backend.exception.NegocioException.class,
+                () -> service.definirSenha(definir("ABCDE23456", "uma-senha-nova-boa"), IP));
+
+        assertEquals(AuthServiceImpl.CD_PROVISORIA_VENCIDA, e.getCdErro());
+        verify(repository, never()).alterarSenha(anyLong(), anyString());
+    }
+
+    @Test
+    void definirSenhaGravaANovaEJaEntra() {
+        Usuario u = comProvisoria("ABCDE23456", AGORA_LOCAL.plusHours(1));
+        when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(u));
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(usuario(true, null, 4)));
+
+        LoginResponseDto r = service.definirSenha(definir("ABCDE23456", "uma-senha-nova-boa"), IP);
+
+        assertNotNull(r.getToken());
+        verify(repository).alterarSenha(eq(1L), argThat(h -> encoder.matches("uma-senha-nova-boa", h)));
+        verify(sessaoService).invalidar(1L);
+        verify(repository).registrarLoginSucesso(1L);
+    }
+
+    @Test
+    void definirSenhaComProvisoriaErradaContaComoFalha() {
+        Usuario provisorio = comProvisoria("ABCDE23456", AGORA_LOCAL.plusHours(1));
+        when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(provisorio));
+        when(repository.incrementarFalhas(1L)).thenReturn(1);
+
+        assertThrows(NaoAutenticadoException.class, () -> service.definirSenha(definir("ERRADA0000", "uma-senha-nova-boa"), IP));
+
+        verify(repository).incrementarFalhas(1L);
+        verify(repository, never()).alterarSenha(anyLong(), anyString());
+    }
+
+    @Test
+    void definirSenhaRecusaQuemNaoFoiResetadoEASenhaIgualAProvisoria() {
+        when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(usuario(true, null, 0)));
+        assertThrows(EntradaInvalidaException.class, () -> service.definirSenha(definir(SENHA, "uma-senha-nova-boa"), IP));
+
+        Usuario provisorio = comProvisoria("ABCDE23456", AGORA_LOCAL.plusHours(1));
+        when(repository.buscarPorEmail("admin@nord.com")).thenReturn(Optional.of(provisorio));
+        assertThrows(EntradaInvalidaException.class, () -> service.definirSenha(definir("ABCDE23456", "abcde-23456"), IP));
+        verify(repository, never()).alterarSenha(anyLong(), anyString());
+    }
+
+    private static br.com.nord_tool_backend.form.AlterarEmailForm novoEmail(String email, String senha) {
+        br.com.nord_tool_backend.form.AlterarEmailForm f = new br.com.nord_tool_backend.form.AlterarEmailForm();
+        f.setNmEmail(email);
+        f.setSenhaAtual(senha);
+        return f;
+    }
+
+    @Test
+    void alterarEmailConfirmaASenhaEConfereSeOEmailEstaLivre() {
+        when(autorizacao.exigirAutenticado()).thenReturn(sessao(0, AGORA));
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(usuario(true, null, 0)));
+
+        assertThrows(EntradaInvalidaException.class, () -> service.alterarEmail(novoEmail("novo@nord.com", "senha-errada-000")));
+        when(repository.emailEmUso("outro@nord.com", 1L)).thenReturn(true);
+        assertThrows(EntradaInvalidaException.class, () -> service.alterarEmail(novoEmail("outro@nord.com", SENHA)));
+        verify(repository, never()).alterarEmail(anyLong(), anyString());
+
+        LoginResponseDto r = service.alterarEmail(novoEmail(" novo@nord.com ", SENHA));
+        verify(repository).alterarEmail(1L, "novo@nord.com");
+        assertNotNull(r.getToken());
     }
 }
