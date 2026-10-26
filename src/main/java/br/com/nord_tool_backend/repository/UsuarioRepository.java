@@ -25,4 +25,7 @@ public interface UsuarioRepository {
     void registrarLoginSucesso(Long id);
     /** Troca o hash e incrementa a versão da sessão (tokens anteriores deixam de valer). */
     void alterarSenha(Long id, String hash);
+    /** Outro usuário (que não o id) já usa este e-mail (sem diferenciar maiúsculas)? */
+    boolean emailEmUso(String email, Long id);
+    void alterarEmail(Long id, String email);
 }

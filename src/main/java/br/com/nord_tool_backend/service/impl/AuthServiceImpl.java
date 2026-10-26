@@ -48,6 +48,11 @@ public class AuthServiceImpl implements AuthService {
     static final String MSG_SESSAO_ENCERRADA = "Sessão encerrada. Faça login novamente.";
     static final String CD_CADASTRO_PENDENTE = "CADASTRO_PENDENTE";
     static final String MSG_CADASTRO_PENDENTE = "Seu cadastro está aguardando a aprovação do administrador da obra.";
+    static final String CD_TROCAR_SENHA = "TROCAR_SENHA";
+    static final String MSG_TROCAR_SENHA = "Sua senha foi redefinida pelo administrador. Crie a sua senha nova para entrar.";
+    static final String CD_PROVISORIA_VENCIDA = "SENHA_PROVISORIA_VENCIDA";
+    static final String MSG_PROVISORIA_VENCIDA = "A senha provisória venceu. Peça ao administrador uma nova.";
+    static final int MAX_TENTATIVAS_EMAIL_CONTA = 5;
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -67,19 +72,78 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class, noRollbackFor = NordException.class)
     public LoginResponseDto login(LoginForm form, String ip) {
-        String email = form.getEmail().trim();
+        Usuario usuario = autenticar(form.getEmail(), form.getSenha(), ip);
+        // Senha resetada pelo admin: a provisória confere, mas antes de entrar a pessoa cria a dela.
+        if (Boolean.TRUE.equals(usuario.getInTrocarSenha())) {
+            exigirProvisoriaValida(usuario);
+            throw new NegocioException(CD_TROCAR_SENHA, MSG_TROCAR_SENHA);
+        }
+        usuarioRepository.registrarLoginSucesso(usuario.getId());
+        Instant instante = clock.instant();
+        return responder(usuario, instante, instante);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NordException.class)
+    public LoginResponseDto definirSenha(br.com.nord_tool_backend.form.DefinirSenhaForm form, String ip) {
+        Usuario usuario = autenticar(form.getEmail(), form.getSenhaProvisoria(), ip);
+        if (!Boolean.TRUE.equals(usuario.getInTrocarSenha())) {
+            throw new EntradaInvalidaException("Esta conta não está aguardando uma senha nova. Entre normalmente.");
+        }
+        exigirProvisoriaValida(usuario);
+        if (normalizarProvisoria(form.getNovaSenha()).equals(normalizarProvisoria(form.getSenhaProvisoria()))) {
+            throw new EntradaInvalidaException("A senha nova deve ser diferente da provisória");
+        }
+        PoliticaSenha.validar(form.getNovaSenha()).ifPresent(motivo -> {
+            throw new EntradaInvalidaException("Senha inválida: " + motivo);
+        });
+        usuarioRepository.alterarSenha(usuario.getId(), passwordEncoder.encode(form.getNovaSenha()));
+        sessaoService.invalidar(usuario.getId());
+        usuarioRepository.registrarLoginSucesso(usuario.getId());
+        Instant instante = clock.instant();
+        return responder(buscarAtivo(usuario.getId()), instante, instante);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LoginResponseDto alterarEmail(br.com.nord_tool_backend.form.AlterarEmailForm form) {
+        UsuarioAutenticado atual = autorizacao.exigirAutenticado();
+        limiteTentativas.registrar("alterar-email:" + atual.getId(), MAX_TENTATIVAS_EMAIL_CONTA);
+        Usuario usuario = buscarAtivo(atual.getId());
+        if (PoliticaSenha.excedeLimiteBcrypt(form.getSenhaAtual())
+                || !passwordEncoder.matches(form.getSenhaAtual(), usuario.getNmSenhaHash())) {
+            throw new EntradaInvalidaException("Senha atual incorreta");
+        }
+        String email = form.getNmEmail().trim();
+        if (!email.equals(usuario.getNmEmail())) {
+            if (usuarioRepository.emailEmUso(email, usuario.getId())) {
+                throw new EntradaInvalidaException("Este e-mail já está em uso por outra pessoa");
+            }
+            usuarioRepository.alterarEmail(usuario.getId(), email);
+        }
+        return responder(buscarAtivo(usuario.getId()), clock.instant(), atual.getInicioSessao());
+    }
+
+    /**
+     * Confere e-mail e senha com as mesmas defesas do login (limites, bloqueio progressivo, mesma mensagem e
+     * mesmo tempo para toda recusa) e devolve o usuário ativo e aprovado.
+     */
+    private Usuario autenticar(String emailBruto, String senha, String ip) {
+        String email = emailBruto.trim();
         limiteTentativas.registrar("ip:" + ip, MAX_TENTATIVAS_IP);
         limiteTentativas.registrar("email:" + email.toLowerCase(Locale.ROOT), MAX_TENTATIVAS_EMAIL);
 
-        Usuario usuario = PoliticaSenha.excedeLimiteBcrypt(form.getSenha())
+        Usuario usuario = PoliticaSenha.excedeLimiteBcrypt(senha)
                 ? null : usuarioRepository.buscarPorEmail(email).orElse(null);
         if (usuario == null) {
-            passwordEncoder.matches(form.getSenha(), hashFalso());
+            passwordEncoder.matches(senha, hashFalso());
             throw credenciaisInvalidas();
         }
 
         LocalDateTime agora = LocalDateTime.now(clock);
-        boolean senhaOk = passwordEncoder.matches(form.getSenha(), usuario.getNmSenhaHash());
+        // A provisória é gerada em maiúsculas: aceita digitada em minúsculas ou com espaços.
+        String conferida = Boolean.TRUE.equals(usuario.getInTrocarSenha()) ? normalizarProvisoria(senha) : senha;
+        boolean senhaOk = passwordEncoder.matches(conferida, usuario.getNmSenhaHash());
         if (usuario.getDhBloqueadoAte() != null && usuario.getDhBloqueadoAte().isAfter(agora)) {
             log.info("Login recusado: conta temporariamente bloqueada ({})", usuario.getId());
             throw credenciaisInvalidas();
@@ -96,10 +160,18 @@ public class AuthServiceImpl implements AuthService {
         if ("PENDENTE".equals(usuario.getCdSituacaoCadastro())) {
             throw new NegocioException(CD_CADASTRO_PENDENTE, MSG_CADASTRO_PENDENTE);
         }
+        return usuario;
+    }
 
-        usuarioRepository.registrarLoginSucesso(usuario.getId());
-        Instant instante = clock.instant();
-        return responder(usuario, instante, instante);
+    private void exigirProvisoriaValida(Usuario usuario) {
+        LocalDateTime ate = usuario.getDhSenhaProvisoriaAte();
+        if (ate != null && !ate.isAfter(LocalDateTime.now(clock))) {
+            throw new NegocioException(CD_PROVISORIA_VENCIDA, MSG_PROVISORIA_VENCIDA);
+        }
+    }
+
+    static String normalizarProvisoria(String senha) {
+        return senha.replaceAll("[\\s-]", "").toUpperCase(Locale.ROOT);
     }
 
     @Override

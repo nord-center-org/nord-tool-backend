@@ -35,6 +35,8 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     private final String qBloquear;
     private final String qRegistrarLogin;
     private final String qAlterarSenha;
+    private final String qEmailEmUso;
+    private final String qAlterarEmail;
 
     public UsuarioRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries) {
         this.jdbc = jdbc;
@@ -51,6 +53,8 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
         this.qBloquear = queries.get("SPU.USUARIO.BLOQUEAR");
         this.qRegistrarLogin = queries.get("SPU.USUARIO.REGISTRAR_LOGIN");
         this.qAlterarSenha = queries.get("SPU.USUARIO.ALTERAR_SENHA");
+        this.qEmailEmUso = queries.get("SPS.USUARIO.EMAIL_EM_USO");
+        this.qAlterarEmail = queries.get("SPU.USUARIO.ALTERAR_EMAIL");
     }
 
     @Override
@@ -132,5 +136,17 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     private Optional<Usuario> buscarUm(String operacao, String sql, MapSqlParameterSource params) {
         return executor.executar(operacao, () ->
                 jdbc.query(sql, params, BeanPropertyRowMapper.newInstance(Usuario.class)).stream().findFirst());
+    }
+
+    @Override
+    public boolean emailEmUso(String email, Long id) {
+        Integer qt = executor.executar("Verificar e-mail", () -> jdbc.queryForObject(qEmailEmUso,
+                new MapSqlParameterSource("email", email).addValue("id", id), Integer.class));
+        return qt != null && qt > 0;
+    }
+
+    @Override
+    public void alterarEmail(Long id, String email) {
+        executor.executar("Alterar e-mail", () -> jdbc.update(qAlterarEmail, new MapSqlParameterSource("id", id).addValue("email", email)));
     }
 }

@@ -12,6 +12,8 @@ public interface AcessoService {
     br.com.nord_tool_backend.dto.AcessoCargoDto salvarAcessosCargo(Integer idCargo, java.util.Map<String, String> acessos);
     AcessoUsuarioDto definirSuperior(Long idUsuario, Long idSuperior);
     AcessoUsuarioDto salvarDados(Long idUsuario, br.com.nord_tool_backend.form.DadosUsuarioForm form);
+    /** Gera uma senha provisória; a pessoa cria a senha nova no próximo login. */
+    br.com.nord_tool_backend.dto.SenhaProvisoriaDto resetarSenha(Long idUsuario);
     java.util.List<br.com.nord_tool_backend.dto.ColaboradorLegadoDto> listarColaboradoresLegados();
     /** Vincula o colaborador antigo ao usuário (null desfaz) e completa o histórico de chaves. */
     br.com.nord_tool_backend.dto.ColaboradorLegadoDto vincularColaborador(Long idUserLegado, Long idUsuario);

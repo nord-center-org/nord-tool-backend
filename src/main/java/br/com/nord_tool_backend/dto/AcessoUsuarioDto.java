@@ -30,11 +30,13 @@ public class AcessoUsuarioDto {
     private Long idSuperior;
     /** O que perfil + cargo dão, sem as exceções do usuário (base para "personalizado"). */
     private Map<String, String> acessosPadrao;
+    /** Senha resetada pelo admin: aguardando a pessoa criar a nova no próximo login. */
+    private boolean inTrocarSenha;
 
     public AcessoUsuarioDto(Long id, String nmNome, String nmEmail, String cdPerfil, boolean inAtivo, LocalDateTime dhUltimoLogin,
                             String nrCelular, Integer idEmpresa, String nmEmpresa, Integer idCargo, String nmCargo,
                             String cdSituacaoCadastro, Long idObraSolicitada, String nmObraSolicitada, Map<String, String> acessos) {
         this(id, nmNome, nmEmail, cdPerfil, inAtivo, dhUltimoLogin, nrCelular, idEmpresa, nmEmpresa, idCargo, nmCargo,
-                cdSituacaoCadastro, idObraSolicitada, nmObraSolicitada, acessos, null, null);
+                cdSituacaoCadastro, idObraSolicitada, nmObraSolicitada, acessos, null, null, false);
     }
 }

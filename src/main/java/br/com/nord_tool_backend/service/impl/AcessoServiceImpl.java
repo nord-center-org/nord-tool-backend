@@ -46,13 +46,25 @@ public class AcessoServiceImpl implements AcessoService {
     private final AutorizacaoService autorizacao;
     private final SessaoService sessao;
     private final br.com.nord_tool_backend.service.EmailService email;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final java.time.Clock clock;
+    private final java.security.SecureRandom aleatorio = new java.security.SecureRandom();
 
+    static final int HORAS_SENHA_PROVISORIA = 72;
+    /** Sem letras e números que se confundem (O/0, I/1, L). */
+    static final String ALFABETO_PROVISORIA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    static final int TAMANHO_PROVISORIA = 10;
+
+    @org.springframework.beans.factory.annotation.Autowired
     public AcessoServiceImpl(AcessoRepository repository, AutorizacaoService autorizacao, SessaoService sessao,
-                             br.com.nord_tool_backend.service.EmailService email) {
+                             br.com.nord_tool_backend.service.EmailService email,
+                             org.springframework.security.crypto.password.PasswordEncoder passwordEncoder, java.time.Clock clock) {
         this.repository = repository;
         this.autorizacao = autorizacao;
         this.sessao = sessao;
         this.email = email;
+        this.passwordEncoder = passwordEncoder;
+        this.clock = clock;
     }
 
     @Override
@@ -128,7 +140,17 @@ public class AcessoServiceImpl implements AcessoService {
         autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
         Usuario u = usuario(idUsuario);
         String celular = form.getNrCelular() == null ? "" : form.getNrCelular().trim();
+        String novoEmail = form.getNmEmail() == null ? "" : form.getNmEmail().trim();
+        boolean trocaEmail = !novoEmail.isEmpty() && !novoEmail.equals(u.getNmEmail());
+        if (trocaEmail && repository.emailEmUso(novoEmail, idUsuario)) {
+            throw new EntradaInvalidaException("Este e-mail já está em uso por outra pessoa");
+        }
         repository.alterarDados(idUsuario, form.getNmNome().trim(), celular.isEmpty() ? null : celular, form.getIdEmpresa(), form.getIdCargo());
+        if (trocaEmail) {
+            // O login passa a ser o e-mail novo; quem estava logado entra de novo com ele.
+            repository.alterarEmail(idUsuario, novoEmail);
+            sessao.invalidar(idUsuario);
+        }
         if (!Objects.equals(u.getIdCargo(), form.getIdCargo())) {
             // O cargo dá acessos: com cargo novo a pessoa entra de novo já com o pacote dele.
             repository.renovarSessao(idUsuario);
@@ -138,6 +160,34 @@ public class AcessoServiceImpl implements AcessoService {
         Map<Long, List<PerfilPermissao>> doPerfil = repository.permissoesPorPerfil();
         Map<Integer, List<PerfilPermissao>> doCargo = repository.permissoesPorCargo();
         return dto(atualizado, efetivas(base(doPerfil, doCargo, atualizado.getIdPerfil(), atualizado.getIdCargo()), repository.excecoesPorUsuario().get(idUsuario)));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public br.com.nord_tool_backend.dto.SenhaProvisoriaDto resetarSenha(Long idUsuario) {
+        UsuarioAutenticado atual = autorizacao.exigir(Modulo.ADMINISTRACAO, Acao.ADMIN);
+        if (idUsuario.equals(atual.getId())) {
+            throw new NegocioException("Para trocar a sua própria senha, use Alterar senha nas Configurações");
+        }
+        Usuario u = usuario(idUsuario);
+        String provisoria = gerarProvisoria();
+        java.time.LocalDateTime ate = java.time.LocalDateTime.now(clock).plusHours(HORAS_SENHA_PROVISORIA);
+        // No banco fica só o hash; a senha antiga para de valer e as sessões abertas caem.
+        repository.definirSenhaProvisoria(idUsuario, passwordEncoder.encode(provisoria), ate);
+        sessao.invalidar(idUsuario);
+        boolean enviado = email.configurado() && email.enviar(u.getNmEmail(), "NordTool: sua senha foi redefinida",
+                "Olá, " + u.getNmNome() + "!\n\n"
+                        + "O administrador redefiniu a sua senha do NordTool.\n\n"
+                        + "Senha provisória: " + provisoria + "\n"
+                        + "Ela vale por " + HORAS_SENHA_PROVISORIA + " horas.\n\n"
+                        + "Entre com o seu e-mail e essa senha provisória: na mesma hora você cria a sua senha nova.\n");
+        return new br.com.nord_tool_backend.dto.SenhaProvisoriaDto(provisoria, ate, enviado);
+    }
+
+    private String gerarProvisoria() {
+        StringBuilder sb = new StringBuilder(TAMANHO_PROVISORIA);
+        for (int i = 0; i < TAMANHO_PROVISORIA; i++) sb.append(ALFABETO_PROVISORIA.charAt(aleatorio.nextInt(ALFABETO_PROVISORIA.length())));
+        return sb.toString();
     }
 
     @Override
@@ -305,6 +355,7 @@ public class AcessoServiceImpl implements AcessoService {
                 u.getIdObraSolicitada(), u.getNmObraSolicitada(), texto(acessos));
         d.setIdSuperior(u.getIdSuperior());
         d.setAcessosPadrao(padrao == null ? null : texto(padrao));
+        d.setInTrocarSenha(Boolean.TRUE.equals(u.getInTrocarSenha()));
         return d;
     }
 }
