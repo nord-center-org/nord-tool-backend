@@ -77,6 +77,20 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
         log.info("Finalizando método que deleta um Cronograma Semanal");
     }
 
+    static final java.util.Set<String> STATUS = java.util.Set.of("pendentes", "executar", "aguardar", "acompanhar", "finalizada");
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CronogramaSemanalDto moverStatus(Long id, String status) {
+        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        String s = status == null ? "" : status.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!STATUS.contains(s)) throw new EntradaInvalidaException("Status inválido: " + status);
+        if (cronogramaSemanalRepository.moverStatus(id, s) == 0) {
+            throw new br.com.nord_tool_backend.exception.NaoEncontradoException("Demanda não encontrada ou fora do seu alcance");
+        }
+        return CronogramaSemanalDto.converterToDto(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id));
+    }
+
     @Override
     public CronogramaSemanalDto buscarPorIdCronogramaSemanal(Long id) {
         autorizacao.exigir(Modulo.CRONOGRAMA, Acao.LEITURA);

@@ -206,6 +206,25 @@ public class CronogramaSemanalServiceImplTest {
     }
 
     @Test
+    void moverStatusValeParaQuemEnxergaOItemEValidaOStatus() {
+        when(cronogramaSemanalRepository.moverStatus(1L, "executar")).thenReturn(1);
+        when(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(1L)).thenReturn(cronogramaSemanal);
+        cronogramaSemanalService.moverStatus(1L, " Executar ");
+        verify(cronogramaSemanalRepository).moverStatus(1L, "executar");
+
+        assertThrows(br.com.nord_tool_backend.exception.EntradaInvalidaException.class, () -> cronogramaSemanalService.moverStatus(1L, "lixo"));
+        when(cronogramaSemanalRepository.moverStatus(2L, "finalizada")).thenReturn(0);
+        assertThrows(br.com.nord_tool_backend.exception.NaoEncontradoException.class, () -> cronogramaSemanalService.moverStatus(2L, "finalizada"));
+    }
+
+    @Test
+    void moverStatusExigeEditarNoCronograma() {
+        when(autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> cronogramaSemanalService.moverStatus(1L, "executar"));
+        verifyNoInteractions(cronogramaSemanalRepository);
+    }
+
+    @Test
     void compartilharExigeOSubacessoDeCompartilhar() {
         when(autorizacao.exigir(Modulo.CRONOGRAMA_COMPARTILHAR, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
         assertThrows(AcessoNegadoException.class, () -> cronogramaSemanalService.compartilhar(1L, Collections.singletonList(8L)));
