@@ -18,6 +18,12 @@ public interface ContextoFaseService {
     /** Fase em que um registro novo entra (cabeçalho X-Fase, sigla do código ou a única fase possível). */
     Long faseParaCriar(String codigoComSigla);
 
+    /**
+     * Obra escolhida (cabeçalho X-Obra), para dados que pertencem à obra inteira e não a uma fase.
+     * Sem obra no cabeçalho, ou obra em que o usuário não participa (o admin participa de todas), recusa.
+     */
+    Long obraEscolhida();
+
     /** Obras e fases que o usuário logado pode escolher. */
     List<ObraDto> minhasObras();
 }
