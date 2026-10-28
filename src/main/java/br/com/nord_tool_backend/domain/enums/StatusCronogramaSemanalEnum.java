@@ -24,7 +24,7 @@ public enum StatusCronogramaSemanalEnum {
     }
 
     public static List<StatusCronogramaSemanalDto> listaStatusCronogramaSemanal() {
-        return Arrays.stream(StatusCronogramaSemanalEnum.values())
+        return Arrays.stream(values())
                 .map(StatusCronogramaSemanalEnum::converterToDto)
                 .collect(Collectors.toList());
     }

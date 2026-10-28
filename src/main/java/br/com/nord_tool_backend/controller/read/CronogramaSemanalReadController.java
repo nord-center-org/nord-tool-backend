@@ -2,7 +2,6 @@ package br.com.nord_tool_backend.controller.read;
 
 import br.com.nord_tool_backend.controller.response.ApiResponseBody;
 import br.com.nord_tool_backend.controller.response.BaseResponse;
-import br.com.nord_tool_backend.dto.ApartamentoVistoriaDto;
 import br.com.nord_tool_backend.dto.CronogramaSemanalDto;
 import br.com.nord_tool_backend.dto.CronogramaSemanalExcecaoDto;
 import br.com.nord_tool_backend.service.CronogramaSemanalService;

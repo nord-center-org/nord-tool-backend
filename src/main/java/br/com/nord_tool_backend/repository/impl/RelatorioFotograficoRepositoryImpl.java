@@ -191,7 +191,7 @@ public class RelatorioFotograficoRepositoryImpl implements RelatorioFotograficoR
     public int alterarImagemModelo(Long idModelo, boolean fundo, Long idArquivo) {
         return executor.executar("Erro ao salvar imagem do modelo", () ->
                 jdbc.update(q(fundo ? "SPU.RELATORIO.MODELO.FUNDO" : "SPU.RELATORIO.MODELO.ICONE"),
-                        new MapSqlParameterSource("id", idModelo).addValue("idArquivo", idArquivo, java.sql.Types.BIGINT)));
+                        new MapSqlParameterSource("id", idModelo).addValue("idArquivo", idArquivo, Types.BIGINT)));
     }
 
     @Override

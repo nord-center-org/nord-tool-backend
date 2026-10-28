@@ -38,6 +38,7 @@ public class JwtServiceImpl implements JwtService {
     static final String TIPO = "at+jwt";
     static final String KID_COMPATIBILIDADE = "padrao";
     static final String KID_EFEMERO = "efemero";
+    private static final SecureRandom ALEATORIO = new SecureRandom();
 
     private final Map<String, SecretKey> chaves;
     private final String kidAtivo;
@@ -57,7 +58,7 @@ public class JwtServiceImpl implements JwtService {
             }
             log.warn("Sem chave JWT configurada: usando chave temporária (só no perfil local; tokens deixam de valer ao reiniciar).");
             byte[] aleatoria = new byte[MIN_SECRET_BYTES];
-            new SecureRandom().nextBytes(aleatoria);
+            ALEATORIO.nextBytes(aleatoria);
             lidas.put(KID_EFEMERO, Keys.hmacShaKeyFor(aleatoria));
         }
         this.chaves = Collections.unmodifiableMap(lidas);

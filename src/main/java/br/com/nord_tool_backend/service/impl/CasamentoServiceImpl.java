@@ -47,7 +47,7 @@ public class CasamentoServiceImpl implements CasamentoService {
     public CasamentoConfiguracaoDto salvarConfiguracao(CasamentoConfiguracaoForm form) {
         autorizacao.exigir(Modulo.CASAMENTO, Acao.ESCRITA);
         try {
-            LocalDate.parse(form.getDataCasamento());
+            LocalDate.parse(form.getDataCasamento()); // NOPMD - só valida o formato da data
         } catch (DateTimeParseException ex) {
             throw new EntradaInvalidaException("Data do casamento inválida");
         }
