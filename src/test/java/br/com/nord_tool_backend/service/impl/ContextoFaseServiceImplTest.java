@@ -2,6 +2,7 @@ package br.com.nord_tool_backend.service.impl;
 
 import br.com.nord_tool_backend.domain.Fase;
 import br.com.nord_tool_backend.domain.Obra;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.repository.ContextoFaseRepository;
 import br.com.nord_tool_backend.security.Acao;
@@ -148,5 +149,23 @@ class ContextoFaseServiceImplTest {
         logado(5, false);
         req.addHeader("X-Obra", "abc");
         assertThrows(EntradaInvalidaException.class, () -> service.escopo());
+    }
+
+    @Test
+    void obraEscolhidaExigeCabecalhoEParticipacao() {
+        logado(5, false);
+        assertThrows(EntradaInvalidaException.class, () -> service.obraEscolhida());
+        req.addHeader("X-Obra", "3");
+        when(repository.fasesDoUsuario(5L, 3L)).thenReturn(Collections.emptyList());
+        assertThrows(AcessoNegadoException.class, () -> service.obraEscolhida());
+        when(repository.fasesDoUsuario(5L, 3L)).thenReturn(Collections.singletonList(fase(30, 3, "T1")));
+        assertEquals(3L, service.obraEscolhida());
+    }
+
+    @Test
+    void adminEscolheQualquerObra() {
+        logado(1, true);
+        req.addHeader("X-Obra", "8");
+        assertEquals(8L, service.obraEscolhida());
     }
 }

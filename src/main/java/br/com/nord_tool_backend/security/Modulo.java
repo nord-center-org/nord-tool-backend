@@ -19,6 +19,8 @@ public enum Modulo {
     MEDICOES,
     RELATORIO_FOTOGRAFICO,
     MAPEAMENTOS,
+    /** Escadinha 3D: torres da obra, apartamentos, lados A/B e ciclos de cada pavimento. */
+    ESCADINHA,
     /** Lugia (chat multi-IA): LEITURA conversa, ESCRITA deixa a IA agir no NordTool, ADMIN libera mudanças de código. */
     LUGIA,
     ADMINISTRACAO;

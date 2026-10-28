@@ -3,6 +3,7 @@ package br.com.nord_tool_backend.service.impl;
 import br.com.nord_tool_backend.domain.Fase;
 import br.com.nord_tool_backend.dto.FaseDto;
 import br.com.nord_tool_backend.dto.ObraDto;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.repository.ContextoFaseRepository;
 import br.com.nord_tool_backend.security.Acao;
@@ -77,6 +78,18 @@ public class ContextoFaseServiceImpl implements ContextoFaseService {
         if (possiveis.size() == 1) return possiveis.get(0).getId();
         if (possiveis.isEmpty()) throw new EntradaInvalidaException("Você ainda não participa de nenhuma fase desta obra");
         throw new EntradaInvalidaException("Escolha a fase antes de salvar");
+    }
+
+    @Override
+    public Long obraEscolhida() {
+        UsuarioAutenticado u = autorizacao.exigirAutenticado();
+        Long obra = cabecalhoLong(CABECALHO_OBRA)
+                .orElseThrow(() -> new EntradaInvalidaException("Escolha a obra no topo da tela"));
+        if (ehAdmin(u) || !repository.existeFase()) return obra;
+        if (repository.fasesDoUsuario(u.getId(), obra).isEmpty()) {
+            throw new AcessoNegadoException("Você não participa desta obra");
+        }
+        return obra;
     }
 
     @Override
