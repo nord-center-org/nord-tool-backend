@@ -23,6 +23,8 @@
         <!-- O SDK da Anthropic (Lugia) exige Kotlin 1.9 e OkHttp 4.12; o Spring Boot 2.7 gerencia versões mais antigas. -->
         <kotlin.version>1.9.25</kotlin.version>
         <okhttp.version>4.12.0</okhttp.version>
+        <!-- Cobertura mínima de linhas dos *ServiceImpl (gate do jacoco:check no mvn verify). -->
+        <cobertura.minima>0.90</cobertura.minima>
     </properties>
 
     <!-- Gerenciamento de dependências para sobresscrever a versão legada com warning -->
@@ -167,6 +169,60 @@
                         <include>**/guard/*GuardTest.java</include>
                     </includes>
                 </configuration>
+            </plugin>
+
+            <!-- Cobertura: mede só os *ServiceImpl (as únicas classes que a política de testes permite testar)
+                 e falha o mvn verify abaixo de 90% de linhas. Relatório em target/site/jacoco. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*ServiceImpl.class</include>
+                                <include>**/*ServiceImpl$*.class</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*ServiceImpl.class</include>
+                                <include>**/*ServiceImpl$*.class</include>
+                            </includes>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>${cobertura.minima}</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Qualidade de código (job "Qualidade de Código" do CI): mvn compile pmd:check spotbugs:check. -->

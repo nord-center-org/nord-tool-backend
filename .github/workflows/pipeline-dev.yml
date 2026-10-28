@@ -41,8 +41,23 @@ jobs:
       - name: Política de testes e convenção de serviços
         run: bash scripts/verificar-politica-testes.sh
 
-      - name: Build e testes (*ServiceImplTest e guardas)
+      # Bloqueante também pela cobertura: abaixo de 90% das linhas dos *ServiceImpl o jacoco:check falha o verify.
+      - name: Build, testes e cobertura (*ServiceImplTest e guardas)
         run: mvn -B clean verify
+
+      - name: Resumo da cobertura
+        if: always()
+        run: |
+          CSV=target/site/jacoco/jacoco.csv
+          [ -f "$CSV" ] || exit 0
+          {
+            echo "## Cobertura dos *ServiceImpl"
+            echo "| Métrica | Cobertura | Mínimo |"
+            echo "|---|---|---|"
+            awk -F, 'NR>1 {lm+=$8; lc+=$9; bm+=$6; bc+=$7} END {
+              printf "| Linhas | %.1f%% | 90%% |\n", 100*lc/(lc+lm)
+              printf "| Branches | %.1f%% | — |\n", 100*bc/(bc+bm) }' "$CSV"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   qualidade:
     name: Qualidade de Código
