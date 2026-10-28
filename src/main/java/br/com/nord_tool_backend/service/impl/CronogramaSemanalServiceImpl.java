@@ -37,6 +37,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
         autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
         log.info("Iniciando método para salvar um Cronograma Semanal");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalForm.converterToDomain();
+        if (Boolean.TRUE.equals(cronogramaSemanal.getInCronogramaFixo())) autorizacao.exigir(Modulo.CRONOGRAMA_ROTINA, Acao.ESCRITA);
         validarOrigemCronogramaSemanal(cronogramaSemanal);
         CronogramaSemanalDto cronogramaSemanalDto = cronogramaSemanalRepository.salvarCronogramaSemanal(cronogramaSemanal);
         log.info("Finalizando método que salva um Cronograma Semanal");
@@ -49,6 +50,11 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
         autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
         log.info("Iniciando método para alterar um Cronograma Semanal");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalForm.converterToDomain();
+        // Mexer numa atividade fixa (ou transformar em fixa) é coisa da rotina.
+        if (Boolean.TRUE.equals(cronogramaSemanal.getInCronogramaFixo()) || (cronogramaSemanal.getId() != null
+                && Boolean.TRUE.equals(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(cronogramaSemanal.getId()).getInCronogramaFixo()))) {
+            autorizacao.exigir(Modulo.CRONOGRAMA_ROTINA, Acao.ESCRITA);
+        }
         validarOrigemCronogramaSemanal(cronogramaSemanal);
         CronogramaSemanalDto cronogramaSemanalDto = cronogramaSemanalRepository.alterarCronogramaSemanal(cronogramaSemanal);
         log.info("Finalizando método que alterar um Cronograma Semanal");
@@ -65,7 +71,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deletarCronogramaSemanal(Long id) {
-        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        autorizacao.exigir(Modulo.CRONOGRAMA_EXCLUIR, Acao.ESCRITA);
         log.info("Iniciando método para deletar um Cronograma Semanal");
         this.cronogramaSemanalRepository.deletarCronogramaSemanal(id);
         log.info("Finalizando método que deleta um Cronograma Semanal");
@@ -100,7 +106,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void incluirExcecao(Long id, LocalDate data) {
-        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        autorizacao.exigir(Modulo.CRONOGRAMA_ROTINA, Acao.ESCRITA);
         CronogramaSemanal item = cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id);
         exigirDono(item);
         if (!Boolean.TRUE.equals(item.getInCronogramaFixo())) {
@@ -112,7 +118,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void removerExcecao(Long id, LocalDate data) {
-        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        autorizacao.exigir(Modulo.CRONOGRAMA_ROTINA, Acao.ESCRITA);
         exigirDono(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id));
         cronogramaSemanalRepository.removerExcecao(id, data);
     }
@@ -122,7 +128,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CronogramaSemanalDto compartilhar(Long id, List<Long> idsUsuarios) {
-        br.com.nord_tool_backend.security.UsuarioAutenticado u = autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        br.com.nord_tool_backend.security.UsuarioAutenticado u = autorizacao.exigir(Modulo.CRONOGRAMA_COMPARTILHAR, Acao.ESCRITA);
         CronogramaSemanal item = cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id);
         exigirDono(item);
         java.util.LinkedHashSet<Long> destinos = new java.util.LinkedHashSet<>();

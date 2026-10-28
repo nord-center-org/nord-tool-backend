@@ -35,8 +35,21 @@ class CargoServiceImplTest {
 
 
 
+    @Mock
+    private br.com.nord_tool_backend.repository.AcessoRepository acessoRepository;
+
     @InjectMocks
     private CargoServiceImpl cargoService;
+
+    @Test
+    void cargoDeEstagiarioNasceSemExcluirDemandas() {
+        CargoForm form = CargoForm.builder().nmCargo("Estagiário de Engenharia").build();
+        when(cargoRepository.salvarCargo(Cargo.builder().nmCargo("Estagiário de Engenharia").build()))
+                .thenReturn(Cargo.builder().id(8L).nmCargo("Estagiário de Engenharia").build());
+        cargoService.salvarCargo(form);
+        verify(acessoRepository).substituirAcessosCargo(8, Collections.singletonList(
+                new br.com.nord_tool_backend.domain.PerfilPermissao("CRONOGRAMA_EXCLUIR", "NENHUM")));
+    }
 
     @Test
     void deveListarCargosConvertidosParaDto() {
@@ -56,6 +69,7 @@ class CargoServiceImplTest {
 
         assertEquals(CargoDto.builder().id(7L).nmCargo("Analista").build(), cargoService.salvarCargo(form));
         verify(cargoRepository).salvarCargo(Cargo.builder().nmCargo("Analista").build());
+        verifyNoInteractions(acessoRepository);
     }
 
     @Test

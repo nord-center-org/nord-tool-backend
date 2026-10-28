@@ -85,7 +85,7 @@ public class AcessoServiceImpl implements AcessoService {
         List<String> modulos = Stream.of(Modulo.values()).map(Modulo::name).collect(Collectors.toList());
         List<br.com.nord_tool_backend.dto.AcessoCargoDto> cargos = repository.listarCargos().stream()
                 .map(c -> new br.com.nord_tool_backend.dto.AcessoCargoDto(c.getId().intValue(), c.getNmCargo(),
-                        texto(efetivas(doCargo.getOrDefault(c.getId().intValue(), Collections.emptyList()), null))))
+                        acessosDoCargo(doCargo.getOrDefault(c.getId().intValue(), Collections.emptyList()))))
                 .collect(Collectors.toList());
         return new AcessosDto(usuarios, perfis, modulos, cargos);
     }
@@ -104,7 +104,7 @@ public class AcessoServiceImpl implements AcessoService {
         Map<Long, List<PerfilPermissao>> doPerfil = repository.permissoesPorPerfil();
         Map<Integer, List<PerfilPermissao>> doCargo = repository.permissoesPorCargo();
         Map<Modulo, Acao> doNovoPerfil = efetivas(base(doPerfil, doCargo, perfil.getIdPerfil(), alvo.getIdCargo()), null);
-        List<PerfilPermissao> excecoes = excecoes(form.getAcessos(), doNovoPerfil);
+        List<PerfilPermissao> excecoes = excecoes(form.getAcessos(), doNovoPerfil, base(doPerfil, doCargo, perfil.getIdPerfil(), alvo.getIdCargo()));
         Map<Modulo, Acao> novas = efetivas(base(doPerfil, doCargo, perfil.getIdPerfil(), alvo.getIdCargo()), excecoes);
         boolean ativo = Boolean.TRUE.equals(form.getInAtivo());
 
@@ -250,13 +250,14 @@ public class AcessoServiceImpl implements AcessoService {
         for (Map.Entry<String, String> e : acessos.entrySet()) {
             Modulo modulo = Modulo.de(e.getKey()).orElseThrow(() -> new EntradaInvalidaException("Módulo inválido: " + e.getKey()));
             Acao acao = acaoValida(e.getValue());
-            if (acao != Acao.NENHUM) lista.add(new PerfilPermissao(modulo.name(), acao.name()));
+            // Subacesso no cargo só bloqueia (NENHUM); liberado = herda o módulo, sem linha.
+            if (modulo.subacesso() ? acao == Acao.NENHUM : acao != Acao.NENHUM) lista.add(new PerfilPermissao(modulo.name(), acao.name()));
         }
         lista.sort((a, b) -> a.getCdModulo().compareTo(b.getCdModulo()));
         repository.substituirAcessosCargo(idCargo, lista);
         // Quem tem o cargo entra de novo já com o pacote novo.
         for (Long id : repository.renovarSessoesDoCargo(idCargo)) sessao.invalidar(id);
-        return new br.com.nord_tool_backend.dto.AcessoCargoDto(idCargo, cargo.getNmCargo(), texto(efetivas(lista, null)));
+        return new br.com.nord_tool_backend.dto.AcessoCargoDto(idCargo, cargo.getNmCargo(), acessosDoCargo(lista));
     }
 
     @Override
@@ -290,14 +291,23 @@ public class AcessoServiceImpl implements AcessoService {
 
     // ---------- apoio ----------
 
-    /** Só o que difere do perfil vira exceção. Módulo ausente no formulário mantém o nível do perfil. */
-    private static List<PerfilPermissao> excecoes(Map<String, String> desejado, Map<Modulo, Acao> doPerfil) {
+    /**
+     * Só o que difere do perfil vira exceção. Módulo ausente no formulário mantém o nível do perfil.
+     * Subacesso: compara liberado/bloqueado com o bloqueio do padrão (linhas NENHUM do cargo ou perfil).
+     */
+    private static List<PerfilPermissao> excecoes(Map<String, String> desejado, Map<Modulo, Acao> doPerfil, List<PerfilPermissao> basePadrao) {
         List<PerfilPermissao> lista = new ArrayList<>();
         for (Map.Entry<String, String> e : desejado.entrySet()) {
             Modulo modulo = Modulo.de(e.getKey())
                     .orElseThrow(() -> new EntradaInvalidaException("Módulo inválido: " + e.getKey()));
             Acao acao = acaoValida(e.getValue());
-            if (acao != doPerfil.getOrDefault(modulo, Acao.NENHUM)) {
+            if (modulo.subacesso()) {
+                // Subacesso: só importa se está liberado ou bloqueado (o nível vem do módulo).
+                boolean quer = acao != Acao.NENHUM;
+                boolean liberadoNoPadrao = basePadrao.stream().noneMatch(l -> modulo.name().equalsIgnoreCase(l.getCdModulo())
+                        && Acao.de(l.getCdAcao()) == Acao.NENHUM);
+                if (quer != liberadoNoPadrao) lista.add(new PerfilPermissao(modulo.name(), quer ? Acao.ESCRITA.name() : Acao.NENHUM.name()));
+            } else if (acao != doPerfil.getOrDefault(modulo, Acao.NENHUM)) {
                 lista.add(new PerfilPermissao(modulo.name(), acao.name()));
             }
         }
@@ -335,6 +345,17 @@ public class AcessoServiceImpl implements AcessoService {
 
     private static boolean ehAdmin(Map<Modulo, Acao> acessos) {
         return acessos.getOrDefault(Modulo.ADMINISTRACAO, Acao.NENHUM).atende(Acao.ADMIN);
+    }
+
+    /** Acessos do cargo: níveis dos módulos e, dos subacessos, só os bloqueados (NENHUM); os ausentes herdam. */
+    private static Map<String, String> acessosDoCargo(List<PerfilPermissao> linhas) {
+        Map<String, String> m = new LinkedHashMap<>();
+        efetivas(linhas, null).forEach((k, v) -> { if (!k.subacesso()) m.put(k.name(), v.name()); });
+        for (PerfilPermissao l : linhas) {
+            Modulo.de(l.getCdModulo()).filter(Modulo::subacesso)
+                    .filter(x -> Acao.de(l.getCdAcao()) == Acao.NENHUM).ifPresent(x -> m.put(x.name(), Acao.NENHUM.name()));
+        }
+        return m;
     }
 
     private static Map<String, String> texto(Map<Modulo, Acao> acessos) {
