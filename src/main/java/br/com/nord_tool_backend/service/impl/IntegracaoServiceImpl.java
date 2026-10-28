@@ -84,7 +84,7 @@ public class IntegracaoServiceImpl implements IntegracaoService {
 
     @Override
     public IntegracaoTokenDto criarToken(IntegracaoTokenForm form) {
-        UsuarioAutenticado u = autorizacao.exigir(Modulo.CRONOGRAMA, Acao.LEITURA);
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.CRONOGRAMA_RELATORIO_IA, Acao.LEITURA);
         String rotulo = form.getNmRotulo() == null ? "" : form.getNmRotulo().trim();
         if (rotulo.isEmpty()) throw new EntradaInvalidaException("Dê um nome ao link (ex.: Gemini)");
         if (repository.contarAtivos(u.getId()) >= MAX_LINKS) {
@@ -116,7 +116,7 @@ public class IntegracaoServiceImpl implements IntegracaoService {
         Usuario dono = usuarios.buscarPorId(token.getIdUsuario()).orElseThrow(IntegracaoServiceImpl::naoEncontrado);
         Map<Modulo, Acao> permissoes = permissoes(dono);
         if (!Boolean.TRUE.equals(dono.getInAtivo()) || !"APROVADO".equals(dono.getCdSituacaoCadastro())
-                || !permissoes.getOrDefault(Modulo.CRONOGRAMA, Acao.NENHUM).atende(Acao.LEITURA)) {
+                || !permissoes.getOrDefault(Modulo.CRONOGRAMA_RELATORIO_IA, Acao.NENHUM).atende(Acao.LEITURA)) {
             throw naoEncontrado();
         }
         boolean verSemDono = permissoes.getOrDefault(Modulo.CRONOGRAMA, Acao.NENHUM).atende(Acao.ADMIN);
@@ -159,7 +159,7 @@ public class IntegracaoServiceImpl implements IntegracaoService {
         List<ItemDto> doDia = new ArrayList<>();
         for (CronogramaSemanal c : itens) {
             if (Boolean.TRUE.equals(c.getInCronogramaFixo())) {
-                if (c.getIdDiaSemana() != null && c.getIdDiaSemana() == diaSemana && !ignorados.contains(c.getId() + "|" + chave)) {
+                if (diaDaSemana(c.getIdDiaSemana()) == diaSemana && !ignorados.contains(c.getId() + "|" + chave)) {
                     doDia.add(item(c, "fixo", c.getNmHorario()));
                 }
             } else if (c.getDtAgendamento() != null && c.getDtAgendamento().toLocalDate().equals(data)) {
@@ -170,6 +170,13 @@ public class IntegracaoServiceImpl implements IntegracaoService {
         }
         doDia.sort(Comparator.comparing(i -> i.getHorario() == null || i.getHorario().isEmpty() ? "99" : i.getHorario()));
         return new DiaDto(data.format(DATA), DIAS[diaSemana - 1], doDia);
+    }
+
+    /** dia_semana do banco → DayOfWeek (1 = segunda … 7 = domingo): 1-5 iguais, 7 = sábado; 6 é "Sem agendamento". */
+    static int diaDaSemana(Integer idDiaSemana) {
+        if (idDiaSemana == null) return 0;
+        if (idDiaSemana >= 1 && idDiaSemana <= 5) return idDiaSemana;
+        return idDiaSemana == 7 ? 6 : 0;
     }
 
     private static ItemDto item(CronogramaSemanal c, String tipo, String horario) {

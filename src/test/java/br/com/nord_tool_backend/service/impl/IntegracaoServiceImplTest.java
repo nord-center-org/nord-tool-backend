@@ -230,4 +230,16 @@ class IntegracaoServiceImplTest {
         assertEquals(IntegracaoServiceImpl.MAX_DIAS - 1, r.getProximosDias().size());
         assertEquals(0, service.relatorioCronograma(CHAVE, -3).getProximosDias().size());
     }
+
+    @Test
+    void sabadoDoBancoEhOId7ESemAgendamentoNaoApareceNaSemana() {
+        // 31/10/2026 é sábado; 01/11 é domingo.
+        when(repository.cronogramaDoUsuario(9L, false)).thenReturn(Arrays.asList(fixo(1L, 7, "08:00", "Feira"), fixo(2L, 6, "", "Sem dia")));
+        RelatorioCronogramaDto r = service.relatorioCronograma(CHAVE, 5);
+        RelatorioCronogramaDto.DiaDto sabado = r.getProximosDias().get(2);
+        assertEquals("sábado", sabado.getDiaSemana());
+        assertEquals("Feira", sabado.getItens().get(0).getTitulo());
+        assertTrue(r.getProximosDias().get(3).getItens().isEmpty(), "domingo");
+        assertTrue(r.getProximosDias().stream().allMatch(d -> d.getItens().stream().noneMatch(i -> i.getTitulo().equals("Sem dia"))));
+    }
 }

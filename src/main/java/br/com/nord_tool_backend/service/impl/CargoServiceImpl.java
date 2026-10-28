@@ -15,9 +15,15 @@ import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor
 public class CargoServiceImpl implements CargoService {
-    private final CargoRepository cargoRepository;
+    private final CargoRepository cargoRepository;
+
 
     private final AutorizacaoService autorizacao;
+
+    private final br.com.nord_tool_backend.repository.AcessoRepository acessoRepository;
+
+    /** Cargo de estagiário já nasce sem poder excluir demandas do cronograma (dá para liberar na tela de Acessos). */
+    private static final java.util.regex.Pattern ESTAGIARIO = java.util.regex.Pattern.compile("estagi|trainee", java.util.regex.Pattern.CASE_INSENSITIVE);
 
     public List<CargoDto> listarCargos() {
         autorizacao.exigirAutenticado();
@@ -29,7 +35,12 @@ public class CargoServiceImpl implements CargoService {
     @Transactional(rollbackFor = Exception.class)
     public CargoDto salvarCargo(CargoForm cargoForm) {
         autorizacao.exigir(Modulo.CADASTROS, Acao.ESCRITA);
-        return CargoDto.converterToDto(cargoRepository.salvarCargo(cargoForm.converterToDomain(null)));
+        br.com.nord_tool_backend.domain.Cargo cargo = cargoRepository.salvarCargo(cargoForm.converterToDomain(null));
+        if (cargo.getId() != null && cargo.getNmCargo() != null && ESTAGIARIO.matcher(cargo.getNmCargo()).find()) {
+            acessoRepository.substituirAcessosCargo(cargo.getId().intValue(), java.util.Collections.singletonList(
+                    new br.com.nord_tool_backend.domain.PerfilPermissao(Modulo.CRONOGRAMA_EXCLUIR.name(), Acao.NENHUM.name())));
+        }
+        return CargoDto.converterToDto(cargo);
     }
 
     @Override

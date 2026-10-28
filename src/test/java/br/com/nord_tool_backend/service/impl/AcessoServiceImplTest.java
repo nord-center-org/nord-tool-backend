@@ -369,4 +369,60 @@ class AcessoServiceImplTest {
         assertFalse(service.resetarSenha(20L).isEmailEnviado());
         verify(email, never()).enviar(any(), any(), any());
     }
+
+    @Test
+    void subacessoHerdaOModuloEOCargoPodeBloquear() {
+        usuarios.get(1).setIdCargo(4);
+        Map<Integer, List<PerfilPermissao>> doCargo = new HashMap<>();
+        doCargo.put(4, Arrays.asList(new PerfilPermissao("CRONOGRAMA", "ESCRITA"), new PerfilPermissao("CRONOGRAMA_EXCLUIR", "NENHUM")));
+        when(repository.permissoesPorCargo()).thenReturn(doCargo);
+        br.com.nord_tool_backend.domain.Cargo c = new br.com.nord_tool_backend.domain.Cargo();
+        c.setId(4L);
+        c.setNmCargo("Estagiário");
+        when(repository.listarCargos()).thenReturn(Collections.singletonList(c));
+
+        AcessosDto dto = service.listar();
+        Map<String, String> ana = dto.getUsuarios().get(1).getAcessos();
+        assertEquals("ESCRITA", ana.get("CRONOGRAMA_ROTINA"));
+        assertEquals("ESCRITA", ana.get("CRONOGRAMA_RELATORIO_IA"));
+        assertFalse(ana.containsKey("CRONOGRAMA_EXCLUIR"));
+        // O admin (curinga) tem todos os subacessos; o cargo mostra só o bloqueio.
+        assertEquals("ADMIN", dto.getUsuarios().get(0).getAcessos().get("CRONOGRAMA_EXCLUIR"));
+        assertEquals("NENHUM", dto.getCargos().get(0).getAcessos().get("CRONOGRAMA_EXCLUIR"));
+        assertFalse(dto.getCargos().get(0).getAcessos().containsKey("CRONOGRAMA_ROTINA"));
+        assertTrue(dto.getModulos().contains("CRONOGRAMA_EXCLUIR"));
+
+        // Liberar para esta pessoa vira exceção; manter igual ao cargo não.
+        service.salvar(20L, form("USER", true, "CRONOGRAMA", "ESCRITA", "CRONOGRAMA_EXCLUIR", "NENHUM", "CRONOGRAMA_ROTINA", "ESCRITA"));
+        verify(repository, never()).substituirExcecoes(anyLong(), any());
+        service.salvar(20L, form("USER", true, "CRONOGRAMA", "ESCRITA", "CRONOGRAMA_EXCLUIR", "ESCRITA", "CRONOGRAMA_COMPARTILHAR", "NENHUM"));
+        verify(repository).substituirExcecoes(20L, Arrays.asList(
+                new PerfilPermissao("CRONOGRAMA_COMPARTILHAR", "NENHUM"), new PerfilPermissao("CRONOGRAMA_EXCLUIR", "ESCRITA")));
+    }
+
+    @Test
+    void subacessoNaoValeSemONivelMinimoDoModulo() {
+        excecoes.put(20L, Arrays.asList(new PerfilPermissao("CRONOGRAMA", "LEITURA"), new PerfilPermissao("CRONOGRAMA_EXCLUIR", "ESCRITA")));
+        Map<String, String> ana = service.listar().getUsuarios().get(1).getAcessos();
+        assertEquals("LEITURA", ana.get("CRONOGRAMA_RELATORIO_IA"));
+        assertFalse(ana.containsKey("CRONOGRAMA_EXCLUIR"), "excluir exige Editar no cronograma");
+        assertFalse(ana.containsKey("CRONOGRAMA_ROTINA"));
+    }
+
+    @Test
+    void cargoGuardaDoSubacessoSoOBloqueio() {
+        br.com.nord_tool_backend.domain.Cargo c = new br.com.nord_tool_backend.domain.Cargo();
+        c.setId(4L);
+        c.setNmCargo("Estagiário");
+        when(repository.listarCargos()).thenReturn(Collections.singletonList(c));
+        Map<String, String> acessos = new HashMap<>();
+        acessos.put("CRONOGRAMA", "ESCRITA");
+        acessos.put("CRONOGRAMA_EXCLUIR", "NENHUM");
+        acessos.put("CRONOGRAMA_ROTINA", "ESCRITA");
+        Map<String, String> salvo = service.salvarAcessosCargo(4, acessos).getAcessos();
+        verify(repository).substituirAcessosCargo(4, Arrays.asList(
+                new PerfilPermissao("CRONOGRAMA", "ESCRITA"), new PerfilPermissao("CRONOGRAMA_EXCLUIR", "NENHUM")));
+        assertEquals("NENHUM", salvo.get("CRONOGRAMA_EXCLUIR"));
+        assertFalse(salvo.containsKey("CRONOGRAMA_ROTINA"));
+    }
 }

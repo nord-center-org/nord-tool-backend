@@ -27,6 +27,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 import br.com.nord_tool_backend.security.Modulo;
@@ -173,7 +174,41 @@ public class CronogramaSemanalServiceImplTest {
     @Test
     void semPermissaoDeEscritaDoModuloNaoAlteraODado() {
         when(autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> cronogramaSemanalService.salvarCronogramaSemanal(new CronogramaSemanalForm()));
+        verifyNoInteractions(cronogramaSemanalRepository);
+    }
+
+    @Test
+    void excluirExigeOSubacessoDeExcluir() {
+        when(autorizacao.exigir(Modulo.CRONOGRAMA_EXCLUIR, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
         assertThrows(AcessoNegadoException.class, () -> cronogramaSemanalService.deletarCronogramaSemanal(1L));
+        verifyNoInteractions(cronogramaSemanalRepository);
+    }
+
+    @Test
+    void atividadeFixaExigeOSubacessoDaRotina() {
+        lenient().when(autorizacao.exigir(Modulo.CRONOGRAMA_ROTINA, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        CronogramaSemanalForm fixa = new CronogramaSemanalForm();
+        fixa.setFlFixo(true);
+        fixa.setIdDiaSemana(2);
+        assertThrows(AcessoNegadoException.class, () -> cronogramaSemanalService.salvarCronogramaSemanal(fixa));
+        assertThrows(AcessoNegadoException.class, () -> cronogramaSemanalService.incluirExcecao(1L, LocalDate.of(2026, 10, 21)));
+        // Alterar uma demanda que já era fixa também é rotina.
+        CronogramaSemanal existente = new CronogramaSemanal();
+        existente.setInCronogramaFixo(true);
+        when(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(5L)).thenReturn(existente);
+        CronogramaSemanalForm virouAvulsa = new CronogramaSemanalForm();
+        virouAvulsa.setIdCronogramaSemanal(5L);
+        virouAvulsa.setFlFixo(false);
+        assertThrows(AcessoNegadoException.class, () -> cronogramaSemanalService.alterarCronogramaSemanal(virouAvulsa));
+        verify(cronogramaSemanalRepository, never()).salvarCronogramaSemanal(any());
+        verify(cronogramaSemanalRepository, never()).alterarCronogramaSemanal(any());
+    }
+
+    @Test
+    void compartilharExigeOSubacessoDeCompartilhar() {
+        when(autorizacao.exigir(Modulo.CRONOGRAMA_COMPARTILHAR, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("Acesso negado"));
+        assertThrows(AcessoNegadoException.class, () -> cronogramaSemanalService.compartilhar(1L, Collections.singletonList(8L)));
         verifyNoInteractions(cronogramaSemanalRepository);
     }
 
