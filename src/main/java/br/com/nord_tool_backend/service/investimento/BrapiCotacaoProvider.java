@@ -58,7 +58,7 @@ public class BrapiCotacaoProvider implements CotacaoProvider {
         if (!hora.isEmpty()) {
             try {
                 momento = Instant.parse(hora);
-            } catch (Exception ignorado) {
+            } catch (Exception ignored) {
                 // hora fora do padrão: vale o momento da consulta
             }
         }

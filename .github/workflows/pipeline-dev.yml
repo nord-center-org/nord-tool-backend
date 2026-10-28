@@ -1,24 +1,27 @@
-name: CI - Build, Test & Deploy
+name: Pipeline
 
+# Roda só no merge em develop (e manualmente). Etapas:
+#   Build & Testes ─┬─► Container Image ─┐
+#   Qualidade ──────┤                    ├─► Resumo de Alertas ─► CD (Railway)
+#   Secret Scanning ┤                    │
+#   Vulnerabilidades┴────────────────────┘
 on:
-  pull_request:
-    branches:
-      - develop
-      - master
   push:
     branches:
       - develop
-      - master
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# Não cancela um run em andamento: ele pode estar no meio do deploy.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
+    name: Build & Testes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout código
@@ -34,10 +37,29 @@ jobs:
       - name: Política de testes e convenção de serviços
         run: bash scripts/verificar-politica-testes.sh
 
-      - name: Build e testes
+      - name: Build e testes (*ServiceImplTest e guardas)
         run: mvn -B clean verify
 
+  qualidade:
+    name: Qualidade de Código
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configurar Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: maven
+
+      # Bloqueante: qualquer apontamento do PMD ou do SpotBugs (prioridade alta) para o pipeline.
+      - name: PMD e SpotBugs
+        run: mvn -B compile pmd:check spotbugs:check
+
   segredos:
+    name: Secret Scanning
     runs-on: ubuntu-latest
     steps:
       - name: Checkout código
@@ -45,25 +67,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Bloqueante: analisa os commits novos (do PR ou do push), não o histórico inteiro.
+      # Bloqueante: analisa só os commits novos do push, não o histórico inteiro.
       - name: Gitleaks
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE: ${{ github.event.before }}
+          HEAD: ${{ github.sha }}
         run: |
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then RANGE="$HEAD~1..$HEAD"; else RANGE="$BASE..$HEAD"; fi
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" \
             zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
             detect --source /repo --log-opts="$RANGE" --redact --no-banner
 
-  dependencias:
+  vulnerabilidades:
+    name: Análise de Vulnerabilidades
     runs-on: ubuntu-latest
+    outputs:
+      resultado: ${{ steps.osv.outcome }}
     steps:
       - name: Checkout código
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Só relatório: a linha Spring Boot 2.7 (fixada no AGENTS.md) tem CVEs conhecidas sem correção nela.
+      # Só alerta: a linha Spring Boot 2.7 (fixada no AGENTS.md) tem CVEs conhecidas sem correção nela.
       - name: OSV-Scanner (pom.xml)
+        id: osv
         uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
         continue-on-error: true
         with:
@@ -71,7 +97,11 @@ jobs:
             --lockfile=pom.xml
 
   imagem:
+    name: Container Image
+    needs: build
     runs-on: ubuntu-latest
+    outputs:
+      resultado: ${{ steps.trivy.outcome }}
     steps:
       - name: Checkout código
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -79,32 +109,65 @@ jobs:
       - name: Build da imagem
         run: docker build -t nord-tool-backend:ci .
 
-      # Só relatório pelo mesmo motivo do OSV; mostra vulnerabilidades altas e críticas da imagem.
+      # Só alerta pelo mesmo motivo do OSV; mostra vulnerabilidades altas e críticas da imagem.
       - name: Trivy (imagem)
+        id: trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        continue-on-error: true
         with:
           image-ref: nord-tool-backend:ci
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: '0'
+          exit-code: '1'
           format: table
 
-  # Só publica no Railway depois do build, da política de testes, dos *ServiceImplTest e do Gitleaks.
-  # Exige o auto-deploy do GitHub desligado no serviço do Railway, senão ele publica sem esperar o CI.
-  deploy:
-    # Por enquanto só existe o ambiente develop no Railway; master entra quando houver produção lá.
-    if: github.event_name == 'push' && github.ref_name == 'develop'
-    needs: [build, segredos]
+  alertas:
+    name: Resumo de Alertas
+    if: always()
+    needs: [build, qualidade, segredos, vulnerabilidades, imagem]
+    runs-on: ubuntu-latest
+    steps:
+      # Falha se uma etapa bloqueante falhou; vulnerabilidades (OSV/Trivy) só aparecem como alerta.
+      - name: Resumo
+        env:
+          BUILD: ${{ needs.build.result }}
+          QUALIDADE: ${{ needs.qualidade.result }}
+          SEGREDOS: ${{ needs.segredos.result }}
+          IMAGEM: ${{ needs.imagem.result }}
+          OSV: ${{ needs.vulnerabilidades.outputs.resultado }}
+          TRIVY: ${{ needs.imagem.outputs.resultado }}
+        run: |
+          icone() { case "$1" in success) echo "✅";; failure) echo "❌";; *) echo "⚪ $1";; esac; }
+          alerta() { case "$1" in success) echo "✅ nenhuma";; failure) echo "⚠️ encontradas (ver log)";; *) echo "⚪ não rodou";; esac; }
+          {
+            echo "## Resumo do pipeline"
+            echo "| Etapa | Resultado | Bloqueia deploy |"
+            echo "|---|---|---|"
+            echo "| Build & Testes | $(icone "$BUILD") | sim |"
+            echo "| Qualidade de Código (PMD/SpotBugs) | $(icone "$QUALIDADE") | sim |"
+            echo "| Secret Scanning (Gitleaks) | $(icone "$SEGREDOS") | sim |"
+            echo "| Container Image | $(icone "$IMAGEM") | sim |"
+            echo "| Vulnerabilidades de dependências (OSV) | $(alerta "$OSV") | não |"
+            echo "| Vulnerabilidades da imagem (Trivy) | $(alerta "$TRIVY") | não |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "$OSV" = "failure" ] && echo "::warning::OSV-Scanner encontrou vulnerabilidades nas dependências."
+          [ "$TRIVY" = "failure" ] && echo "::warning::Trivy encontrou vulnerabilidades altas/críticas na imagem."
+          for r in "$BUILD" "$QUALIDADE" "$SEGREDOS" "$IMAGEM"; do
+            if [ "$r" != "success" ]; then echo "::error::Etapa bloqueante falhou; deploy cancelado."; exit 1; fi
+          done
+
+  # Exige o auto-deploy do GitHub desligado no serviço do Railway, senão ele publica sem esperar o pipeline.
+  cd:
+    name: CD (Railway)
+    needs: alertas
+    if: github.ref_name == 'develop'
     runs-on: ubuntu-latest
     environment: develop
-    concurrency:
-      group: deploy-develop
-      cancel-in-progress: false
     steps:
       - name: Checkout código
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # RAILWAY_TOKEN é um Project Token do ambiente correspondente; RAILWAY_SERVICE é o nome do serviço.
+      # RAILWAY_TOKEN é um Project Token do ambiente develop; RAILWAY_SERVICE é o nome do serviço.
       - name: Deploy no Railway
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

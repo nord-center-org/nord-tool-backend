@@ -114,7 +114,7 @@ public class CronogramaSemanalRepositoryImpl implements CronogramaSemanalReposit
     }
 
     @Override
-    public void compartilhar(Long id, java.util.List<Long> idsUsuarios) {
+    public void compartilhar(Long id, List<Long> idsUsuarios) {
         executor.executar("Compartilhar item do cronograma", () -> {
             jdbc.update(qLimparCompartilhamento, new MapSqlParameterSource("id", id));
             for (Long destino : idsUsuarios) {

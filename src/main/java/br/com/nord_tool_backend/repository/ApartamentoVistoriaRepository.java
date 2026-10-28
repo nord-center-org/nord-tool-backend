@@ -6,7 +6,6 @@ import br.com.nord_tool_backend.domain.OrdenacaoApartamentoVistoria;
 import br.com.nord_tool_backend.dto.ApartamentoVistoriaDto;
 import br.com.nord_tool_backend.dto.ApartamentoVistoriaFiltroDto;
 
-import java.time.LocalDate;
 import java.util.List;
 
 public interface ApartamentoVistoriaRepository {

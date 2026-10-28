@@ -26,7 +26,7 @@ public enum CategoriaEnum {
     }
 
     public static List<CategoriaDto> listarCategoria() {
-        return Arrays.stream(CategoriaEnum.values())
+        return Arrays.stream(values())
                 .map(CategoriaEnum::converterToDto)
                 .collect(Collectors.toList());
     }

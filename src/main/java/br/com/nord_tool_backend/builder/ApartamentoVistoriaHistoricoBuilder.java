@@ -14,7 +14,7 @@ public class ApartamentoVistoriaHistoricoBuilder {
                                                               ApartamentoVistoria apartamentoVistoriaAtual, List<Integer> lsNrVersaoHistorico) {
 
         List<ApartamentoVistoriaHistoricoCustom> lsApVistoriaAlterado =
-                ApartamentoVistoriaHistoricoBuilder.comparar(apartamentoVistoriaAnterior, apartamentoVistoriaAtual);
+                comparar(apartamentoVistoriaAnterior, apartamentoVistoriaAtual);
 
         List<ApartamentoVistoriaHistorico> lsApVistoriaHistorico = lsApVistoriaAlterado.stream()
                 .map(alterado -> criarHistorico(

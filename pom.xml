@@ -168,6 +168,26 @@
                     </includes>
                 </configuration>
             </plugin>
+
+            <!-- Qualidade de código (job "Qualidade de Código" do CI): mvn compile pmd:check spotbugs:check. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>3.26.0</version>
+                <configuration>
+                    <targetJdk>11</targetJdk>
+                    <printFailingErrors>true</printFailingErrors>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>4.8.6.6</version>
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>High</threshold>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

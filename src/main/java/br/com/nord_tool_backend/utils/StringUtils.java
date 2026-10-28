@@ -35,11 +35,11 @@ public class StringUtils {
             return chaveMensagem;
         }
 
-        return (new MessageFormat(mensagem)).format(params);
+        return new MessageFormat(mensagem).format(params);
     }
 
     public static String normalizeStatusVistoria(String value) {
-        return java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+        return Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase()
                 .replaceAll("[\\s_-]+", "");
