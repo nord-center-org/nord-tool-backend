@@ -11,6 +11,8 @@ public interface CronogramaSemanalRepository {
     CronogramaSemanalDto salvarCronogramaSemanal(CronogramaSemanal cronogramaSemanal);
     CronogramaSemanalDto alterarCronogramaSemanal(CronogramaSemanal cronogramaSemanal);
     void deletarCronogramaSemanal(Long id);
+    /** Muda só o status, se o usuário enxerga o item; devolve as linhas alteradas. */
+    int moverStatus(Long id, String status);
     CronogramaSemanal buscarPorIdCronogramaSemanal(Long id);
     List<CronogramaSemanal> listarCronogramaSemanal();
     List<CronogramaSemanalExcecaoDto> listarExcecoes();

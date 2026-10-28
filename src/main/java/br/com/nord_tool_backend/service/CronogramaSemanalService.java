@@ -18,4 +18,7 @@ public interface CronogramaSemanalService {
     void removerExcecao(Long id, LocalDate data);
     CronogramaSemanalDto compartilhar(Long id, List<Long> idsUsuarios);
     List<br.com.nord_tool_backend.dto.PessoaCronogramaDto> listarPessoas();
+
+    /** Move a demanda na esteira (só o status): vale para quem enxerga o item, não só o dono. */
+    CronogramaSemanalDto moverStatus(Long id, String status);
 }

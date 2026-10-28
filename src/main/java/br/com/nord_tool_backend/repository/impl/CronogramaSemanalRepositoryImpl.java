@@ -24,6 +24,7 @@ public class CronogramaSemanalRepositoryImpl implements CronogramaSemanalReposit
     private final String qInserir;
     private final String qAlterar;
     private final String qDeletar;
+    private final String qStatus;
     private final String qBuscarPorId;
     private final String qListar;
     private final String qListarExcecoes;
@@ -48,6 +49,7 @@ public class CronogramaSemanalRepositoryImpl implements CronogramaSemanalReposit
         this.qInserir = queries.get("SPI.CRONOGRAMA_SEMANAL.INSERIR");
         this.qAlterar = queries.get("SPU.CRONOGRAMA_SEMANAL.ALTERAR");
         this.qDeletar = queries.get("SPD.CRONOGRAMA_SEMANAL.DELETAR");
+        this.qStatus = queries.get("SPU.CRONOGRAMA_SEMANAL.STATUS");
         this.qBuscarPorId = queries.get("SPS.CRONOGRAMA_SEMANAL.BUSTAR_POR_ID");
         this.qListar = queries.get("SPS.CRONOGRAMA_SEMANAL.LISTAR");
         this.qListarExcecoes = queries.get("SPS.CRONOGRAMA_SEMANAL_EXCECAO.LISTAR");
@@ -77,6 +79,12 @@ public class CronogramaSemanalRepositoryImpl implements CronogramaSemanalReposit
         executor.executar("Excluir cronograma semanal", () -> {
             if (jdbc.update(qDeletar, usuario(new MapSqlParameterSource("id", id))) == 0) throw naoEDono();
         });
+    }
+
+    @Override
+    public int moverStatus(Long id, String status) {
+        return executor.executar("Mover demanda na esteira", () ->
+                jdbc.update(qStatus, usuario(new MapSqlParameterSource("id", id).addValue("status", status))));
     }
 
     @Override
@@ -139,14 +147,17 @@ public class CronogramaSemanalRepositoryImpl implements CronogramaSemanalReposit
     }
 
     /**
-     * Cronograma pessoal: o usuário logado (dono e destinatário dos compartilhamentos). Admin do módulo também
-     * enxerga e altera os itens sem dono, que vieram de antes do cronograma pessoal.
+     * Cronograma pessoal: o usuário logado (dono e destinatário dos compartilhamentos) enxerga também as demandas de
+     * quem está na mesma equipe. Admin do módulo enxerga tudo e altera os itens sem dono, que vieram de antes do
+     * cronograma pessoal.
      */
     private MapSqlParameterSource usuario(MapSqlParameterSource params) {
         br.com.nord_tool_backend.security.UsuarioAutenticado u = autorizacao.exigirAutenticado();
+        boolean admin = u.acao(br.com.nord_tool_backend.security.Modulo.CRONOGRAMA).atende(br.com.nord_tool_backend.security.Acao.ADMIN);
         return params.addValue("idUsuario", u.getId())
-                .addValue("verSemDono", u.acao(br.com.nord_tool_backend.security.Modulo.CRONOGRAMA)
-                        .atende(br.com.nord_tool_backend.security.Acao.ADMIN));
+                .addValue("verSemDono", admin)
+                .addValue("verTudo", admin)
+                .addValue("verEquipe", true);
     }
 
     private org.springframework.jdbc.core.namedparam.SqlParameterSource comUsuario(org.springframework.jdbc.core.namedparam.SqlParameterSource base) {

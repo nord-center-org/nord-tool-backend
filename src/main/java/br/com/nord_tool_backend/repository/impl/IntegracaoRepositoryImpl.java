@@ -90,14 +90,14 @@ public class IntegracaoRepositoryImpl implements IntegracaoRepository {
     @Override
     public List<CronogramaSemanal> cronogramaDoUsuario(Long idUsuario, boolean verSemDono) {
         return executor.executar("Erro ao ler o cronograma", () -> jdbc.query(qCronograma,
-                new MapSqlParameterSource("idUsuario", idUsuario).addValue("verSemDono", verSemDono),
+                new MapSqlParameterSource("idUsuario", idUsuario).addValue("verSemDono", verSemDono).addValue("verTudo", false).addValue("verEquipe", false),
                 BeanPropertyRowMapper.newInstance(CronogramaSemanal.class)));
     }
 
     @Override
     public List<CronogramaSemanalExcecaoDto> excecoesDoUsuario(Long idUsuario, boolean verSemDono) {
         return executor.executar("Erro ao ler as exceções do cronograma", () -> jdbc.query(qExcecoes,
-                new MapSqlParameterSource("idUsuario", idUsuario).addValue("verSemDono", verSemDono),
+                new MapSqlParameterSource("idUsuario", idUsuario).addValue("verSemDono", verSemDono).addValue("verTudo", false).addValue("verEquipe", false),
                 BeanPropertyRowMapper.newInstance(CronogramaSemanalExcecaoDto.class)));
     }
 }

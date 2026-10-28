@@ -43,6 +43,13 @@ public class CronogramaSemanalWriteController implements BaseResponse {
         return ok(cronogramaSemanalDto);
     }
 
+    @Operation(summary = "Mover a demanda na esteira (só o status); vale para quem enxerga o item")
+    @PutMapping("/{id}/status")
+    public ResponseEntity<ApiResponseBody<CronogramaSemanalDto>> moverStatus(@PathVariable("id") Long id,
+            @Valid @RequestBody br.com.nord_tool_backend.form.StatusCronogramaForm form) {
+        return ok(cronogramaSemanalService.moverStatus(id, form.getNmStatusCronograma()));
+    }
+
     @Operation(summary = "Excluir um cronograma Semanal")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponseBody<Void>> deletarCronogramaSemanal(@PathVariable("id") Long id) {
