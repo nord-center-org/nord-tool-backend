@@ -47,6 +47,12 @@ que depende deles.** Migrações de dados do Lugia ficam em `MIGRACAO/` (manuais
 | `LUGIA_GITHUB_TOKEN` | Lugia, modo Executar: token *fine-grained* do GitHub com **Contents** e **Pull requests** (leitura e escrita) nos repositórios da organização. Vai para o vault da Anthropic; nunca para o container do agente | — |
 | `LUGIA_MODELO_AGENTE` `LUGIA_REPOSITORIOS` `LUGIA_ANEXO_MAX_MB` | modelo do agente, repositórios montados (`owner/repo,...`) e tamanho máximo de anexo | `claude-opus-5-5` · os 5 do NordTool · `10` |
 
+### Deploy no Railway (pelo CI)
+O job `deploy` do `pipeline-dev.yml` publica só depois que o build, a política de testes, os `*ServiceImplTest` e o Gitleaks passam, em todo push para `develop` (environment `develop` do GitHub). `master` ainda não publica pelo CI. No environment `develop` do GitHub (Settings → Environments, só a branch `develop` liberada):
+1. Crie o secret `RAILWAY_TOKEN` com um **Project Token** do ambiente `develop` no Railway (Project Settings → Tokens).
+2. Crie a variável `RAILWAY_SERVICE` com o nome do serviço do backend no Railway.
+3. No serviço do Railway, **desligue o auto-deploy pelo GitHub** (Settings → Source); senão o Railway publica sem esperar o CI.
+
 ### Primeiro acesso (Railway)
 1. Aplique os scripts do `nord-tool-scripts-sql` (colunas de sessão e `usuario_permissao`) antes de publicar o backend.
 2. Defina `NORD_JWT_KEYS`/`NORD_JWT_ACTIVE_KID` e `NORD_ADMIN_*`, publique e confira no log "Usuário ADMIN de NORD_ADMIN_EMAIL criado".

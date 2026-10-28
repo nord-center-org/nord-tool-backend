@@ -1,4 +1,4 @@
-name: CI - Build & Test
+name: CI - Build, Test & Deploy
 
 on:
   pull_request:
@@ -88,3 +88,30 @@ jobs:
           ignore-unfixed: true
           exit-code: '0'
           format: table
+
+  # Só publica no Railway depois do build, da política de testes, dos *ServiceImplTest e do Gitleaks.
+  # Exige o auto-deploy do GitHub desligado no serviço do Railway, senão ele publica sem esperar o CI.
+  deploy:
+    # Por enquanto só existe o ambiente develop no Railway; master entra quando houver produção lá.
+    if: github.event_name == 'push' && github.ref_name == 'develop'
+    needs: [build, segredos]
+    runs-on: ubuntu-latest
+    environment: develop
+    concurrency:
+      group: deploy-develop
+      cancel-in-progress: false
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # RAILWAY_TOKEN é um Project Token do ambiente correspondente; RAILWAY_SERVICE é o nome do serviço.
+      - name: Deploy no Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$RAILWAY_SERVICE" ]; then
+            echo "::error::Configure o secret RAILWAY_TOKEN e a variável RAILWAY_SERVICE no environment develop."
+            exit 1
+          fi
+          npx --yes @railway/cli@5.67.1 up --ci --service "$RAILWAY_SERVICE"
