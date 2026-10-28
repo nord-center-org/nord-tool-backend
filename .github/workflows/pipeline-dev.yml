@@ -1,11 +1,15 @@
 name: Pipeline
 
-# Roda só no merge em develop (e manualmente). Etapas:
+# Merge em develop (ou manual): pipeline completo com deploy. Etapas:
 #   Build & Testes ─┬─► Container Image ─┐
 #   Qualidade ──────┤                    ├─► Resumo de Alertas ─► CD (Railway)
 #   Secret Scanning ┤                    │
 #   Vulnerabilidades┴────────────────────┘
+# PR para develop: checagem leve (Build & Testes, Qualidade e Secret Scanning), sem imagem nem deploy.
 on:
+  pull_request:
+    branches:
+      - develop
   push:
     branches:
       - develop
@@ -14,10 +18,10 @@ on:
 permissions:
   contents: read
 
-# Não cancela um run em andamento: ele pode estar no meio do deploy.
+# No PR, um push novo cancela o run anterior; no develop não, porque ele pode estar no meio do deploy.
 concurrency:
-  group: pipeline-${{ github.ref }}
-  cancel-in-progress: false
+  group: pipeline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -67,11 +71,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Bloqueante: analisa só os commits novos do push, não o histórico inteiro.
+      # Bloqueante: analisa só os commits novos (do PR ou do push), não o histórico inteiro.
       - name: Gitleaks
         env:
-          BASE: ${{ github.event.before }}
-          HEAD: ${{ github.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then RANGE="$HEAD~1..$HEAD"; else RANGE="$BASE..$HEAD"; fi
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" \
@@ -80,6 +84,7 @@ jobs:
 
   vulnerabilidades:
     name: Análise de Vulnerabilidades
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     outputs:
       resultado: ${{ steps.osv.outcome }}
@@ -99,6 +104,7 @@ jobs:
   imagem:
     name: Container Image
     needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     outputs:
       resultado: ${{ steps.trivy.outcome }}
@@ -135,6 +141,7 @@ jobs:
           SEGREDOS: ${{ needs.segredos.result }}
           IMAGEM: ${{ needs.imagem.result }}
           OSV: ${{ needs.vulnerabilidades.outputs.resultado }}
+          EVENTO: ${{ github.event_name }}
           TRIVY: ${{ needs.imagem.outputs.resultado }}
         run: |
           icone() { case "$1" in success) echo "✅";; failure) echo "❌";; *) echo "⚪ $1";; esac; }
@@ -152,15 +159,17 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           [ "$OSV" = "failure" ] && echo "::warning::OSV-Scanner encontrou vulnerabilidades nas dependências."
           [ "$TRIVY" = "failure" ] && echo "::warning::Trivy encontrou vulnerabilidades altas/críticas na imagem."
+          # No PR a imagem não roda (skipped) e não conta como falha.
+          [ "$EVENTO" = "pull_request" ] && [ "$IMAGEM" = "skipped" ] && IMAGEM=success
           for r in "$BUILD" "$QUALIDADE" "$SEGREDOS" "$IMAGEM"; do
-            if [ "$r" != "success" ]; then echo "::error::Etapa bloqueante falhou; deploy cancelado."; exit 1; fi
+            if [ "$r" != "success" ]; then echo "::error::Etapa bloqueante falhou; merge/deploy bloqueado."; exit 1; fi
           done
 
   # Exige o auto-deploy do GitHub desligado no serviço do Railway, senão ele publica sem esperar o pipeline.
   cd:
     name: CD (Railway)
     needs: alertas
-    if: github.ref_name == 'develop'
+    if: github.event_name != 'pull_request' && github.ref_name == 'develop'
     runs-on: ubuntu-latest
     environment: develop
     steps:
