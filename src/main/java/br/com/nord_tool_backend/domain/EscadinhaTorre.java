@@ -13,6 +13,7 @@ public class EscadinhaTorre {
     private Integer nrOrdem;
     private String txConfig;
     private String txCiclos;
+    private String txGrade;
     private Boolean temPlanta;
     private Integer nrVersao;
     private LocalDateTime dhAtualizacao;

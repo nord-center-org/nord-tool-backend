@@ -54,7 +54,8 @@ class EscadinhaServiceImplTest {
         repository = mock(EscadinhaRepository.class);
         autorizacao = mock(AutorizacaoService.class);
         contexto = mock(ContextoFaseService.class);
-        service = new EscadinhaServiceImpl(repository, autorizacao, contexto, json);
+        service = new EscadinhaServiceImpl(repository, autorizacao, contexto, json,
+                java.time.Clock.fixed(java.time.Instant.parse("2026-10-29T13:00:00Z"), java.time.ZoneOffset.UTC));
         UsuarioAutenticado u = new UsuarioAutenticado(9L, "u@o.com", "USER", new EnumMap<>(Modulo.class), 0, Instant.now());
         when(autorizacao.exigir(any(), any())).thenReturn(u);
         when(contexto.obraEscolhida()).thenReturn(OBRA);
@@ -169,5 +170,100 @@ class EscadinhaServiceImplTest {
         when(autorizacao.exigir(Modulo.ESCADINHA, Acao.LEITURA)).thenThrow(new AcessoNegadoException("sem acesso"));
         assertThrows(AcessoNegadoException.class, () -> service.carregar());
         verify(repository, never()).listarTorres(anyLong());
+    }
+
+    // ---------- grade (células) ----------
+
+    private static br.com.nord_tool_backend.form.EscadinhaCelulasForm celulas(String... trios) {
+        br.com.nord_tool_backend.form.EscadinhaCelulasForm f = new br.com.nord_tool_backend.form.EscadinhaCelulasForm();
+        java.util.List<br.com.nord_tool_backend.form.EscadinhaCelulasForm.Celula> l = new java.util.ArrayList<>();
+        for (int i = 0; i < trios.length; i += 3) {
+            br.com.nord_tool_backend.form.EscadinhaCelulasForm.Celula c = new br.com.nord_tool_backend.form.EscadinhaCelulasForm.Celula();
+            c.setChave(trios[i]);
+            c.setStatus(trios[i + 1]);
+            c.setData(trios[i + 2]);
+            l.add(c);
+        }
+        f.setAlteracoes(l);
+        return f;
+    }
+
+    @Test
+    void marcarCelulasGravaCadaUmaComQuemEQuandoELimpaAsVazias() throws Exception {
+        when(repository.buscarTorre(OBRA, 1L)).thenReturn(java.util.Optional.of(torre(1, 3)));
+        when(repository.gravarCelula(eq(OBRA), eq(1L), anyString(), any(), eq(9L))).thenReturn(1);
+        when(repository.grade(OBRA, 1L)).thenReturn(java.util.Optional.of("{\"p2|A|c1a1\":{\"s\":\"E\"}}"));
+
+        br.com.nord_tool_backend.dto.EscadinhaGradeDto g = service.marcarCelulas(1L, celulas("p2|A|c1a1", "e", null, "p2|B|c1a1", "", null, "terreo|A|c1a1", "N", "2026-10-20"));
+
+        org.mockito.ArgumentCaptor<String> valor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(repository).gravarCelula(eq(OBRA), eq(1L), eq("p2|A|c1a1"), valor.capture(), eq(9L));
+        com.fasterxml.jackson.databind.JsonNode v = json.readTree(valor.getValue());
+        assertEquals("E", v.get("s").asText());
+        assertEquals("2026-10-29", v.get("d").asText(), "sem data vale hoje (São Paulo)");
+        assertEquals(9, v.get("u").asInt());
+        verify(repository).gravarCelula(OBRA, 1L, "p2|B|c1a1", null, 9L);
+        verify(repository).gravarCelula(eq(OBRA), eq(1L), eq("terreo|A|c1a1"), org.mockito.ArgumentMatchers.contains("2026-10-20"), eq(9L));
+        assertEquals("E", g.getGrade().get("p2|A|c1a1").get("s").asText());
+    }
+
+    @Test
+    void marcarCelulasRecusaChaveStatusEDataInvalidosSemGravarNada() {
+        when(repository.buscarTorre(OBRA, 1L)).thenReturn(java.util.Optional.of(torre(1, 3)));
+        assertThrows(EntradaInvalidaException.class, () -> service.marcarCelulas(1L, celulas("p2|A|c1a1", "E", null, "p2|C|x", "E", null)));
+        assertThrows(EntradaInvalidaException.class, () -> service.marcarCelulas(1L, celulas("p2|A|c1a1", "Z", null)));
+        assertThrows(EntradaInvalidaException.class, () -> service.marcarCelulas(1L, celulas("p2|A|c1a1", "E", "2026-11-30")));
+        assertThrows(EntradaInvalidaException.class, () -> service.marcarCelulas(1L, celulas("p2|A|c1a1", "E", "29/10/2026")));
+        verify(repository, never()).gravarCelula(anyLong(), anyLong(), anyString(), any(), anyLong());
+    }
+
+    @Test
+    void marcarCelulasEmTorreDeOutraObraDa404() {
+        when(repository.buscarTorre(OBRA, 7L)).thenReturn(java.util.Optional.empty());
+        assertThrows(NaoEncontradoException.class, () -> service.marcarCelulas(7L, celulas("p2|A|c1a1", "E", null)));
+    }
+
+    @Test
+    void modeloSoComAdminDaEscadinha() {
+        when(autorizacao.exigir(Modulo.ESCADINHA, Acao.ADMIN)).thenThrow(new AcessoNegadoException("negado"));
+        assertThrows(AcessoNegadoException.class, () -> service.salvarModelo(new EscadinhaModeloForm()));
+        verify(repository, never()).gravarModelo(anyLong(), anyString(), anyLong());
+    }
+
+    // ---------- tipologias ----------
+
+    private static br.com.nord_tool_backend.dto.EscadinhaTipologiaDto tipo(long id, String nome) {
+        br.com.nord_tool_backend.dto.EscadinhaTipologiaDto d = new br.com.nord_tool_backend.dto.EscadinhaTipologiaDto();
+        d.setId(id);
+        d.setIdTorre(1L);
+        d.setNmTipologia(nome);
+        d.setTemImagem(true);
+        return d;
+    }
+
+    @Test
+    void criarTipologiaValidaNomeRepetidoEImagem() {
+        when(repository.buscarTorre(OBRA, 1L)).thenReturn(java.util.Optional.of(torre(1, 3)));
+        br.com.nord_tool_backend.form.EscadinhaTipologiaForm f = new br.com.nord_tool_backend.form.EscadinhaTipologiaForm();
+        f.setNmTipologia(" Tipo 1 ");
+        f.setImagem("data:image/png;base64,AAAA");
+        when(repository.inserirTipologia(1L, "Tipo 1", "data:image/png;base64,AAAA", 9L)).thenReturn(5L);
+        when(repository.tipologias(OBRA, null, 5L)).thenReturn(java.util.Collections.singletonList(tipo(5, "Tipo 1")));
+        assertEquals("Tipo 1", service.criarTipologia(1L, f).getNmTipologia());
+
+        when(repository.nomeTipologiaEmUso(1L, "Tipo 1", null)).thenReturn(true);
+        assertThrows(ConflitoException.class, () -> service.criarTipologia(1L, f));
+        f.setNmTipologia("Tipo 2");
+        f.setImagem("javascript:alert(1)");
+        assertThrows(EntradaInvalidaException.class, () -> service.criarTipologia(1L, f));
+    }
+
+    @Test
+    void tipologiaDeOutraObraNaoAbreNemSomeDaqui() {
+        when(repository.tipologias(OBRA, null, 8L)).thenReturn(java.util.Collections.emptyList());
+        assertThrows(NaoEncontradoException.class, () -> service.imagemTipologia(8L));
+        when(repository.excluirTipologia(OBRA, 8L)).thenReturn(0);
+        assertThrows(NaoEncontradoException.class, () -> service.excluirTipologia(8L));
+        verify(repository, never()).imagemTipologia(anyLong(), anyLong());
     }
 }

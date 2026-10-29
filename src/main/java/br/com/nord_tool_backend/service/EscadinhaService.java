@@ -19,4 +19,17 @@ public interface EscadinhaService {
     void excluirTorre(Long idTorre);
 
     EscadinhaDto salvarModelo(EscadinhaModeloForm form);
+
+    /** Marca células da grade (executado, em execução, não se aplica ou limpa); devolve a grade atualizada. */
+    br.com.nord_tool_backend.dto.EscadinhaGradeDto marcarCelulas(Long idTorre, br.com.nord_tool_backend.form.EscadinhaCelulasForm form);
+
+    java.util.List<br.com.nord_tool_backend.dto.EscadinhaTipologiaDto> tipologias(Long idTorre);
+
+    EscadinhaPlantaDto imagemTipologia(Long idTipologia);
+
+    br.com.nord_tool_backend.dto.EscadinhaTipologiaDto criarTipologia(Long idTorre, br.com.nord_tool_backend.form.EscadinhaTipologiaForm form);
+
+    br.com.nord_tool_backend.dto.EscadinhaTipologiaDto alterarTipologia(Long idTipologia, br.com.nord_tool_backend.form.EscadinhaTipologiaForm form);
+
+    void excluirTipologia(Long idTipologia);
 }

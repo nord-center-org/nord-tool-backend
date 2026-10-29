@@ -53,4 +53,32 @@ public class EscadinhaWriteController implements BaseResponse {
     public ResponseEntity<ApiResponseBody<EscadinhaDto>> salvarModelo(@Valid @RequestBody EscadinhaModeloForm form) {
         return ok(service.salvarModelo(form));
     }
+
+    @Operation(summary = "Marca células da escadinha (executado, em execução, não se aplica ou limpa) e devolve a grade")
+    @PutMapping("/torres/{id}/celulas")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.EscadinhaGradeDto>> celulas(@PathVariable Long id,
+            @Valid @RequestBody br.com.nord_tool_backend.form.EscadinhaCelulasForm form) {
+        return ok(service.marcarCelulas(id, form));
+    }
+
+    @Operation(summary = "Cria uma tipologia de apartamento na torre")
+    @PostMapping("/torres/{id}/tipologias")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.EscadinhaTipologiaDto>> criarTipologia(@PathVariable Long id,
+            @Valid @RequestBody br.com.nord_tool_backend.form.EscadinhaTipologiaForm form) {
+        return created(service.criarTipologia(id, form));
+    }
+
+    @Operation(summary = "Altera nome e imagem da tipologia (imagem null = manter, vazia = remover)")
+    @PutMapping("/tipologias/{id}")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.EscadinhaTipologiaDto>> alterarTipologia(@PathVariable Long id,
+            @Valid @RequestBody br.com.nord_tool_backend.form.EscadinhaTipologiaForm form) {
+        return ok(service.alterarTipologia(id, form));
+    }
+
+    @Operation(summary = "Exclui a tipologia")
+    @DeleteMapping("/tipologias/{id}")
+    public ResponseEntity<ApiResponseBody<Void>> excluirTipologia(@PathVariable Long id) {
+        service.excluirTipologia(id);
+        return noContent();
+    }
 }
