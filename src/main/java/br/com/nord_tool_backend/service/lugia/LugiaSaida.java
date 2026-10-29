@@ -15,6 +15,10 @@ public interface LugiaSaida {
     /** Passo do agente (ferramenta usada), mostrado como linha de progresso. */
     void ferramenta(String descricao);
 
+    /** Provedor e modelo que vão responder (no modo Automático muda quando um deles atinge o limite). */
+    default void provedor(String id, String modelo) {
+    }
+
     void fim(String motivo);
 
     void erro(String mensagem);

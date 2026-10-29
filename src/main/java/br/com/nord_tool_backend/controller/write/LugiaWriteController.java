@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -93,6 +94,12 @@ public class LugiaWriteController implements BaseResponse {
         @Override public void conversa(Long idConversa) { enviar("conversa", Collections.singletonMap("id", idConversa)); }
         @Override public void texto(String delta) { enviar("texto", Collections.singletonMap("delta", delta)); }
         @Override public void ferramenta(String descricao) { enviar("ferramenta", Collections.singletonMap("descricao", descricao)); }
+        @Override public void provedor(String id, String modelo) {
+            Map<String, String> dados = new LinkedHashMap<>();
+            dados.put("id", id);
+            dados.put("modelo", modelo);
+            enviar("provedor", dados);
+        }
         @Override public void fim(String motivo) { enviar("fim", Collections.singletonMap("motivo", motivo)); }
         @Override public void erro(String mensagem) { enviar("erro", Collections.singletonMap("mensagem", mensagem)); }
 

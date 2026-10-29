@@ -11,7 +11,8 @@ import java.util.stream.Collectors;
 
 /**
  * Configuração da Lugia ({@code nord-tool.lugia.*}). As chaves vêm só do ambiente (ANTHROPIC_API_KEY,
- * OPENAI_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, LUGIA_GITHUB_TOKEN) e nunca vão para log ou resposta.
+ * OPENAI_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, MISTRAL_API_KEY, NVIDIA_API_KEY,
+ * LUGIA_GITHUB_TOKEN) e nunca vão para log ou resposta.
  */
 @Component
 public class LugiaProperties {
@@ -33,6 +34,11 @@ public class LugiaProperties {
     private final List<String> modelosGroq;
     private final String openrouterApiKey;
     private final List<String> modelosOpenrouter;
+    private final String mistralApiKey;
+    private final List<String> modelosMistral;
+    private final String nvidiaApiKey;
+    private final List<String> modelosNvidia;
+    private final List<String> cadeiaAutomatico;
 
     public LugiaProperties(
             @Value("${nord-tool.lugia.anthropic-api-key:}") String anthropicApiKey,
@@ -51,7 +57,12 @@ public class LugiaProperties {
             @Value("${nord-tool.lugia.groq-api-key:}") String groqApiKey,
             @Value("${nord-tool.lugia.modelos-groq:openai/gpt-oss-120b,llama-3.1-8b-instant}") String modelosGroq,
             @Value("${nord-tool.lugia.openrouter-api-key:}") String openrouterApiKey,
-            @Value("${nord-tool.lugia.modelos-openrouter:}") String modelosOpenrouter) {
+            @Value("${nord-tool.lugia.modelos-openrouter:openrouter/free}") String modelosOpenrouter,
+            @Value("${nord-tool.lugia.mistral-api-key:}") String mistralApiKey,
+            @Value("${nord-tool.lugia.modelos-mistral:mistral-small-latest}") String modelosMistral,
+            @Value("${nord-tool.lugia.nvidia-api-key:}") String nvidiaApiKey,
+            @Value("${nord-tool.lugia.modelos-nvidia:meta/llama-3.3-70b-instruct}") String modelosNvidia,
+            @Value("${nord-tool.lugia.cadeia-automatico:}") String cadeiaAutomatico) {
         this.anthropicApiKey = limpo(anthropicApiKey);
         this.openaiApiKey = limpo(openaiApiKey);
         this.geminiApiKey = limpo(geminiApiKey);
@@ -70,6 +81,11 @@ public class LugiaProperties {
         this.modelosGroq = lista(modelosGroq);
         this.openrouterApiKey = limpo(openrouterApiKey);
         this.modelosOpenrouter = lista(modelosOpenrouter);
+        this.mistralApiKey = limpo(mistralApiKey);
+        this.modelosMistral = lista(modelosMistral);
+        this.nvidiaApiKey = limpo(nvidiaApiKey);
+        this.modelosNvidia = lista(modelosNvidia);
+        this.cadeiaAutomatico = lista(cadeiaAutomatico);
     }
 
     /** Repositórios montados na sessão do agente (owner/repo). */
@@ -106,4 +122,10 @@ public class LugiaProperties {
     public List<String> getModelosGroq() { return modelosGroq; }
     public String getOpenrouterApiKey() { return openrouterApiKey; }
     public List<String> getModelosOpenrouter() { return modelosOpenrouter; }
+    public String getMistralApiKey() { return mistralApiKey; }
+    public List<String> getModelosMistral() { return modelosMistral; }
+    public String getNvidiaApiKey() { return nvidiaApiKey; }
+    public List<String> getModelosNvidia() { return modelosNvidia; }
+    /** Ordem dos modelos no modo Automático; vazia = todos os gratuitos, na ordem dos provedores. */
+    public List<String> getCadeiaAutomatico() { return cadeiaAutomatico; }
 }

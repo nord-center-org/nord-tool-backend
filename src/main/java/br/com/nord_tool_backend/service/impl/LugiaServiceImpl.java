@@ -26,22 +26,33 @@ import br.com.nord_tool_backend.service.lugia.LugiaSaida;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
  * Lugia. Conversas são do usuário logado; o histórico fica num formato neutro para trocar de provedor no meio
- * da conversa. O modo "agente" (executar no NordTool) exige ADMIN no módulo LUGIA.
+ * da conversa. O modo "agente" (executar no NordTool) exige ADMIN no módulo LUGIA. O modelo "automatico" percorre
+ * os provedores gratuitos e passa para o próximo quando um deles atinge o limite antes de começar a responder.
  */
 @Service @Slf4j
 public class LugiaServiceImpl implements LugiaService {
 
     static final String MODO_AGENTE = "agente";
     static final String PROVEDOR_AGENTE = "agente";
+    static final String AUTOMATICO = "automatico";
+    /** Pausa de um modelo que falhou sem o provedor dizer por quanto tempo esperar. */
+    static final long PAUSA_PADRAO_SEGUNDOS = 60;
+    static final long PAUSA_MAXIMA_SEGUNDOS = 24 * 60 * 60;
     static final int MAX_ANEXOS = 5;
     static final List<String> MIMES_IMAGEM = Arrays.asList("image/png", "image/jpeg", "image/webp", "image/gif");
     private static final Pattern BASE64 = Pattern.compile("^[A-Za-z0-9+/]+={0,2}$");
@@ -52,20 +63,27 @@ public class LugiaServiceImpl implements LugiaService {
     private final List<LugiaIaProvider> provedores;
     private final LugiaAgenteClient agente;
     private final LugiaProperties props;
+    private final Clock clock;
+    /** Modelo (provedor:modelo) → até quando fica no fim da fila do modo Automático. Só em memória: some no restart. */
+    private final Map<String, Instant> pausados = new ConcurrentHashMap<>();
 
     public LugiaServiceImpl(LugiaRepository repository, AutorizacaoService autorizacao, List<LugiaIaProvider> provedores,
-                            LugiaAgenteClient agente, LugiaProperties props) {
+                            LugiaAgenteClient agente, LugiaProperties props, Clock clock) {
         this.repository = repository;
         this.autorizacao = autorizacao;
         this.provedores = provedores;
         this.agente = agente;
         this.props = props;
+        this.clock = clock;
     }
 
     @Override
     public LugiaModelosDto modelos() {
         UsuarioAutenticado u = autorizacao.exigir(Modulo.LUGIA, Acao.LEITURA);
         List<LugiaModeloDto> modelos = new ArrayList<>();
+        if (!cadeiaAutomatico().isEmpty()) {
+            modelos.add(new LugiaModeloDto(AUTOMATICO, AUTOMATICO, "Automático · troca sozinho entre as IAs gratuitas"));
+        }
         for (LugiaIaProvider p : provedores) {
             if (!p.disponivel()) continue;
             for (String m : p.modelos()) modelos.add(new LugiaModeloDto(p.id(), m, p.nome() + " · " + m));
@@ -106,14 +124,16 @@ public class LugiaServiceImpl implements LugiaService {
         boolean modoAgente = MODO_AGENTE.equals(form.getModo());
         UsuarioAutenticado u = autorizacao.exigir(Modulo.LUGIA, modoAgente ? Acao.ADMIN : Acao.LEITURA);
 
-        LugiaIaProvider provedor = null;
+        boolean automatico = !modoAgente && AUTOMATICO.equals(form.getModelo());
+        List<Opcao> opcoes = Collections.emptyList();
         if (modoAgente) {
             if (!agente.disponivel()) {
                 throw new NegocioException("LUGIA_AGENTE_INDISPONIVEL", "O agente ainda não foi configurado no servidor (ANTHROPIC_API_KEY e LUGIA_GITHUB_TOKEN).");
             }
         } else {
-            provedor = provedorDo(form.getModelo())
-                    .orElseThrow(() -> new EntradaInvalidaException("Modelo indisponível."));
+            opcoes = automatico ? cadeiaAutomatico()
+                    : provedorDo(form.getModelo()).map(p -> Collections.singletonList(new Opcao(p, form.getModelo()))).orElse(Collections.emptyList());
+            if (opcoes.isEmpty()) throw new EntradaInvalidaException("Modelo indisponível.");
         }
 
         List<LugiaParteDto> partes = partes(form);
@@ -132,12 +152,13 @@ public class LugiaServiceImpl implements LugiaService {
         LugiaMensagemDto daVez = new LugiaMensagemDto(LugiaMensagemDto.USUARIO, null, partes, null);
         repository.adicionarMensagem(conversa.getId(), daVez, null, null, null);
         historico.add(daVez);
+        if (automatico) opcoes = emOrdemDeTentativa(opcoes, temAnexo(historico));
 
         saida.abrir();
         saida.conversa(conversa.getId());
         StringBuilder recebido = new StringBuilder();
-        String provedorId = modoAgente ? PROVEDOR_AGENTE : provedor.id();
-        String modelo = modoAgente ? props.getModeloAgente() : form.getModelo();
+        String provedorId = modoAgente ? PROVEDOR_AGENTE : opcoes.get(0).provedor.id();
+        String modelo = modoAgente ? props.getModeloAgente() : opcoes.get(0).modelo;
         try {
             LugiaResposta resposta;
             if (modoAgente) {
@@ -148,10 +169,31 @@ public class LugiaServiceImpl implements LugiaService {
                 }
                 resposta = agente.executar(sessao, partes, new SaidaQueAcumula(saida, recebido));
             } else {
-                resposta = provedor.conversar(modelo, sistema(), historico, delta -> {
-                    recebido.append(delta);
-                    saida.texto(delta);
-                });
+                resposta = null;
+                for (int i = 0; resposta == null; i++) {
+                    Opcao opcao = opcoes.get(i);
+                    provedorId = opcao.provedor.id();
+                    modelo = opcao.modelo;
+                    if (automatico) saida.provedor(provedorId, modelo);
+                    try {
+                        resposta = opcao.provedor.conversar(modelo, sistema(), historico, delta -> {
+                            recebido.append(delta);
+                            saida.texto(delta);
+                        });
+                    } catch (LugiaFalhaException e) {
+                        // Só troca antes do primeiro pedaço: depois disso a pessoa já está lendo esta resposta.
+                        if (recebido.length() > 0 || Thread.currentThread().isInterrupted()) throw e;
+                        pausar(opcao, e);
+                        if (!automatico) throw e;
+                        if (i == opcoes.size() - 1) {
+                            throw new LugiaFalhaException("Todas as IAs gratuitas estão no limite agora. Tente de novo em alguns minutos ou escolha outro modelo.", e);
+                        }
+                        log.info("Lugia automático: {} ({}) falhou, tentando o próximo", opcao.chave(), e.getMessage());
+                        LugiaIaProvider proximo = opcoes.get(i + 1).provedor;
+                        saida.ferramenta(opcao.provedor.nome() + " indisponível agora; passando para "
+                                + (proximo == opcao.provedor ? "outro modelo do " + proximo.nome() : proximo.nome()));
+                    }
+                }
             }
             gravarResposta(conversa.getId(), provedorId, modelo, resposta.getTexto(), resposta.getNativo(),
                     resposta.getTokensEntrada(), resposta.getTokensSaida());
@@ -179,6 +221,47 @@ public class LugiaServiceImpl implements LugiaService {
                 "Responda em português do Brasil, de forma direta e útil. Use Markdown quando ajudar a leitura.",
                 "Quando não souber algo sobre os dados do NordTool, diga isso em vez de inventar.",
                 "Imagens anexadas costumam ser prints de telas do NordTool.");
+    }
+
+    /**
+     * Modelos gratuitos disponíveis, na ordem de LUGIA_CADEIA_AUTOMATICO ou, sem ela, na ordem dos provedores.
+     * Ids da cadeia que não estiverem disponíveis (sem chave, fora da lista do provedor) são ignorados.
+     */
+    List<Opcao> cadeiaAutomatico() {
+        List<Opcao> gratuitos = new ArrayList<>();
+        for (LugiaIaProvider p : provedores) {
+            if (!p.disponivel() || !p.gratuito()) continue;
+            for (String m : p.modelos()) gratuitos.add(new Opcao(p, m));
+        }
+        List<String> ordem = props.getCadeiaAutomatico();
+        if (ordem.isEmpty()) return gratuitos;
+        List<Opcao> cadeia = new ArrayList<>();
+        for (String id : ordem) {
+            gratuitos.stream().filter(o -> o.modelo.equals(id) && !cadeia.contains(o)).findFirst().ifPresent(cadeia::add);
+        }
+        return cadeia;
+    }
+
+    /**
+     * Pausados vão para o fim (ainda são tentados se todos estiverem pausados). Com anexo na conversa, quem lê
+     * imagem e PDF vem antes. A ordem configurada vale dentro de cada grupo.
+     */
+    List<Opcao> emOrdemDeTentativa(List<Opcao> cadeia, boolean comAnexo) {
+        Instant agora = clock.instant();
+        List<Opcao> ordem = new ArrayList<>(cadeia);
+        ordem.sort(Comparator.<Opcao>comparingInt(o -> pausados.getOrDefault(o.chave(), Instant.MIN).isAfter(agora) ? 1 : 0)
+                .thenComparingInt(o -> comAnexo && !o.provedor.leAnexos() ? 1 : 0));
+        return ordem;
+    }
+
+    private void pausar(Opcao opcao, LugiaFalhaException e) {
+        long segundos = e.getPausaSegundos() > 0 ? Math.min(e.getPausaSegundos(), PAUSA_MAXIMA_SEGUNDOS) : PAUSA_PADRAO_SEGUNDOS;
+        pausados.put(opcao.chave(), clock.instant().plusSeconds(segundos));
+    }
+
+    private static boolean temAnexo(List<LugiaMensagemDto> historico) {
+        return historico.stream().filter(m -> !LugiaMensagemDto.ASSISTENTE.equals(m.getPapel()))
+                .flatMap(m -> m.getPartes().stream()).anyMatch(p -> !LugiaParteDto.TEXTO.equals(p.getTipo()));
     }
 
     private Optional<LugiaIaProvider> provedorDo(String modelo) {
@@ -236,6 +319,22 @@ public class LugiaServiceImpl implements LugiaService {
 
     private static NaoEncontradoException naoEncontrada() {
         return new NaoEncontradoException("Conversa não encontrada.");
+    }
+
+    /** Um modelo de um provedor, como tentativa do modo Automático. */
+    static final class Opcao {
+        final LugiaIaProvider provedor;
+        final String modelo;
+
+        Opcao(LugiaIaProvider provedor, String modelo) {
+            this.provedor = provedor;
+            this.modelo = modelo;
+        }
+
+        String chave() { return provedor.id() + ":" + modelo; }
+
+        @Override public boolean equals(Object o) { return o instanceof Opcao && ((Opcao) o).chave().equals(chave()); }
+        @Override public int hashCode() { return chave().hashCode(); }
     }
 
     /** Repassa o progresso do agente e guarda o texto já recebido (para gravar se a sessão falhar no meio). */

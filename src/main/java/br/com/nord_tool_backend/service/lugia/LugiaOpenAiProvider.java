@@ -76,7 +76,7 @@ public class LugiaOpenAiProvider implements LugiaIaProvider {
             throw new LugiaFalhaException("Resposta cancelada.", e);
         } catch (Exception e) {
             log.warn("OpenAI falhou: {}", e.getMessage());
-            throw new LugiaFalhaException(LugiaSseHttp.mensagemErro("ChatGPT", e), e);
+            throw LugiaSseHttp.falha("ChatGPT", e);
         }
         if (falha[0] != null) {
             log.warn("OpenAI devolveu erro no stream: {}", falha[0]);

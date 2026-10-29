@@ -78,11 +78,19 @@ nord-tool:
     # Sem padrão para a OpenAI: os ids mudam com frequência; use os que a sua chave acessa.
     modelos-openai: ${LUGIA_MODELOS_OPENAI:}
     modelos-gemini: ${LUGIA_MODELOS_GEMINI:gemini-flash-latest}
-    # Gratuitos: Groq (rápido, sem cartão) e OpenRouter (modelos com ":free"). Só texto.
+    # Gratuitos (só texto): Groq (rápido, sem cartão), OpenRouter ("openrouter/free" escolhe um modelo gratuito),
+    # Mistral (plano Experiment) e NVIDIA (build.nvidia.com). O Gemini também entra no modo Automático.
     groq-api-key: ${GROQ_API_KEY:}
     modelos-groq: ${LUGIA_MODELOS_GROQ:openai/gpt-oss-120b,llama-3.1-8b-instant}
     openrouter-api-key: ${OPENROUTER_API_KEY:}
-    modelos-openrouter: ${LUGIA_MODELOS_OPENROUTER:}
+    modelos-openrouter: ${LUGIA_MODELOS_OPENROUTER:openrouter/free}
+    mistral-api-key: ${MISTRAL_API_KEY:}
+    modelos-mistral: ${LUGIA_MODELOS_MISTRAL:mistral-small-latest}
+    nvidia-api-key: ${NVIDIA_API_KEY:}
+    modelos-nvidia: ${LUGIA_MODELOS_NVIDIA:meta/llama-3.3-70b-instruct}
+    # Modo Automático: ordem dos modelos (ids separados por vírgula). Vazio = todos os gratuitos com chave,
+    # na ordem Gemini, Groq, OpenRouter, Mistral, NVIDIA. Quem bate no limite fica de fora até a cota voltar.
+    cadeia-automatico: ${LUGIA_CADEIA_AUTOMATICO:}
     anexo-max-mb: ${LUGIA_ANEXO_MAX_MB:10}
     # Agente executor (ADMIN do módulo LUGIA): token fine-grained do GitHub com Contents e Pull requests (leitura e escrita)
     # nos repositórios da organização. Agente, ambiente e vault são criados no primeiro uso e guardados em lugia_configuracao.
