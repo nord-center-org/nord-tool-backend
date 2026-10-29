@@ -2,13 +2,17 @@ package br.com.nord_tool_backend.service.impl;
 
 import br.com.nord_tool_backend.domain.EscadinhaTorre;
 import br.com.nord_tool_backend.dto.EscadinhaDto;
+import br.com.nord_tool_backend.dto.EscadinhaGradeDto;
 import br.com.nord_tool_backend.dto.EscadinhaPlantaDto;
+import br.com.nord_tool_backend.dto.EscadinhaTipologiaDto;
 import br.com.nord_tool_backend.dto.EscadinhaTorreDto;
 import br.com.nord_tool_backend.exception.ConflitoException;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.exception.FalhaInternaException;
 import br.com.nord_tool_backend.exception.NaoEncontradoException;
+import br.com.nord_tool_backend.form.EscadinhaCelulasForm;
 import br.com.nord_tool_backend.form.EscadinhaModeloForm;
+import br.com.nord_tool_backend.form.EscadinhaTipologiaForm;
 import br.com.nord_tool_backend.form.EscadinhaTorreForm;
 import br.com.nord_tool_backend.repository.EscadinhaRepository;
 import br.com.nord_tool_backend.security.Acao;
@@ -22,7 +26,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -43,15 +54,15 @@ public class EscadinhaServiceImpl implements EscadinhaService {
     private final AutorizacaoService autorizacao;
     private final ContextoFaseService contexto;
     private final ObjectMapper json;
-    private final java.time.Clock clock;
+    private final Clock clock;
 
     static final int MAX_TIPOLOGIAS = 40;
-    private static final java.time.ZoneId FUSO = java.time.ZoneId.of("America/Sao_Paulo");
+    private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
     private static final Pattern CHAVE = Pattern.compile("^[A-Za-z0-9_.-]{1,64}\\|[AB]\\|[A-Za-z0-9_.-]{1,64}$");
     private static final Pattern DATA = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
 
     public EscadinhaServiceImpl(EscadinhaRepository repository, AutorizacaoService autorizacao, ContextoFaseService contexto, ObjectMapper json,
-                                java.time.Clock clock) {
+                                Clock clock) {
         this.repository = repository;
         this.autorizacao = autorizacao;
         this.contexto = contexto;
@@ -119,15 +130,15 @@ public class EscadinhaServiceImpl implements EscadinhaService {
     }
 
     @Override
-    public br.com.nord_tool_backend.dto.EscadinhaGradeDto marcarCelulas(Long idTorre, br.com.nord_tool_backend.form.EscadinhaCelulasForm form) {
+    public EscadinhaGradeDto marcarCelulas(Long idTorre, EscadinhaCelulasForm form) {
         UsuarioAutenticado u = autorizacao.exigir(Modulo.ESCADINHA, Acao.ESCRITA);
         Long obra = contexto.obraEscolhida();
         torre(obra, idTorre);
-        java.time.LocalDateTime agora = java.time.LocalDateTime.now(clock.withZone(FUSO)).withNano(0);
-        java.util.List<String[]> validas = new java.util.ArrayList<>();
-        for (br.com.nord_tool_backend.form.EscadinhaCelulasForm.Celula c : form.getAlteracoes()) {
+        LocalDateTime agora = LocalDateTime.now(clock.withZone(FUSO)).withNano(0);
+        List<String[]> validas = new ArrayList<>();
+        for (EscadinhaCelulasForm.Celula c : form.getAlteracoes()) {
             if (c == null || c.getChave() == null || !CHAVE.matcher(c.getChave()).matches()) throw new EntradaInvalidaException("Célula inválida");
-            String status = c.getStatus() == null ? "" : c.getStatus().trim().toUpperCase(java.util.Locale.ROOT);
+            String status = c.getStatus() == null ? "" : c.getStatus().trim().toUpperCase(Locale.ROOT);
             if (status.isEmpty()) { validas.add(new String[]{c.getChave(), null}); continue; }
             if (!status.equals("E") && !status.equals("X") && !status.equals("N")) throw new EntradaInvalidaException("Status inválido: " + c.getStatus());
             String data = dataValida(c.getData(), agora.toLocalDate());
@@ -141,17 +152,17 @@ public class EscadinhaServiceImpl implements EscadinhaService {
         for (String[] c : validas) {
             if (repository.gravarCelula(obra, idTorre, c[0], c[1], u.getId()) == 0) throw new NaoEncontradoException("Torre não encontrada nesta obra");
         }
-        return new br.com.nord_tool_backend.dto.EscadinhaGradeDto(ler(repository.grade(obra, idTorre).orElse("{}")));
+        return new EscadinhaGradeDto(ler(repository.grade(obra, idTorre).orElse("{}")));
     }
 
     /** Data da execução: hoje quando não vem; não aceita futuro nem antes de 2000. */
-    static String dataValida(String data, java.time.LocalDate hoje) {
+    static String dataValida(String data, LocalDate hoje) {
         if (data == null || data.isBlank()) return hoje.toString();
         if (!DATA.matcher(data.trim()).matches()) throw new EntradaInvalidaException("Data inválida: " + data);
-        java.time.LocalDate d;
+        LocalDate d;
         try {
-            d = java.time.LocalDate.parse(data.trim());
-        } catch (java.time.format.DateTimeParseException e) {
+            d = LocalDate.parse(data.trim());
+        } catch (DateTimeParseException e) {
             throw new EntradaInvalidaException("Data inválida: " + data);
         }
         if (d.isAfter(hoje) || d.getYear() < 2000) throw new EntradaInvalidaException("A data da execução não pode ser no futuro");
@@ -159,7 +170,7 @@ public class EscadinhaServiceImpl implements EscadinhaService {
     }
 
     @Override
-    public java.util.List<br.com.nord_tool_backend.dto.EscadinhaTipologiaDto> tipologias(Long idTorre) {
+    public List<EscadinhaTipologiaDto> tipologias(Long idTorre) {
         autorizacao.exigir(Modulo.ESCADINHA, Acao.LEITURA);
         Long obra = contexto.obraEscolhida();
         torre(obra, idTorre);
@@ -175,7 +186,7 @@ public class EscadinhaServiceImpl implements EscadinhaService {
     }
 
     @Override
-    public br.com.nord_tool_backend.dto.EscadinhaTipologiaDto criarTipologia(Long idTorre, br.com.nord_tool_backend.form.EscadinhaTipologiaForm form) {
+    public EscadinhaTipologiaDto criarTipologia(Long idTorre, EscadinhaTipologiaForm form) {
         UsuarioAutenticado u = autorizacao.exigir(Modulo.ESCADINHA, Acao.ESCRITA);
         Long obra = contexto.obraEscolhida();
         torre(obra, idTorre);
@@ -188,10 +199,10 @@ public class EscadinhaServiceImpl implements EscadinhaService {
     }
 
     @Override
-    public br.com.nord_tool_backend.dto.EscadinhaTipologiaDto alterarTipologia(Long idTipologia, br.com.nord_tool_backend.form.EscadinhaTipologiaForm form) {
+    public EscadinhaTipologiaDto alterarTipologia(Long idTipologia, EscadinhaTipologiaForm form) {
         UsuarioAutenticado u = autorizacao.exigir(Modulo.ESCADINHA, Acao.ESCRITA);
         Long obra = contexto.obraEscolhida();
-        br.com.nord_tool_backend.dto.EscadinhaTipologiaDto atual = tipologia(obra, idTipologia);
+        EscadinhaTipologiaDto atual = tipologia(obra, idTipologia);
         String nome = nomeTipologia(form);
         if (repository.nomeTipologiaEmUso(atual.getIdTorre(), nome, idTipologia)) throw new ConflitoException("Já existe uma tipologia com esse nome nesta torre");
         String imagem = plantaValida(form.getImagem());
@@ -206,12 +217,12 @@ public class EscadinhaServiceImpl implements EscadinhaService {
         if (repository.excluirTipologia(obra, idTipologia) == 0) throw new NaoEncontradoException("Tipologia não encontrada nesta obra");
     }
 
-    private br.com.nord_tool_backend.dto.EscadinhaTipologiaDto tipologia(Long obra, Long id) {
+    private EscadinhaTipologiaDto tipologia(Long obra, Long id) {
         return repository.tipologias(obra, null, id).stream().findFirst()
                 .orElseThrow(() -> new NaoEncontradoException("Tipologia não encontrada nesta obra"));
     }
 
-    private static String nomeTipologia(br.com.nord_tool_backend.form.EscadinhaTipologiaForm form) {
+    private static String nomeTipologia(EscadinhaTipologiaForm form) {
         String n = form.getNmTipologia() == null ? "" : form.getNmTipologia().trim();
         if (n.isEmpty()) throw new EntradaInvalidaException("Informe o nome da tipologia");
         return n;
