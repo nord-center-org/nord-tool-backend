@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Base para provedores com API compatível com Chat Completions da OpenAI (Groq, OpenRouter), muitos com plano
+ * Base para provedores com API compatível com Chat Completions da OpenAI (Groq, OpenRouter, Mistral, NVIDIA), todos com plano
  * gratuito. Só texto: os anexos viram um aviso, porque boa parte desses modelos não lê imagem nem PDF.
  */
 @Slf4j
@@ -34,6 +34,9 @@ abstract class LugiaChatCompletionsProvider implements LugiaIaProvider {
     public boolean disponivel() {
         return !chave().isEmpty() && !modelos().isEmpty();
     }
+
+    @Override
+    public boolean gratuito() { return true; }
 
     @Override
     public LugiaResposta conversar(String modelo, String sistema, List<LugiaMensagemDto> historico, Consumer<String> aoTexto) {
@@ -65,7 +68,7 @@ abstract class LugiaChatCompletionsProvider implements LugiaIaProvider {
             throw new LugiaFalhaException("Resposta cancelada.", e);
         } catch (Exception e) {
             log.warn("{} falhou: {}", nome(), e.getMessage());
-            throw new LugiaFalhaException(LugiaSseHttp.mensagemErro(nome(), e), e);
+            throw LugiaSseHttp.falha(nome(), e);
         }
         return new LugiaResposta(texto.toString(), null, motivo[0], uso[0], uso[1]);
     }

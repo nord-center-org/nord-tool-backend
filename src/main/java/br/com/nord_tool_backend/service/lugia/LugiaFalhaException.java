@@ -6,11 +6,21 @@ package br.com.nord_tool_backend.service.lugia;
  */
 public class LugiaFalhaException extends RuntimeException {
 
+    /** Quanto tempo o provedor pediu para esperar (limite de uso ou sobrecarga); 0 quando não informou. */
+    private final long pausaSegundos;
+
     public LugiaFalhaException(String mensagem) {
-        super(mensagem);
+        this(mensagem, null, 0);
     }
 
     public LugiaFalhaException(String mensagem, Throwable causa) {
-        super(mensagem, causa);
+        this(mensagem, causa, 0);
     }
+
+    public LugiaFalhaException(String mensagem, Throwable causa, long pausaSegundos) {
+        super(mensagem, causa);
+        this.pausaSegundos = pausaSegundos;
+    }
+
+    public long getPausaSegundos() { return pausaSegundos; }
 }

@@ -25,7 +25,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,6 +63,7 @@ class LugiaServiceImplTest {
     private LugiaAgenteClient agente;
     private LugiaServiceImpl service;
     private SaidaGravada saida;
+    private MutableClock relogio;
 
     @BeforeEach
     void setUp() {
@@ -69,7 +72,8 @@ class LugiaServiceImplTest {
         claude = provedor("claude", "Claude", true, "claude-opus-5-5");
         gemini = provedor("gemini", "Gemini", false, "gemini-flash-latest");
         agente = mock(LugiaAgenteClient.class);
-        service = new LugiaServiceImpl(repository, autorizacao, Arrays.asList(claude, gemini), agente, propriedades());
+        relogio = new MutableClock(Instant.parse("2026-10-29T12:00:00Z"));
+        service = new LugiaServiceImpl(repository, autorizacao, Arrays.asList(claude, gemini), agente, propriedades(""), relogio);
         saida = new SaidaGravada();
         logado(Acao.LEITURA);
         when(repository.criarConversa(eq(7L), anyString())).thenReturn(30L);
@@ -84,9 +88,45 @@ class LugiaServiceImplTest {
         return p;
     }
 
-    private static LugiaProperties propriedades() {
+    private static LugiaProperties propriedades(String cadeiaAutomatico) {
         return new LugiaProperties("sk-ant", "", "", "claude-opus-5-5", "", "gemini-flash-latest", 1,
-                "ghp", "", "claude-opus-5-5", "", "", "", "", "", "", "");
+                "ghp", "", "claude-opus-5-5", "", "", "", "", "", "", "", "", "", "", "", cadeiaAutomatico);
+    }
+
+    private static LugiaIaProvider gratuito(String id, String nome, boolean leAnexos, String... modelos) {
+        LugiaIaProvider p = mock(LugiaIaProvider.class);
+        when(p.id()).thenReturn(id);
+        when(p.nome()).thenReturn(nome);
+        when(p.disponivel()).thenReturn(true);
+        when(p.gratuito()).thenReturn(true);
+        when(p.leAnexos()).thenReturn(leAnexos);
+        when(p.modelos()).thenReturn(Arrays.asList(modelos));
+        return p;
+    }
+
+    private LugiaServiceImpl comGratuitos(String cadeia, LugiaIaProvider... gratuitos) {
+        List<LugiaIaProvider> todos = new ArrayList<>(Collections.singletonList(claude));
+        todos.addAll(Arrays.asList(gratuitos));
+        return new LugiaServiceImpl(repository, autorizacao, todos, agente, propriedades(cadeia), relogio);
+    }
+
+    private static void responde(LugiaIaProvider p, String texto) {
+        when(p.conversar(anyString(), anyString(), anyList(), any())).thenAnswer(inv -> {
+            Consumer<String> aoTexto = inv.getArgument(3);
+            aoTexto.accept(texto);
+            return new LugiaResposta(texto, null, "stop", 4, 2);
+        });
+    }
+
+    private static void noLimite(LugiaIaProvider p, long pausaSegundos) {
+        LugiaFalhaException limite = new LugiaFalhaException("Limite de uso do " + p.nome() + " atingido; tente em instantes.", null, pausaSegundos);
+        when(p.conversar(anyString(), anyString(), anyList(), any())).thenThrow(limite);
+    }
+
+    private static LugiaChatForm automatico(String texto) {
+        LugiaChatForm f = chat(texto);
+        f.setModelo("automatico");
+        return f;
     }
 
     private UsuarioAutenticado logado(Acao nivel) {
@@ -358,6 +398,145 @@ class LugiaServiceImplTest {
                 new LugiaParteDto(LugiaParteDto.PDF, null, null, "AAAA", "termo.pdf"))));
     }
 
+    @Test
+    void modelosOfereceAutomaticoPrimeiroSoComProvedorGratuito() {
+        assertFalse(service.modelos().getModelos().stream().anyMatch(m -> "automatico".equals(m.getId())));
+
+        LugiaModelosDto dto = comGratuitos("", gratuito("groq", "Groq", false, "gpt-oss-120b")).modelos();
+
+        assertEquals("automatico", dto.getModelos().get(0).getId());
+        assertEquals("automatico", dto.getModelos().get(0).getProvedor());
+        assertEquals(Arrays.asList("automatico", "claude-opus-5-5", "gpt-oss-120b"),
+                dto.getModelos().stream().map(m -> m.getId()).collect(java.util.stream.Collectors.toList()));
+    }
+
+    @Test
+    void automaticoSemGratuitoDisponivelRecusa() {
+        assertThrows(EntradaInvalidaException.class, () -> service.conversar(automatico("oi"), saida));
+        assertTrue(saida.eventos.isEmpty());
+    }
+
+    @Test
+    void automaticoPassaParaOProximoQuandoUmAtingeOLimiteAntesDeResponder() {
+        LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b");
+        LugiaIaProvider mistral = gratuito("mistral", "Mistral", false, "mistral-small-latest");
+        noLimite(groq, 3600);
+        responde(mistral, "Oi!");
+
+        comGratuitos("", groq, mistral).conversar(automatico("oi"), saida);
+
+        assertEquals(Arrays.asList("abrir", "conversa:30", "provedor:groq/gpt-oss-120b",
+                "ferramenta:Groq indisponível agora; passando para Mistral", "provedor:mistral/mistral-small-latest",
+                "texto:Oi!", "fim:stop"), saida.eventos);
+        verify(claude, never()).conversar(anyString(), anyString(), anyList(), any());
+        ArgumentCaptor<LugiaMensagemDto> msgs = ArgumentCaptor.forClass(LugiaMensagemDto.class);
+        verify(repository).adicionarMensagem(eq(30L), msgs.capture(), eq("mistral-small-latest"), eq(4), eq(2));
+        assertEquals("mistral", msgs.getValue().getProvedor());
+    }
+
+    @Test
+    void automaticoDeixaQuemAtingiuOLimiteNoFimAteAPausaAcabar() {
+        LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b");
+        LugiaIaProvider mistral = gratuito("mistral", "Mistral", false, "mistral-small-latest");
+        noLimite(groq, 120);
+        responde(mistral, "Oi!");
+        LugiaServiceImpl auto = comGratuitos("", groq, mistral);
+        auto.conversar(automatico("oi"), saida);
+
+        relogio.avancar(60);
+        auto.conversar(automatico("de novo"), new SaidaGravada());
+        verify(groq, times(1)).conversar(anyString(), anyString(), anyList(), any());
+        verify(mistral, times(2)).conversar(anyString(), anyString(), anyList(), any());
+
+        relogio.avancar(61);
+        auto.conversar(automatico("e agora"), new SaidaGravada());
+        verify(groq, times(2)).conversar(anyString(), anyString(), anyList(), any());
+    }
+
+    @Test
+    void automaticoNaoTrocaDepoisQueARespostaComecou() {
+        LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b");
+        LugiaIaProvider mistral = gratuito("mistral", "Mistral", false, "mistral-small-latest");
+        when(groq.conversar(anyString(), anyString(), anyList(), any())).thenAnswer(inv -> {
+            Consumer<String> aoTexto = inv.getArgument(3);
+            aoTexto.accept("Come");
+            throw new LugiaFalhaException("Falha no Groq (500).");
+        });
+
+        comGratuitos("", groq, mistral).conversar(automatico("oi"), saida);
+
+        assertEquals("erro:Falha no Groq (500).", saida.eventos.get(saida.eventos.size() - 1));
+        verify(mistral, never()).conversar(anyString(), anyString(), anyList(), any());
+        verify(repository).adicionarMensagem(eq(30L), any(), eq("gpt-oss-120b"), isNull(), isNull());
+    }
+
+    @Test
+    void automaticoAvisaQuandoTodosEstaoNoLimite() {
+        LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b");
+        LugiaIaProvider mistral = gratuito("mistral", "Mistral", false, "mistral-small-latest");
+        noLimite(groq, 0);
+        noLimite(mistral, 0);
+
+        comGratuitos("", groq, mistral).conversar(automatico("oi"), saida);
+
+        assertEquals("erro:Todas as IAs gratuitas estão no limite agora. Tente de novo em alguns minutos ou escolha outro modelo.",
+                saida.eventos.get(saida.eventos.size() - 1));
+        verify(repository, times(1)).adicionarMensagem(anyLong(), any(), any(), any(), any());
+    }
+
+    @Test
+    void automaticoComAnexoComecaPorQuemLeImagemEPdf() {
+        LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b");
+        LugiaIaProvider geminiGratis = gratuito("gemini", "Gemini", true, "gemini-flash-latest");
+        responde(geminiGratis, "Vi o print");
+        LugiaChatForm form = automatico("O que tem aqui?");
+        form.getAnexos().add(anexo("image/png", "AAAA"));
+
+        comGratuitos("", groq, geminiGratis).conversar(form, saida);
+
+        assertEquals("provedor:gemini/gemini-flash-latest", saida.eventos.get(2));
+        verify(groq, never()).conversar(anyString(), anyString(), anyList(), any());
+    }
+
+    @Test
+    void cadeiaConfiguradaDefineOrdemEIgnoraModelosIndisponiveis() {
+        LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b", "llama-3.1-8b-instant");
+        LugiaIaProvider mistral = gratuito("mistral", "Mistral", false, "mistral-small-latest");
+
+        List<LugiaServiceImpl.Opcao> cadeia = comGratuitos("mistral-small-latest, claude-opus-5-5, inexistente, llama-3.1-8b-instant",
+                groq, mistral).cadeiaAutomatico();
+
+        assertEquals(Arrays.asList("mistral:mistral-small-latest", "groq:llama-3.1-8b-instant"),
+                cadeia.stream().map(LugiaServiceImpl.Opcao::chave).collect(java.util.stream.Collectors.toList()));
+    }
+
+    @Test
+    void modeloEscolhidoSemAutomaticoNaoTrocaDeProvedor() {
+        LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b");
+        LugiaIaProvider mistral = gratuito("mistral", "Mistral", false, "mistral-small-latest");
+        noLimite(groq, 60);
+        LugiaChatForm form = chat("oi");
+        form.setModelo("gpt-oss-120b");
+
+        comGratuitos("", groq, mistral).conversar(form, saida);
+
+        assertEquals("erro:Limite de uso do Groq atingido; tente em instantes.", saida.eventos.get(saida.eventos.size() - 1));
+        verify(mistral, never()).conversar(anyString(), anyString(), anyList(), any());
+    }
+
+    /** Relógio que só anda quando o teste manda. */
+    private static final class MutableClock extends Clock {
+        private Instant agora;
+
+        MutableClock(Instant agora) { this.agora = agora; }
+
+        void avancar(long segundos) { agora = agora.plusSeconds(segundos); }
+
+        @Override public ZoneOffset getZone() { return ZoneOffset.UTC; }
+        @Override public Clock withZone(java.time.ZoneId zone) { return this; }
+        @Override public Instant instant() { return agora; }
+    }
+
     /** Saída que só registra os eventos em ordem. */
     private static final class SaidaGravada implements LugiaSaida {
         final List<String> eventos = new ArrayList<>();
@@ -366,6 +545,7 @@ class LugiaServiceImplTest {
         @Override public void conversa(Long idConversa) { eventos.add("conversa:" + idConversa); }
         @Override public void texto(String delta) { eventos.add("texto:" + delta); }
         @Override public void ferramenta(String descricao) { eventos.add("ferramenta:" + descricao); }
+        @Override public void provedor(String id, String modelo) { eventos.add("provedor:" + id + "/" + modelo); }
         @Override public void fim(String motivo) { eventos.add("fim:" + motivo); }
         @Override public void erro(String mensagem) { eventos.add("erro:" + mensagem); }
     }

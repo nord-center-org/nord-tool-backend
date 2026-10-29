@@ -45,6 +45,13 @@ public class LugiaGeminiProvider implements LugiaIaProvider {
         return !props.getGeminiApiKey().isEmpty() && !props.getModelosGemini().isEmpty();
     }
 
+    /** Chave do Google AI Studio sem faturamento ativo usa o plano gratuito. */
+    @Override
+    public boolean gratuito() { return true; }
+
+    @Override
+    public boolean leAnexos() { return true; }
+
     @Override
     public LugiaResposta conversar(String modelo, String sistema, List<LugiaMensagemDto> historico, Consumer<String> aoTexto) {
         ObjectNode corpo = json.createObjectNode();
@@ -78,7 +85,7 @@ public class LugiaGeminiProvider implements LugiaIaProvider {
             throw new LugiaFalhaException("Resposta cancelada.", e);
         } catch (Exception e) {
             log.warn("Gemini falhou: {}", e.getMessage());
-            throw new LugiaFalhaException(LugiaSseHttp.mensagemErro("Gemini", e), e);
+            throw LugiaSseHttp.falha("Gemini", e);
         }
         return new LugiaResposta(texto.toString(), null, motivo[0], uso[0], uso[1]);
     }
