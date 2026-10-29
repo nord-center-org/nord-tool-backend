@@ -33,4 +33,16 @@ public class EscadinhaReadController implements BaseResponse {
     public ResponseEntity<ApiResponseBody<EscadinhaPlantaDto>> planta(@PathVariable Long id) {
         return ok(service.planta(id));
     }
+
+    @Operation(summary = "Tipologias de apartamento da torre (sem a imagem)")
+    @GetMapping("/torres/{id}/tipologias")
+    public ResponseEntity<ApiResponseBody<java.util.List<br.com.nord_tool_backend.dto.EscadinhaTipologiaDto>>> tipologias(@PathVariable Long id) {
+        return ok(service.tipologias(id));
+    }
+
+    @Operation(summary = "Imagem da planta da tipologia (data URL)")
+    @GetMapping("/tipologias/{id}/imagem")
+    public ResponseEntity<ApiResponseBody<EscadinhaPlantaDto>> imagemTipologia(@PathVariable Long id) {
+        return ok(service.imagemTipologia(id));
+    }
 }

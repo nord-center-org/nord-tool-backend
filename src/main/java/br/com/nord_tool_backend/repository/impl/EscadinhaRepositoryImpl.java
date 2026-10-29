@@ -29,6 +29,7 @@ public class EscadinhaRepositoryImpl implements EscadinhaRepository {
     private final String qPlanta;
     private final String qModelo;
     private final String qGravarModelo;
+    private final SqlQueries q;
 
     public EscadinhaRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries) {
         this.jdbc = jdbc;
@@ -41,6 +42,7 @@ public class EscadinhaRepositoryImpl implements EscadinhaRepository {
         this.qPlanta = queries.get("SPS.ESCADINHA.TORRE.PLANTA");
         this.qModelo = queries.get("SPS.ESCADINHA.MODELO");
         this.qGravarModelo = queries.get("SPI.ESCADINHA.MODELO");
+        this.q = queries;
     }
 
     @Override
@@ -107,5 +109,60 @@ public class EscadinhaRepositoryImpl implements EscadinhaRepository {
         executor.executar("Erro ao salvar o modelo de ciclos", () -> {
             jdbc.update(qGravarModelo, new MapSqlParameterSource("idObra", idObra).addValue("modelo", modelo).addValue("idUsuario", idUsuario));
         });
+    }
+
+    @Override
+    public int gravarCelula(Long idObra, Long idTorre, String chave, String valor, Long idUsuario) {
+        return executor.executar("Erro ao gravar a célula da escadinha", () -> jdbc.update(q.get("SPU.ESCADINHA.CELULA"),
+                new MapSqlParameterSource("idObra", idObra).addValue("idTorre", idTorre).addValue("chave", chave)
+                        .addValue("valor", valor, Types.VARCHAR).addValue("idUsuario", idUsuario)));
+    }
+
+    @Override
+    public Optional<String> grade(Long idObra, Long idTorre) {
+        return executor.executar("Erro ao ler a grade da escadinha", () -> jdbc.queryForList(q.get("SPS.ESCADINHA.GRADE"),
+                new MapSqlParameterSource("idObra", idObra).addValue("idTorre", idTorre), String.class).stream().findFirst());
+    }
+
+    @Override
+    public List<br.com.nord_tool_backend.dto.EscadinhaTipologiaDto> tipologias(Long idObra, Long idTorre, Long idTipologia) {
+        return executor.executar("Erro ao listar as tipologias", () -> jdbc.query(q.get("SPS.ESCADINHA.TIPOLOGIAS"),
+                new MapSqlParameterSource("idObra", idObra).addValue("idTorre", idTorre, Types.BIGINT).addValue("id", idTipologia, Types.BIGINT),
+                BeanPropertyRowMapper.newInstance(br.com.nord_tool_backend.dto.EscadinhaTipologiaDto.class)));
+    }
+
+    @Override
+    public Optional<String> imagemTipologia(Long idObra, Long idTipologia) {
+        return executor.executar("Erro ao ler a imagem da tipologia", () -> jdbc.queryForList(q.get("SPS.ESCADINHA.TIPOLOGIA.IMAGEM"),
+                new MapSqlParameterSource("idObra", idObra).addValue("id", idTipologia), String.class).stream().findFirst());
+    }
+
+    @Override
+    public boolean nomeTipologiaEmUso(Long idTorre, String nome, Long idIgnorar) {
+        return executor.executar("Erro ao conferir a tipologia", () -> {
+            Integer n = jdbc.queryForObject(q.get("SPS.ESCADINHA.TIPOLOGIA.NOME_EM_USO"), new MapSqlParameterSource("idTorre", idTorre)
+                    .addValue("nome", nome).addValue("id", idIgnorar == null ? -1L : idIgnorar), Integer.class);
+            return n != null && n > 0;
+        });
+    }
+
+    @Override
+    public Long inserirTipologia(Long idTorre, String nome, String imagem, Long idUsuario) {
+        return executor.executar("Erro ao criar a tipologia", () -> jdbc.queryForObject(q.get("SPI.ESCADINHA.TIPOLOGIA"),
+                new MapSqlParameterSource("idTorre", idTorre).addValue("nome", nome).addValue("imagem", imagem, Types.VARCHAR)
+                        .addValue("idUsuario", idUsuario), Long.class));
+    }
+
+    @Override
+    public int alterarTipologia(Long idObra, Long idTipologia, String nome, boolean mudarImagem, String imagem, Long idUsuario) {
+        return executor.executar("Erro ao salvar a tipologia", () -> jdbc.update(q.get("SPU.ESCADINHA.TIPOLOGIA"),
+                new MapSqlParameterSource("idObra", idObra).addValue("id", idTipologia).addValue("nome", nome)
+                        .addValue("mudarImagem", mudarImagem).addValue("imagem", imagem, Types.VARCHAR).addValue("idUsuario", idUsuario)));
+    }
+
+    @Override
+    public int excluirTipologia(Long idObra, Long idTipologia) {
+        return executor.executar("Erro ao excluir a tipologia", () -> jdbc.update(q.get("SPD.ESCADINHA.TIPOLOGIA"),
+                new MapSqlParameterSource("idObra", idObra).addValue("id", idTipologia)));
     }
 }

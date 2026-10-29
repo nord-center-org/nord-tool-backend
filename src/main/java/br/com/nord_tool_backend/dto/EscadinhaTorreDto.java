@@ -13,6 +13,8 @@ public class EscadinhaTorreDto {
     private Integer nrOrdem;
     private JsonNode config;
     private JsonNode ciclos;
+    /** Status de cada célula da escadinha: "idPavimento|lado|idAtividade" → {s, d, u, h}. */
+    private JsonNode grade;
     private Boolean temPlanta;
     private Integer nrVersao;
     private LocalDateTime dhAtualizacao;

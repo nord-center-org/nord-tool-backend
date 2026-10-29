@@ -26,4 +26,21 @@ public interface EscadinhaRepository {
     Optional<String> modelo(Long idObra);
 
     void gravarModelo(Long idObra, String modelo, Long idUsuario);
+
+    /** Grava (valor JSON) ou apaga (valor null) uma célula da grade. Devolve as linhas alteradas (0 = torre de outra obra). */
+    int gravarCelula(Long idObra, Long idTorre, String chave, String valor, Long idUsuario);
+
+    Optional<String> grade(Long idObra, Long idTorre);
+
+    List<br.com.nord_tool_backend.dto.EscadinhaTipologiaDto> tipologias(Long idObra, Long idTorre, Long idTipologia);
+
+    Optional<String> imagemTipologia(Long idObra, Long idTipologia);
+
+    boolean nomeTipologiaEmUso(Long idTorre, String nome, Long idIgnorar);
+
+    Long inserirTipologia(Long idTorre, String nome, String imagem, Long idUsuario);
+
+    int alterarTipologia(Long idObra, Long idTipologia, String nome, boolean mudarImagem, String imagem, Long idUsuario);
+
+    int excluirTipologia(Long idObra, Long idTipologia);
 }
