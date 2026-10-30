@@ -34,6 +34,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -57,6 +58,11 @@ public class EscadinhaServiceImpl implements EscadinhaService {
     private final Clock clock;
 
     static final int MAX_TIPOLOGIAS = 40;
+    /**
+     * Marcações aceitas numa célula: E executado, X em execução, N não se aplica e os status da legenda escolhidos à mão
+     * (A atrasado, O atrasada em execução, P atraso com anterior pendente, D dentro do período, V vazio).
+     */
+    static final Set<String> STATUS_CELULA = Set.of("E", "X", "N", "A", "O", "P", "D", "V");
     private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
     private static final Pattern CHAVE = Pattern.compile("^[A-Za-z0-9_.-]{1,64}\\|[AB]\\|[A-Za-z0-9_.-]{1,64}$");
     private static final Pattern DATA = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
@@ -140,7 +146,7 @@ public class EscadinhaServiceImpl implements EscadinhaService {
             if (c == null || c.getChave() == null || !CHAVE.matcher(c.getChave()).matches()) throw new EntradaInvalidaException("Célula inválida");
             String status = c.getStatus() == null ? "" : c.getStatus().trim().toUpperCase(Locale.ROOT);
             if (status.isEmpty()) { validas.add(new String[]{c.getChave(), null}); continue; }
-            if (!status.equals("E") && !status.equals("X") && !status.equals("N")) throw new EntradaInvalidaException("Status inválido: " + c.getStatus());
+            if (!STATUS_CELULA.contains(status)) throw new EntradaInvalidaException("Status inválido: " + c.getStatus());
             String data = dataValida(c.getData(), agora.toLocalDate());
             com.fasterxml.jackson.databind.node.ObjectNode v = json.createObjectNode();
             v.put("s", status);
