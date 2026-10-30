@@ -2,7 +2,9 @@ package br.com.nord_tool_backend.controller.write;
 
 import br.com.nord_tool_backend.controller.response.ApiResponseBody;
 import br.com.nord_tool_backend.controller.response.BaseResponse;
+import br.com.nord_tool_backend.dto.CronogramaInterpretacaoDto;
 import br.com.nord_tool_backend.dto.CronogramaSemanalDto;
+import br.com.nord_tool_backend.form.CronogramaInterpretarForm;
 import br.com.nord_tool_backend.form.CronogramaSemanalForm;
 import br.com.nord_tool_backend.service.CronogramaSemanalService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,6 +50,12 @@ public class CronogramaSemanalWriteController implements BaseResponse {
     public ResponseEntity<ApiResponseBody<CronogramaSemanalDto>> moverStatus(@PathVariable("id") Long id,
             @Valid @RequestBody br.com.nord_tool_backend.form.StatusCronogramaForm form) {
         return ok(cronogramaSemanalService.moverStatus(id, form.getNmStatusCronograma()));
+    }
+
+    @Operation(summary = "A Lugia monta demanda(s) a partir do texto (não salva)")
+    @PostMapping("/interpretar")
+    public ResponseEntity<ApiResponseBody<CronogramaInterpretacaoDto>> interpretar(@Valid @RequestBody CronogramaInterpretarForm form) {
+        return ok(cronogramaSemanalService.interpretar(form));
     }
 
     @Operation(summary = "Excluir um cronograma Semanal")

@@ -205,6 +205,23 @@ public class LugiaServiceImpl implements LugiaService {
         }
     }
 
+    @Override
+    public String responderUmaVez(String sistema, String texto) {
+        List<Opcao> opcoes = emOrdemDeTentativa(cadeiaAutomatico(), false);
+        if (opcoes.isEmpty()) throw new NegocioException("LUGIA_INDISPONIVEL", "A Lugia não tem nenhuma IA gratuita configurada no servidor.");
+        List<LugiaMensagemDto> historico = Collections.singletonList(
+                new LugiaMensagemDto(LugiaMensagemDto.USUARIO, null, Collections.singletonList(LugiaParteDto.texto(texto)), null));
+        for (Opcao opcao : opcoes) {
+            try {
+                return opcao.provedor.conversar(opcao.modelo, sistema, historico, delta -> { }).getTexto();
+            } catch (LugiaFalhaException e) {
+                pausar(opcao, e);
+                log.info("Lugia (uma vez): {} ({}) falhou, tentando o próximo", opcao.chave(), e.getMessage());
+            }
+        }
+        throw new NegocioException("LUGIA_LIMITE", "Todas as IAs gratuitas estão no limite agora. Tente de novo em alguns minutos.");
+    }
+
     private void gravarResposta(Long idConversa, String provedor, String modelo, String texto, String nativo,
                                 Integer tokensEntrada, Integer tokensSaida) {
         if ((texto == null || texto.isEmpty()) && nativo == null) return;

@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import org.junit.jupiter.api.BeforeEach;
@@ -246,7 +247,7 @@ public class CronogramaSemanalServiceImplTest {
             UsuarioAutenticado u = mock(UsuarioAutenticado.class);
             lenient().when(u.getId()).thenReturn(7L);
             lenient().when(autorizacao.exigir(any(), any())).thenReturn(u);
-            service = new CronogramaSemanalServiceImpl(repository, autorizacao);
+            service = new CronogramaSemanalServiceImpl(repository, autorizacao, mock(br.com.nord_tool_backend.service.LugiaService.class));
         }
 
         private CronogramaSemanal item(Boolean proprio) {
@@ -305,6 +306,95 @@ public class CronogramaSemanalServiceImplTest {
             assertEquals(List.of(7L, 9L), dto.getIdsCompartilhados());
             when(repository.buscarPorIdCronogramaSemanal(eq(2L))).thenReturn(new CronogramaSemanal());
             assertEquals(true, service.buscarPorIdCronogramaSemanal(2L).getFlProprio());
+        }
+    }
+
+    /** Chat da Lugia: o texto livre vira demanda(s) já com valores que a tela aceita. */
+    @org.junit.jupiter.api.Nested
+    class Interpretar {
+
+        private br.com.nord_tool_backend.service.LugiaService lugia;
+        private AutorizacaoService autorizacao;
+        private CronogramaSemanalServiceImpl service;
+
+        @BeforeEach
+        void setUp() {
+            lugia = mock(br.com.nord_tool_backend.service.LugiaService.class);
+            autorizacao = mock(AutorizacaoService.class);
+            service = new CronogramaSemanalServiceImpl(mock(CronogramaSemanalRepository.class), autorizacao, lugia);
+        }
+
+        private br.com.nord_tool_backend.form.CronogramaInterpretarForm form(String texto) {
+            br.com.nord_tool_backend.form.CronogramaInterpretarForm f = new br.com.nord_tool_backend.form.CronogramaInterpretarForm();
+            f.setTexto(texto);
+            f.setHoje("2026-10-30");
+            f.getAnteriores().add("reunião toda segunda");
+            return f;
+        }
+
+        @Test
+        void mandaHojeEPedidosAnterioresParaALugiaEExigeEscrita() {
+            when(lugia.responderUmaVez(anyString(), anyString())).thenReturn("{\"mensagem\":\"ok\",\"demandas\":[]}");
+            service.interpretar(form("muda para quarta"));
+            verify(autorizacao).exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+            org.mockito.ArgumentCaptor<String> pedido = org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(lugia).responderUmaVez(eq(CronogramaSemanalServiceImpl.sistemaInterpretar()), pedido.capture());
+            org.junit.jupiter.api.Assertions.assertTrue(pedido.getValue().contains("sexta-feira, 2026-10-30"));
+            org.junit.jupiter.api.Assertions.assertTrue(pedido.getValue().contains("- reunião toda segunda"));
+            org.junit.jupiter.api.Assertions.assertTrue(pedido.getValue().endsWith("Pedido atual: muda para quarta"));
+        }
+
+        @Test
+        void semPermissaoNaoChamaALugia() {
+            when(autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA)).thenThrow(new AcessoNegadoException("sem acesso"));
+            assertThrows(AcessoNegadoException.class, () -> service.interpretar(form("x")));
+            verifyNoInteractions(lugia);
+        }
+
+        @Test
+        void leRespostaComBlocoDeCodigoENormalizaOsCampos() {
+            String resposta = "Claro! ```json\n{\"mensagem\":\"Montei duas demandas.\",\"demandas\":["
+                    + "{\"titulo\":\"Reunião de obra\",\"categoria\":\"engenharia\",\"status\":\"EXECUTAR\",\"fixa\":true,"
+                    + "\"dias\":[1,3,0,6,9],\"horario\":\"9:00\",\"agendamento\":\"2026-11-02T09:00\",\"tag\":\"null\"},"
+                    + "{\"titulo\":\"Entregar relatório\",\"categoria\":\"programacao\",\"prazo\":\"2026-11-06\",\"fixa\":false,"
+                    + "\"agendamento\":\"2026-11-05\",\"observacao\":\"para o cliente\"},"
+                    + "{\"titulo\":\"  \"}]}\n```";
+            br.com.nord_tool_backend.dto.CronogramaInterpretacaoDto dto = CronogramaSemanalServiceImpl.lerInterpretacao(resposta);
+            assertEquals("Montei duas demandas.", dto.getMensagem());
+            assertEquals(2, dto.getDemandas().size());
+            br.com.nord_tool_backend.dto.CronogramaRascunhoDto fixa = dto.getDemandas().get(0);
+            assertEquals("Engenharia", fixa.getNmCategoria());
+            assertEquals("executar", fixa.getNmStatusCronograma());
+            assertEquals(Boolean.TRUE, fixa.getFlFixo());
+            assertEquals(Arrays.asList(1, 3), fixa.getDiasSemana());
+            assertEquals("09:00", fixa.getNmHorario());
+            org.junit.jupiter.api.Assertions.assertNull(fixa.getDtAgendamento());
+            org.junit.jupiter.api.Assertions.assertNull(fixa.getNmTag());
+            br.com.nord_tool_backend.dto.CronogramaRascunhoDto pontual = dto.getDemandas().get(1);
+            assertEquals("Programação", pontual.getNmCategoria());
+            assertEquals("pendentes", pontual.getNmStatusCronograma());
+            assertEquals("2026-11-06", pontual.getDtPrazo());
+            assertEquals("2026-11-05T09:00", pontual.getDtAgendamento());
+            assertEquals(Boolean.FALSE, pontual.getFlFixo());
+            assertEquals("para o cliente", pontual.getTxObservacao());
+        }
+
+        @Test
+        void fixaSemDiaValidoViraDemandaComum() {
+            br.com.nord_tool_backend.dto.CronogramaInterpretacaoDto dto = CronogramaSemanalServiceImpl.lerInterpretacao(
+                    "{\"demandas\":[{\"titulo\":\"Missa\",\"categoria\":\"Inventada\",\"fixa\":true,\"dias\":[0],\"horario\":\"10:00\"}]}");
+            br.com.nord_tool_backend.dto.CronogramaRascunhoDto d = dto.getDemandas().get(0);
+            assertEquals(Boolean.FALSE, d.getFlFixo());
+            assertEquals("Engenharia", d.getNmCategoria());
+            org.junit.jupiter.api.Assertions.assertNull(d.getNmHorario());
+            assertEquals("Pronto, montei a demanda.", dto.getMensagem());
+        }
+
+        @Test
+        void respostaSemJsonDaErroAmigavel() {
+            br.com.nord_tool_backend.exception.NegocioException e = assertThrows(br.com.nord_tool_backend.exception.NegocioException.class,
+                    () -> CronogramaSemanalServiceImpl.lerInterpretacao("Desculpe, não entendi."));
+            org.junit.jupiter.api.Assertions.assertTrue(e.getMessage().contains("Tente escrever de outro jeito"));
         }
     }
 }

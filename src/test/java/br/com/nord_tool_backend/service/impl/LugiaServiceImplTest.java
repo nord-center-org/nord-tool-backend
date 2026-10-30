@@ -435,6 +435,28 @@ class LugiaServiceImplTest {
     }
 
     @Test
+    void responderUmaVezPassaParaOProximoESemGravarConversa() {
+        LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b");
+        LugiaIaProvider mistral = gratuito("mistral", "Mistral", false, "mistral-small-latest");
+        noLimite(groq, 3600);
+        responde(mistral, "{\"demandas\":[]}");
+
+        assertEquals("{\"demandas\":[]}", comGratuitos("", groq, mistral).responderUmaVez("sistema", "pedido"));
+
+        verify(mistral).conversar(eq("mistral-small-latest"), eq("sistema"), anyList(), any());
+        verify(claude, never()).conversar(anyString(), anyString(), anyList(), any());
+        verify(repository, never()).criarConversa(anyLong(), anyString());
+    }
+
+    @Test
+    void responderUmaVezComTodasNoLimiteDaErroDeNegocio() {
+        LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b");
+        noLimite(groq, 3600);
+        assertThrows(NegocioException.class, () -> comGratuitos("", groq).responderUmaVez("s", "p"));
+        assertThrows(NegocioException.class, () -> service.responderUmaVez("s", "p"));
+    }
+
+    @Test
     void automaticoDeixaQuemAtingiuOLimiteNoFimAteAPausaAcabar() {
         LugiaIaProvider groq = gratuito("groq", "Groq", false, "gpt-oss-120b");
         LugiaIaProvider mistral = gratuito("mistral", "Mistral", false, "mistral-small-latest");
