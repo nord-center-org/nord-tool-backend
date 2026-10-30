@@ -208,6 +208,20 @@ class EscadinhaServiceImplTest {
     }
 
     @Test
+    void marcarCelulasAceitaOsStatusDaLegendaEscolhidosAMao() throws Exception {
+        when(repository.buscarTorre(OBRA, 1L)).thenReturn(java.util.Optional.of(torre(1, 3)));
+        when(repository.gravarCelula(eq(OBRA), eq(1L), anyString(), any(), eq(9L))).thenReturn(1);
+        when(repository.grade(OBRA, 1L)).thenReturn(java.util.Optional.of("{}"));
+
+        service.marcarCelulas(1L, celulas("p2|A|c1a1", "a", null, "p3|A|c1a1", "O", null, "p4|A|c1a1", "P", null, "p5|A|c1a1", "D", null, "p6|A|c1a1", "V", null));
+
+        org.mockito.ArgumentCaptor<String> valor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(repository, org.mockito.Mockito.times(5)).gravarCelula(eq(OBRA), eq(1L), anyString(), valor.capture(), eq(9L));
+        assertEquals(java.util.List.of("A", "O", "P", "D", "V"),
+                valor.getAllValues().stream().map(x -> { try { return json.readTree(x).get("s").asText(); } catch (Exception e) { throw new IllegalStateException(e); } }).collect(java.util.stream.Collectors.toList()));
+    }
+
+    @Test
     void marcarCelulasRecusaChaveStatusEDataInvalidosSemGravarNada() {
         when(repository.buscarTorre(OBRA, 1L)).thenReturn(java.util.Optional.of(torre(1, 3)));
         assertThrows(EntradaInvalidaException.class, () -> service.marcarCelulas(1L, celulas("p2|A|c1a1", "E", null, "p2|C|x", "E", null)));
