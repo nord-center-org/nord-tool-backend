@@ -103,7 +103,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Transactional(rollbackFor = Exception.class)
     public CronogramaSemanalDto moverStatus(Long id, String status) {
         autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
-        String s = status == null ? "" : status.trim().toLowerCase(java.util.Locale.ROOT);
+        String s = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
         if (!STATUS.contains(s)) throw new EntradaInvalidaException("Status inválido: " + status);
         if (cronogramaSemanalRepository.moverStatus(id, s) == 0) {
             throw new br.com.nord_tool_backend.exception.NaoEncontradoException("Demanda não encontrada ou fora do seu alcance");
