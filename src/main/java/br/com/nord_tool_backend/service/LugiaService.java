@@ -25,4 +25,10 @@ public interface LugiaService {
 
     /** Valida, grava a mensagem e transmite a resposta em {@code saida} (abre a transmissão só depois de validar). */
     void conversar(LugiaChatForm form, LugiaSaida saida);
+
+    /**
+     * Uma pergunta só, pelas IAs gratuitas do modo Automático (passa para a próxima quando uma atinge o limite), sem
+     * gravar conversa. Não confere permissão: quem chama já conferiu a do próprio módulo.
+     */
+    String responderUmaVez(String sistema, String texto);
 }

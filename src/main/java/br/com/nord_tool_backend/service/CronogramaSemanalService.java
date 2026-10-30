@@ -21,4 +21,7 @@ public interface CronogramaSemanalService {
 
     /** Move a demanda na esteira (só o status): vale para quem enxerga o item, não só o dono. */
     CronogramaSemanalDto moverStatus(Long id, String status);
+
+    /** A Lugia lê o pedido em texto livre e devolve as demandas montadas (sem salvar: a pessoa confere e cria). */
+    br.com.nord_tool_backend.dto.CronogramaInterpretacaoDto interpretar(br.com.nord_tool_backend.form.CronogramaInterpretarForm form);
 }
