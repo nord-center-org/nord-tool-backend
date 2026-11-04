@@ -126,4 +126,25 @@ class SacServiceImplTest {
         verify(armazenamento, times(1)).abrir(70L);
         verify(repository, never()).inserirImagem(anyLong(), anyLong(), anyInt());
     }
+
+    @Test
+    void novidadesDaPessoaEAbertosSoParaOAdm() {
+        when(autorizacao.exigirAutenticado()).thenReturn(pessoa);
+        when(repository.novidades(5L)).thenReturn(Collections.singletonList(chamado(10, 5, "RESOLVIDO")));
+        assertEquals(1, service.novidades().getChamados().size());
+        assertEquals(null, service.novidades().getAbertos());
+        verify(repository, never()).abertos();
+        when(autorizacao.exigirAutenticado()).thenReturn(adm);
+        when(repository.abertos()).thenReturn(3);
+        assertEquals(Integer.valueOf(3), service.novidades().getAbertos());
+    }
+
+    @Test
+    void marcarVistoSoOsDaPropriaPessoa() {
+        when(autorizacao.exigirAutenticado()).thenReturn(pessoa);
+        service.marcarVistos(Arrays.asList(10L, 11L));
+        verify(repository).marcarVistos(5L, Arrays.asList(10L, 11L));
+        service.marcarVistos(Collections.emptyList());
+        verify(repository, times(1)).marcarVistos(anyLong(), any());
+    }
 }

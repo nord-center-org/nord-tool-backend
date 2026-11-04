@@ -5,6 +5,7 @@ import br.com.nord_tool_backend.controller.response.BaseResponse;
 import br.com.nord_tool_backend.dto.SacChamadoDto;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.form.SacRespostaForm;
+import br.com.nord_tool_backend.form.SacVistosForm;
 import br.com.nord_tool_backend.service.SacService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -54,6 +55,13 @@ public class SacWriteController implements BaseResponse {
     @PutMapping("/chamados/{id}/resposta")
     public ResponseEntity<ApiResponseBody<SacChamadoDto>> responder(@PathVariable Long id, @Valid @RequestBody SacRespostaForm form) {
         return ok(service.responder(id, form));
+    }
+
+    @Operation(summary = "Quem abriu viu os chamados: some o aviso de novidade")
+    @PutMapping("/chamados/vistos")
+    public ResponseEntity<ApiResponseBody<Void>> vistos(@Valid @RequestBody SacVistosForm form) {
+        service.marcarVistos(form.getIds());
+        return noContent();
     }
 
     @Operation(summary = "Exclui o chamado: quem abriu, enquanto está aberto; o ADMIN do SAC, sempre")

@@ -27,4 +27,13 @@ public interface SacRepository {
     List<Long> arquivos(Long idChamado);
 
     int excluir(Long id);
+
+    /** Chamados da pessoa com novidade não vista (com o avatar de quem respondeu). */
+    List<SacChamadoDto> novidades(Long idUsuario);
+
+    /** Marca como vistos os chamados da pessoa. */
+    int marcarVistos(Long idUsuario, List<Long> ids);
+
+    /** Quantos chamados de todo mundo ainda estão abertos (para o selo dos administradores). */
+    int abertos();
 }

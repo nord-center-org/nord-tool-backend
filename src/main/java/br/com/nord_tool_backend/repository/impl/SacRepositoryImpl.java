@@ -97,4 +97,25 @@ public class SacRepositoryImpl implements SacRepository {
         return executor.executar("Erro ao excluir chamado do SAC", () ->
                 jdbc.update(q("SPD.SAC.EXCLUIR"), new MapSqlParameterSource("id", id)));
     }
+
+    @Override
+    public List<SacChamadoDto> novidades(Long idUsuario) {
+        return executor.executar("Erro ao buscar novidades do SAC", () ->
+                jdbc.query(q("SPS.SAC.NOVIDADES"), new MapSqlParameterSource("idUsuario", idUsuario), BeanPropertyRowMapper.newInstance(SacChamadoDto.class)));
+    }
+
+    @Override
+    public int marcarVistos(Long idUsuario, List<Long> ids) {
+        if (ids.isEmpty()) return 0;
+        return executor.executar("Erro ao marcar chamados como vistos", () ->
+                jdbc.update(q("SPU.SAC.VISTO"), new MapSqlParameterSource("idUsuario", idUsuario).addValue("ids", ids)));
+    }
+
+    @Override
+    public int abertos() {
+        return executor.executar("Erro ao contar chamados abertos", () -> {
+            Integer n = jdbc.queryForObject(q("SPS.SAC.ABERTOS"), new MapSqlParameterSource(), Integer.class);
+            return n == null ? 0 : n;
+        });
+    }
 }
