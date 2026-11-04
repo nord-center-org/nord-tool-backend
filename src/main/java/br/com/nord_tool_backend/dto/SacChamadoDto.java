@@ -20,6 +20,12 @@ public class SacChamadoDto {
     private String cdStatus;
     private String txResposta;
     private String nmUsuarioResposta;
+    /** Resposta ou status novo que quem abriu ainda não viu. */
+    private Boolean inNovidade;
+    /** Avatar de quem respondeu (para o aviso no Início). */
+    private Long idUsuarioResposta;
+    private String nmCargoResposta;
+    private String dsConfigResposta;
     private LocalDateTime dhCriacao;
     private LocalDateTime dhAtualizacao;
     /** Ids das imagens, na ordem (baixadas em /sac/imagens/{id}). */

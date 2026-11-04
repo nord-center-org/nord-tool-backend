@@ -1,6 +1,7 @@
 package br.com.nord_tool_backend.service;
 
 import br.com.nord_tool_backend.dto.SacChamadoDto;
+import br.com.nord_tool_backend.dto.SacNovidadesDto;
 import br.com.nord_tool_backend.form.SacRespostaForm;
 import br.com.nord_tool_backend.storage.ArquivoDownload;
 
@@ -28,4 +29,10 @@ public interface SacService {
     void excluir(Long id);
 
     ArquivoDownload baixarImagem(Long idImagem);
+
+    /** Novidades da pessoa (resposta ou status novo não vistos) e, para o ADMIN do SAC, quantos chamados estão abertos. */
+    SacNovidadesDto novidades();
+
+    /** Quem abriu viu estes chamados: some o aviso. */
+    void marcarVistos(List<Long> ids);
 }

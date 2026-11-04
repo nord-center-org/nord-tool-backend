@@ -2,6 +2,7 @@ package br.com.nord_tool_backend.service.impl;
 
 import br.com.nord_tool_backend.dto.SacChamadoDto;
 import br.com.nord_tool_backend.dto.SacImagemDto;
+import br.com.nord_tool_backend.dto.SacNovidadesDto;
 import br.com.nord_tool_backend.exception.AcessoNegadoException;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.exception.NaoEncontradoException;
@@ -105,6 +106,25 @@ public class SacServiceImpl implements SacService {
         }
         // O arquivo da imagem nunca muda: o id serve de versão para o cache.
         return new ArquivoDownload(armazenamento.abrir(i.getIdArquivo()), i.getIdArquivo());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SacNovidadesDto novidades() {
+        UsuarioAutenticado u = autorizacao.exigirAutenticado();
+        SacNovidadesDto n = new SacNovidadesDto();
+        n.setChamados(repository.novidades(u.getId()));
+        n.setAbertos(u.acao(Modulo.SAC).atende(Acao.ADMIN) ? repository.abertos() : null);
+        return n;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void marcarVistos(List<Long> ids) {
+        UsuarioAutenticado u = autorizacao.exigirAutenticado();
+        if (ids == null || ids.isEmpty()) return;
+        if (ids.size() > 300) throw new EntradaInvalidaException("Muitos chamados de uma vez");
+        repository.marcarVistos(u.getId(), ids);
     }
 
     private SacChamadoDto chamado(Long id) {
