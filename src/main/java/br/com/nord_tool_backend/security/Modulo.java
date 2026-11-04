@@ -36,6 +36,8 @@ public enum Modulo {
     LUGIA,
     /** SAC: qualquer pessoa logada abre chamados; ADMIN vê todos, responde e muda o status. */
     SAC,
+    /** Placas de obra: LEITURA vê e baixa, ESCRITA cria e altera placas, ADMIN mantém os modelos. */
+    PLACAS,
     ADMINISTRACAO;
 
     public static final String CURINGA = "*";
