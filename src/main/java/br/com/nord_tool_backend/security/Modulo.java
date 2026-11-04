@@ -34,6 +34,8 @@ public enum Modulo {
     ESCADINHA,
     /** Lugia (chat multi-IA): LEITURA conversa, ESCRITA deixa a IA agir no NordTool, ADMIN libera mudanças de código. */
     LUGIA,
+    /** SAC: qualquer pessoa logada abre chamados; ADMIN vê todos, responde e muda o status. */
+    SAC,
     ADMINISTRACAO;
 
     public static final String CURINGA = "*";
