@@ -29,5 +29,19 @@ public class RelatorioFotograficoDto {
     private String nmAutor;
     private Long qtFotos;
     private Integer nrVersao;
+    /** v2: o relatório é de quem está logado (quem recebeu compartilhado só vê). */
+    private Boolean inProprio;
+    /** v2: com quem está compartilhado ("3,7,9"); vai para a tela como idsCompartilhados. */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String txCompartilhados;
     private List<RelatorioItemDto> itens;
+
+    public List<Long> getIdsCompartilhados() {
+        List<Long> ids = new java.util.ArrayList<>();
+        if (txCompartilhados == null || txCompartilhados.isEmpty()) return ids;
+        for (String t : txCompartilhados.split(",")) {
+            if (!t.trim().isEmpty()) ids.add(Long.valueOf(t.trim()));
+        }
+        return ids;
+    }
 }

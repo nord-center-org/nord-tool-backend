@@ -32,10 +32,22 @@ public class RelatorioFotograficoReadController implements BaseResponse {
         return ok(service.listarModelos());
     }
 
-    @Operation(summary = "Lista os relatórios das fases que o usuário vê (sem itens)")
+    @Operation(summary = "Lista os relatórios da pessoa e os compartilhados com ela; o administrador do módulo vê todos (sem itens)")
     @GetMapping
     public ResponseEntity<ApiResponseBody<List<RelatorioFotograficoDto>>> listar() {
         return ok(service.listar());
+    }
+
+    @Operation(summary = "Pessoas com quem dá para compartilhar um relatório")
+    @GetMapping("/pessoas")
+    public ResponseEntity<ApiResponseBody<List<br.com.nord_tool_backend.dto.PessoaCronogramaDto>>> pessoas() {
+        return ok(service.pessoas());
+    }
+
+    @Operation(summary = "Equipes que a pessoa enxerga, para compartilhar com todos os membros")
+    @GetMapping("/equipes")
+    public ResponseEntity<ApiResponseBody<List<br.com.nord_tool_backend.dto.CronogramaEquipeDto>>> equipes() {
+        return ok(service.equipes());
     }
 
     @Operation(summary = "Relatório com itens e fotos")
