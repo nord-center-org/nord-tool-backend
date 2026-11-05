@@ -52,7 +52,7 @@ class SacServiceImplTest {
         repository = mock(SacRepository.class);
         autorizacao = mock(AutorizacaoService.class);
         armazenamento = mock(ArmazenamentoService.class);
-        service = new SacServiceImpl(repository, autorizacao, armazenamento);
+        service = new SacServiceImpl(repository, autorizacao, armazenamento, mock(br.com.nord_tool_backend.service.NotificacaoService.class));
         when(repository.imagens(any())).thenReturn(Collections.emptyList());
     }
 
