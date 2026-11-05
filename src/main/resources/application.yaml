@@ -69,6 +69,14 @@ nord-tool:
   storage:
     # Provedor de arquivos: POSTGRES (provisório). Definitivo ainda a decidir (Drive/S3).
     provider: ${NORD_STORAGE_PROVIDER:POSTGRES}
+  push:
+    # Notificações no celular (Web Push). Sem as chaves no ambiente, o servidor gera um par VAPID na primeira vez e
+    # guarda no banco (push_chave). Para usar o seu: npx web-push generate-vapid-keys (nunca versione a privada).
+    vapid-public: ${NORD_PUSH_VAPID_PUBLIC:}
+    vapid-private: ${NORD_PUSH_VAPID_PRIVATE:}
+    # Contato do remetente exigido pelos serviços de push (mailto: ou https:).
+    subject: ${NORD_PUSH_SUBJECT:${NORD_APP_URL:mailto:nordtool@localhost}}
+    lembretes: ${NORD_PUSH_LEMBRETES:true}
   lugia:
     # Chat multi-IA. Cada provedor aparece com chave + ao menos um modelo. Chaves só pelo ambiente.
     anthropic-api-key: ${ANTHROPIC_API_KEY:}

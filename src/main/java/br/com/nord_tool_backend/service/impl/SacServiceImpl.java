@@ -42,6 +42,7 @@ public class SacServiceImpl implements SacService {
     private final SacRepository repository;
     private final AutorizacaoService autorizacao;
     private final ArmazenamentoService armazenamento;
+    private final br.com.nord_tool_backend.service.NotificacaoService notificacoes;
 
     @Override
     @Transactional(readOnly = true)
@@ -78,7 +79,9 @@ public class SacServiceImpl implements SacService {
         String resposta = texto(form.getTxResposta());
         if (resposta != null && resposta.length() > MAX_DESCRICAO) throw new EntradaInvalidaException("A resposta deve ter no máximo " + MAX_DESCRICAO + " caracteres");
         if (repository.responder(id, form.getCdStatus(), resposta, u.getId()) == 0) throw new NaoEncontradoException("Chamado não encontrado");
-        return chamado(id);
+        SacChamadoDto c = chamado(id);
+        if (!u.getId().equals(c.getIdUsuario())) notificacoes.sacRespondido(c.getIdUsuario(), c.getId(), c.getNmTitulo(), c.getCdStatus(), u);
+        return c;
     }
 
     @Override

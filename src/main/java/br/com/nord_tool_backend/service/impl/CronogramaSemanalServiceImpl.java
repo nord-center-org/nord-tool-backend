@@ -51,15 +51,18 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
 
     private final LugiaService lugia;
 
+    private final br.com.nord_tool_backend.service.NotificacaoService notificacoes;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CronogramaSemanalDto salvarCronogramaSemanal(CronogramaSemanalForm cronogramaSemanalForm) {
-        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        br.com.nord_tool_backend.security.UsuarioAutenticado ator = autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
         log.info("Iniciando método para salvar um Cronograma Semanal");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalForm.converterToDomain();
         if (Boolean.TRUE.equals(cronogramaSemanal.getInCronogramaFixo())) autorizacao.exigir(Modulo.CRONOGRAMA_ROTINA, Acao.ESCRITA);
         validarOrigemCronogramaSemanal(cronogramaSemanal);
         CronogramaSemanalDto cronogramaSemanalDto = cronogramaSemanalRepository.salvarCronogramaSemanal(cronogramaSemanal);
+        if (cronogramaSemanalDto != null && cronogramaSemanalDto.getId() != null) notificacoes.demandaCriada(cronogramaSemanalDto.getId(), ator);
         log.info("Finalizando método que salva um Cronograma Semanal");
         return cronogramaSemanalDto;
     }
@@ -67,7 +70,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CronogramaSemanalDto alterarCronogramaSemanal(CronogramaSemanalForm cronogramaSemanalForm) {
-        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        br.com.nord_tool_backend.security.UsuarioAutenticado ator = autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
         log.info("Iniciando método para alterar um Cronograma Semanal");
         CronogramaSemanal cronogramaSemanal = cronogramaSemanalForm.converterToDomain();
         // Mexer numa atividade fixa (ou transformar em fixa) é coisa da rotina.
@@ -77,6 +80,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
         }
         validarOrigemCronogramaSemanal(cronogramaSemanal);
         CronogramaSemanalDto cronogramaSemanalDto = cronogramaSemanalRepository.alterarCronogramaSemanal(cronogramaSemanal);
+        if (cronogramaSemanal.getId() != null) notificacoes.demandaAlterada(cronogramaSemanal.getId(), ator, null);
         log.info("Finalizando método que alterar um Cronograma Semanal");
         return cronogramaSemanalDto;
     }
@@ -102,12 +106,13 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CronogramaSemanalDto moverStatus(Long id, String status) {
-        autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
+        br.com.nord_tool_backend.security.UsuarioAutenticado ator = autorizacao.exigir(Modulo.CRONOGRAMA, Acao.ESCRITA);
         String s = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
         if (!STATUS.contains(s)) throw new EntradaInvalidaException("Status inválido: " + status);
         if (cronogramaSemanalRepository.moverStatus(id, s) == 0) {
             throw new br.com.nord_tool_backend.exception.NaoEncontradoException("Demanda não encontrada ou fora do seu alcance");
         }
+        notificacoes.demandaAlterada(id, ator, "etapa:" + s);
         return CronogramaSemanalDto.converterToDto(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id));
     }
 
@@ -173,7 +178,11 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
         if (!destinos.isEmpty() && cronogramaSemanalRepository.contarUsuariosAtivos(destinos) != destinos.size()) {
             throw new EntradaInvalidaException("Há pessoas inativas ou inexistentes na lista");
         }
+        List<Long> antes = CronogramaSemanalDto.converterToDto(item).getIdsCompartilhados();
         cronogramaSemanalRepository.compartilhar(id, new ArrayList<>(destinos));
+        java.util.Set<Long> novos = new java.util.LinkedHashSet<>(destinos);
+        if (antes != null) novos.removeAll(antes);
+        notificacoes.demandaCompartilhada(id, u, novos);
         return CronogramaSemanalDto.converterToDto(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(id));
     }
 

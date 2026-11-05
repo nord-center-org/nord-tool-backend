@@ -53,6 +53,9 @@ public class CronogramaSemanalServiceImplTest {
     @Mock
     private CronogramaSemanalRepository cronogramaSemanalRepository;
 
+    @Mock
+    private br.com.nord_tool_backend.service.NotificacaoService notificacoes;
+
     CronogramaSemanal cronogramaSemanal = new CronogramaSemanal();
     CronogramaSemanalDto cronogramaSemanalDto = new CronogramaSemanalDto();
     List<CronogramaSemanalDto> lsCronogramaSemanalDto = new ArrayList<>();
@@ -132,6 +135,7 @@ public class CronogramaSemanalServiceImplTest {
         CronogramaSemanalDto result = cronogramaSemanalService.salvarCronogramaSemanal(cronogramaSemanalForm);
         assertEquals(cronogramaSemanalDto, result);
         verify(cronogramaSemanalRepository).salvarCronogramaSemanal(any(CronogramaSemanal.class));
+        if (cronogramaSemanalDto.getId() != null) verify(notificacoes).demandaCriada(org.mockito.ArgumentMatchers.eq(cronogramaSemanalDto.getId()), any());
     }
 
     @Test
@@ -247,7 +251,7 @@ public class CronogramaSemanalServiceImplTest {
             UsuarioAutenticado u = mock(UsuarioAutenticado.class);
             lenient().when(u.getId()).thenReturn(7L);
             lenient().when(autorizacao.exigir(any(), any())).thenReturn(u);
-            service = new CronogramaSemanalServiceImpl(repository, autorizacao, mock(br.com.nord_tool_backend.service.LugiaService.class));
+            service = new CronogramaSemanalServiceImpl(repository, autorizacao, mock(br.com.nord_tool_backend.service.LugiaService.class), mock(br.com.nord_tool_backend.service.NotificacaoService.class));
         }
 
         private CronogramaSemanal item(Boolean proprio) {
@@ -321,7 +325,7 @@ public class CronogramaSemanalServiceImplTest {
         void setUp() {
             lugia = mock(br.com.nord_tool_backend.service.LugiaService.class);
             autorizacao = mock(AutorizacaoService.class);
-            service = new CronogramaSemanalServiceImpl(mock(CronogramaSemanalRepository.class), autorizacao, lugia);
+            service = new CronogramaSemanalServiceImpl(mock(CronogramaSemanalRepository.class), autorizacao, lugia, mock(br.com.nord_tool_backend.service.NotificacaoService.class));
         }
 
         private br.com.nord_tool_backend.form.CronogramaInterpretarForm form(String texto) {
