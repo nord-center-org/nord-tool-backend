@@ -75,7 +75,7 @@ public final class WebPushCripto {
     }
 
     /** Ponto não comprimido: 0x04 || X (32) || Y (32). */
-    static byte[] bytesDaPublica(ECPublicKey k) {
+    public static byte[] bytesDaPublica(ECPublicKey k) {
         byte[] saida = new byte[65];
         saida[0] = 4;
         copiar32(k.getW().getAffineX(), saida, 1);
@@ -90,7 +90,7 @@ public final class WebPushCripto {
         System.arraycopy(b, inicio, destino, pos + 32 - tam, tam);
     }
 
-    static ECPublicKey publicaDosBytes(byte[] ponto) throws GeneralSecurityException {
+    public static ECPublicKey publicaDosBytes(byte[] ponto) throws GeneralSecurityException {
         if (ponto.length != 65 || ponto[0] != 4) throw new GeneralSecurityException("Chave pública P-256 inválida");
         BigInteger x = new BigInteger(1, Arrays.copyOfRange(ponto, 1, 33));
         BigInteger y = new BigInteger(1, Arrays.copyOfRange(ponto, 33, 65));
@@ -136,7 +136,7 @@ public final class WebPushCripto {
      * Cifra o conteúdo para um aparelho. `uaPublica` (p256dh) e `segredo` (auth) vêm da inscrição do navegador.
      * `parDoServidor` e `salt` são aleatórios a cada envio (só os testes passam valores fixos).
      */
-    static byte[] cifrar(byte[] conteudo, byte[] uaPublica, byte[] segredo, KeyPair parDoServidor, byte[] salt) throws GeneralSecurityException {
+    public static byte[] cifrar(byte[] conteudo, byte[] uaPublica, byte[] segredo, KeyPair parDoServidor, byte[] salt) throws GeneralSecurityException {
         ECPublicKey ua = publicaDosBytes(uaPublica);
         byte[] asPublica = bytesDaPublica((ECPublicKey) parDoServidor.getPublic());
         KeyAgreement ka = KeyAgreement.getInstance("ECDH");
@@ -174,7 +174,7 @@ public final class WebPushCripto {
     // ---------------------------------------------------------------- VAPID (RFC 8292)
 
     /** Origem do endpoint (o "aud" do JWT): https://fcm.googleapis.com. */
-    static String origem(String endpoint) {
+    public static String origem(String endpoint) {
         URI u = URI.create(endpoint);
         return u.getScheme() + "://" + u.getHost() + (u.getPort() > 0 ? ":" + u.getPort() : "");
     }
@@ -228,7 +228,7 @@ public final class WebPushCripto {
     }
 
     /** Monta um par a partir dos bytes (testes com os vetores da RFC). */
-    static KeyPair par(byte[] privada, byte[] publica) throws GeneralSecurityException {
+    public static KeyPair par(byte[] privada, byte[] publica) throws GeneralSecurityException {
         return new KeyPair(publicaDosBytes(publica), privadaDosBytes(privada));
     }
 }

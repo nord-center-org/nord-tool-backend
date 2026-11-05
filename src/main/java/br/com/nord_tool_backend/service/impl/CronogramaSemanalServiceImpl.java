@@ -178,7 +178,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
         if (!destinos.isEmpty() && cronogramaSemanalRepository.contarUsuariosAtivos(destinos) != destinos.size()) {
             throw new EntradaInvalidaException("Há pessoas inativas ou inexistentes na lista");
         }
-        java.util.List<Long> antes = CronogramaSemanalDto.converterToDto(item).getIdsCompartilhados();
+        List<Long> antes = CronogramaSemanalDto.converterToDto(item).getIdsCompartilhados();
         cronogramaSemanalRepository.compartilhar(id, new ArrayList<>(destinos));
         java.util.Set<Long> novos = new java.util.LinkedHashSet<>(destinos);
         if (antes != null) novos.removeAll(antes);
