@@ -14,12 +14,16 @@ import br.com.nord_tool_backend.form.RelatorioFotograficoForm;
 import br.com.nord_tool_backend.form.RelatorioItemForm;
 import br.com.nord_tool_backend.form.RelatorioModeloForm;
 import br.com.nord_tool_backend.form.RelatorioStatusForm;
+import br.com.nord_tool_backend.dto.CronogramaEquipeDto;
+import br.com.nord_tool_backend.dto.PessoaCronogramaDto;
+import br.com.nord_tool_backend.exception.AcessoNegadoException;
+import br.com.nord_tool_backend.repository.CronogramaEquipeRepository;
+import br.com.nord_tool_backend.repository.CronogramaSemanalRepository;
 import br.com.nord_tool_backend.repository.RelatorioFotograficoRepository;
 import br.com.nord_tool_backend.security.Acao;
 import br.com.nord_tool_backend.security.Modulo;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
 import br.com.nord_tool_backend.service.AutorizacaoService;
-import br.com.nord_tool_backend.service.ContextoFaseService;
 import br.com.nord_tool_backend.service.RelatorioFotograficoService;
 import br.com.nord_tool_backend.storage.ArmazenamentoService;
 import br.com.nord_tool_backend.storage.ArquivoDownload;
@@ -49,19 +53,23 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
     static final String FUNDO = "fundo";
     static final String ICONE = "icone";
     static final int MAX_FOTOS = 200;
+    static final int MAX_COMPARTILHAMENTOS = 200;
     static final String MSG_CONFLITO = "O relatório mudou. Sincronize e tente novamente.";
 
     private final RelatorioFotograficoRepository repository;
     private final AutorizacaoService autorizacao;
-    private final ContextoFaseService contexto;
+    private final CronogramaSemanalRepository pessoas;
+    private final CronogramaEquipeRepository equipes;
     private final ArmazenamentoService armazenamento;
 
     public RelatorioFotograficoServiceImpl(RelatorioFotograficoRepository repository, AutorizacaoService autorizacao,
-                                           ContextoFaseService contexto, ArmazenamentoService armazenamento) {
+                                           ArmazenamentoService armazenamento, CronogramaSemanalRepository pessoas,
+                                           CronogramaEquipeRepository equipes) {
         this.repository = repository;
         this.autorizacao = autorizacao;
-        this.contexto = contexto;
         this.armazenamento = armazenamento;
+        this.pessoas = pessoas;
+        this.equipes = equipes;
     }
 
     // ---------- modelos ----------
@@ -105,15 +113,15 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
     @Override
     @Transactional(readOnly = true)
     public List<RelatorioFotograficoDto> listar() {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
-        return repository.listar();
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
+        return repository.listar(u.getId(), admin(u));
     }
 
     @Override
     @Transactional(readOnly = true)
     public RelatorioFotograficoDto detalhar(Long id) {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
-        return completo(id);
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
+        return completo(id, u);
     }
 
     @Override
@@ -127,7 +135,8 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         if (r.getCdLayout() == null) usarLayout(r, modelo == null ? "R2" : modelo.getCdLayout());
         r.setIdModelo(modelo == null ? null : modelo.getId());
         r.setIdAutor(u.getId());
-        Long id = repository.inserir(r, contexto.faseParaCriar(null));
+        // v2: o relatório é de quem criou; não fica mais preso a uma obra/fase.
+        Long id = repository.inserir(r, null);
 
         List<RelatorioItemForm> itens = form.getItens() == null ? new ArrayList<>() : form.getItens();
         if (itens.isEmpty() && modelo != null) {
@@ -140,41 +149,41 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
                 repository.inserirItem(item(id, ordem++, f.getNmItem().trim(), texto(f.getTxOrientacao()), texto(f.getTxResposta())));
             }
         }
-        return completo(id);
+        return completo(id, u);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RelatorioFotograficoDto alterar(Long id, RelatorioFotograficoForm form) {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
         int versao = versaoObrigatoria(form.getNrVersao());
-        RelatorioFotograficoDto atual = editavel(id);
+        RelatorioFotograficoDto atual = editavel(id, u);
         RelatorioFotograficoDto r = cabecalho(form);
         r.setId(id);
         if (r.getCdLayout() == null) usarLayout(r, atual.getCdLayout());
         if (repository.alterar(r, versao) == 0) throw new ConflitoException(MSG_CONFLITO);
         if (form.getItens() != null) sincronizarItens(id, form.getItens());
-        return completo(id);
+        return completo(id, u);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RelatorioFotograficoDto alterarStatus(Long id, RelatorioStatusForm form) {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
         int versao = versaoObrigatoria(form.getNrVersao());
         String status = form.getCdStatus().trim().toUpperCase();
         if (!RASCUNHO.equals(status) && !CONCLUIDO.equals(status)) throw new EntradaInvalidaException("Status inválido");
-        relatorio(id);
+        doDonoOuAdmin(id, u);
         if (repository.alterarStatus(id, status, versao) == 0) throw new ConflitoException(MSG_CONFLITO);
-        return completo(id);
+        return completo(id, u);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluir(Long id, Integer nrVersao) {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
         int versao = versaoObrigatoria(nrVersao);
-        relatorio(id);
+        doDonoOuAdmin(id, u);
         List<Long> arquivos = repository.listarFotos(id).stream().map(RelatorioFotoDto::getIdArquivo).collect(Collectors.toList());
         if (repository.deletar(id, versao) == 0) throw new ConflitoException(MSG_CONFLITO);
         apagarArquivos(arquivos);
@@ -185,9 +194,9 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RelatorioFotoDto adicionarFoto(Long idItem, String nome, byte[] bytes, String txLegenda) {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
         Long idRelatorio = repository.relatorioDoItem(idItem).orElseThrow(() -> new NaoEncontradoException("Item não encontrado"));
-        editavel(idRelatorio);
+        editavel(idRelatorio, u);
         if (repository.listarFotos(idRelatorio).size() >= MAX_FOTOS) {
             throw new NegocioException("O relatório pode ter no máximo " + MAX_FOTOS + " fotos");
         }
@@ -202,9 +211,9 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RelatorioFotoDto alterarFoto(Long idFoto, RelatorioFotoForm form) {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
-        RelatorioFotoDto f = fotoNoEscopo(idFoto);
-        editavel(f.getIdRelatorio());
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        RelatorioFotoDto f = fotoNoEscopo(idFoto, u);
+        editavel(f.getIdRelatorio(), u);
         int ordem = form.getNrOrdem() == null ? f.getNrOrdem() : form.getNrOrdem();
         repository.alterarFoto(idFoto, texto(form.getTxLegenda()), ordem);
         return foto(idFoto);
@@ -213,9 +222,9 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluirFoto(Long idFoto) {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
-        RelatorioFotoDto f = fotoNoEscopo(idFoto);
-        editavel(f.getIdRelatorio());
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        RelatorioFotoDto f = fotoNoEscopo(idFoto, u);
+        editavel(f.getIdRelatorio(), u);
         repository.deletarFoto(idFoto);
         apagarArquivos(java.util.Collections.singletonList(f.getIdArquivo()));
     }
@@ -223,8 +232,8 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
     @Override
     @Transactional(readOnly = true)
     public ArquivoDownload baixarFoto(Long idFoto) {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
-        RelatorioFotoDto f = fotoNoEscopo(idFoto);
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
+        RelatorioFotoDto f = fotoNoEscopo(idFoto, u);
         // A versão (ETag) acompanha o arquivo: ao cortar/girar a foto troca de arquivo e o cache do navegador é renovado.
         return new ArquivoDownload(armazenamento.abrir(f.getIdArquivo()), f.getIdArquivo());
     }
@@ -232,14 +241,49 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RelatorioFotoDto trocarImagemFoto(Long idFoto, String nome, byte[] bytes) {
-        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
-        RelatorioFotoDto f = fotoNoEscopo(idFoto);
-        editavel(f.getIdRelatorio());
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        RelatorioFotoDto f = fotoNoEscopo(idFoto, u);
+        editavel(f.getIdRelatorio(), u);
         String contentType = ArquivoValidador.validarImagem(nome, bytes);
         Long novo = armazenamento.salvar(nome, contentType, bytes);
         repository.trocarImagemFoto(idFoto, novo);
         apagarArquivos(java.util.Collections.singletonList(f.getIdArquivo()));
         return foto(idFoto);
+    }
+
+    // ---------- compartilhamento (v2) ----------
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RelatorioFotograficoDto compartilhar(Long id, List<Long> idsUsuarios) {
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        RelatorioFotograficoDto r = doDonoOuAdmin(id, u);
+        Set<Long> destinos = new java.util.LinkedHashSet<>();
+        for (Long d : idsUsuarios == null ? new ArrayList<Long>() : idsUsuarios) {
+            if (d != null && !d.equals(r.getIdAutor())) destinos.add(d);
+        }
+        if (destinos.size() > MAX_COMPARTILHAMENTOS) {
+            throw new EntradaInvalidaException("Compartilhe com no máximo " + MAX_COMPARTILHAMENTOS + " pessoas");
+        }
+        if (!destinos.isEmpty() && pessoas.contarUsuariosAtivos(destinos) != destinos.size()) {
+            throw new EntradaInvalidaException("Há pessoas inativas ou inexistentes na lista");
+        }
+        repository.compartilhar(id, new ArrayList<>(destinos));
+        return completo(id, u);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PessoaCronogramaDto> pessoas() {
+        autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
+        return pessoas.listarPessoas();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CronogramaEquipeDto> equipes() {
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.LEITURA);
+        return equipes.listar(null, u.getId(), admin(u)).stream().map(CronogramaEquipeServiceImpl::dto).collect(Collectors.toList());
     }
 
     // ---------- imagens do modelo ----------
@@ -320,8 +364,8 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         ids.forEach(armazenamento::apagar);
     }
 
-    private RelatorioFotograficoDto completo(Long id) {
-        RelatorioFotograficoDto r = relatorio(id);
+    private RelatorioFotograficoDto completo(Long id, UsuarioAutenticado u) {
+        RelatorioFotograficoDto r = relatorio(id, u);
         List<RelatorioItemDto> itens = repository.listarItens(id);
         Map<Long, List<RelatorioFotoDto>> fotos = repository.listarFotos(id).stream()
                 .collect(Collectors.groupingBy(RelatorioFotoDto::getIdItem));
@@ -330,20 +374,34 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         return r;
     }
 
-    private RelatorioFotograficoDto relatorio(Long id) {
-        return repository.buscar(id).orElseThrow(() -> new NaoEncontradoException("Relatório não encontrado"));
+    /** O relatório, se a pessoa o enxerga: é dela, foi compartilhado com ela ou ela é administradora do módulo. */
+    private RelatorioFotograficoDto relatorio(Long id, UsuarioAutenticado u) {
+        return repository.buscar(id, u.getId(), admin(u)).orElseThrow(() -> new NaoEncontradoException("Relatório não encontrado"));
     }
 
-    private RelatorioFotograficoDto editavel(Long id) {
-        RelatorioFotograficoDto r = relatorio(id);
+    /** Compartilhado comigo é só leitura: altera quem criou ou o administrador do módulo. */
+    private RelatorioFotograficoDto doDonoOuAdmin(Long id, UsuarioAutenticado u) {
+        RelatorioFotograficoDto r = relatorio(id, u);
+        if (!Boolean.TRUE.equals(r.getInProprio()) && !admin(u)) {
+            throw new AcessoNegadoException("Só quem criou o relatório pode alterá-lo. Ele foi compartilhado com você só para ver.");
+        }
+        return r;
+    }
+
+    private static boolean admin(UsuarioAutenticado u) {
+        return u.acao(Modulo.RELATORIO_FOTOGRAFICO).atende(Acao.ADMIN);
+    }
+
+    private RelatorioFotograficoDto editavel(Long id, UsuarioAutenticado u) {
+        RelatorioFotograficoDto r = doDonoOuAdmin(id, u);
         if (CONCLUIDO.equals(r.getCdStatus())) throw new NegocioException("Relatório concluído. Reabra para editar.");
         return r;
     }
 
-    /** A foto só é vista por quem enxerga o relatório (escopo de fase). */
-    private RelatorioFotoDto fotoNoEscopo(Long idFoto) {
+    /** A foto só é vista por quem enxerga o relatório. */
+    private RelatorioFotoDto fotoNoEscopo(Long idFoto, UsuarioAutenticado u) {
         RelatorioFotoDto f = repository.buscarFoto(idFoto).orElseThrow(() -> new NaoEncontradoException("Foto não encontrada"));
-        relatorio(f.getIdRelatorio());
+        relatorio(f.getIdRelatorio(), u);
         return f;
     }
 

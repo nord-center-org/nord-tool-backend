@@ -23,6 +23,15 @@ public interface RelatorioFotograficoService {
 
     RelatorioFotograficoDto detalhar(Long id);
 
+    /** v2: substitui com quem o relatório está compartilhado (quem recebe só vê). */
+    RelatorioFotograficoDto compartilhar(Long id, List<Long> idsUsuarios);
+
+    /** v2: pessoas com quem dá para compartilhar (inEquipe = abaixo de mim na hierarquia). */
+    List<br.com.nord_tool_backend.dto.PessoaCronogramaDto> pessoas();
+
+    /** v2: equipes que a pessoa enxerga, para compartilhar com todos os membros de uma vez. */
+    List<br.com.nord_tool_backend.dto.CronogramaEquipeDto> equipes();
+
     RelatorioFotograficoDto criar(RelatorioFotograficoForm form);
 
     RelatorioFotograficoDto alterar(Long id, RelatorioFotograficoForm form);

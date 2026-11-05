@@ -126,4 +126,11 @@ public class RelatorioFotograficoWriteController implements BaseResponse {
             throw new EntradaInvalidaException("Não foi possível ler o arquivo enviado", ex);
         }
     }
+
+    @Operation(summary = "Substitui com quem o relatório está compartilhado (quem recebe só vê)")
+    @PutMapping("/{id}/compartilhamento")
+    public ResponseEntity<ApiResponseBody<RelatorioFotograficoDto>> compartilhar(@PathVariable Long id,
+            @Valid @RequestBody br.com.nord_tool_backend.form.CompartilhamentoForm form) {
+        return ok(service.compartilhar(id, form.getIdsUsuarios()));
+    }
 }

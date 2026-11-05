@@ -22,10 +22,14 @@ public interface RelatorioFotograficoRepository {
     void substituirItensDoModelo(Long idModelo, List<RelatorioModeloItemDto> itens);
 
     /** Relatórios da fase em escopo (sem itens). */
-    List<RelatorioFotograficoDto> listar();
+    /** v2: os de idUsuario, os compartilhados com ele e, com verTudo, todos. */
+    List<RelatorioFotograficoDto> listar(Long idUsuario, boolean verTudo);
 
     /** Busca respeitando o escopo de fase. */
-    Optional<RelatorioFotograficoDto> buscar(Long id);
+    Optional<RelatorioFotograficoDto> buscar(Long id, Long idUsuario, boolean verTudo);
+
+    /** Substitui a lista de pessoas com quem o relatório está compartilhado. */
+    void compartilhar(Long id, List<Long> idsUsuarios);
 
     List<RelatorioItemDto> listarItens(Long idRelatorio);
 

@@ -8,7 +8,6 @@ import br.com.nord_tool_backend.dto.RelatorioModeloItemDto;
 import br.com.nord_tool_backend.repository.RelatorioFotograficoRepository;
 import br.com.nord_tool_backend.repository.jdbc.JdbcExecutor;
 import br.com.nord_tool_backend.repository.jdbc.SqlQueries;
-import br.com.nord_tool_backend.service.ContextoFaseService;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -24,15 +23,12 @@ public class RelatorioFotograficoRepositoryImpl implements RelatorioFotograficoR
 
     private final NamedParameterJdbcTemplate jdbc;
     private final JdbcExecutor executor;
-    private final ContextoFaseService contexto;
     private final SqlQueries queries;
 
-    public RelatorioFotograficoRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries,
-                                              ContextoFaseService contexto) {
+    public RelatorioFotograficoRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries) {
         this.jdbc = jdbc;
         this.executor = executor;
         this.queries = queries;
-        this.contexto = contexto;
         // Falha cedo se alguma query faltar no catálogo.
         for (String chave : new String[]{"SPS.RELATORIO.MODELO.LISTAR", "SPS.RELATORIO.LISTAR", "SPI.RELATORIO.FOTO.INSERIR"}) {
             queries.get(chave);
@@ -81,17 +77,31 @@ public class RelatorioFotograficoRepositoryImpl implements RelatorioFotograficoR
     }
 
     @Override
-    public List<RelatorioFotograficoDto> listar() {
+    public List<RelatorioFotograficoDto> listar(Long idUsuario, boolean verTudo) {
         return executor.executar("Erro ao listar relatórios fotográficos", () ->
-                jdbc.query(q("SPS.RELATORIO.LISTAR"), contexto.escopo().aplicar(new MapSqlParameterSource().addValue("id", null, Types.BIGINT)),
+                jdbc.query(q("SPS.RELATORIO.LISTAR"), escopo(idUsuario, verTudo).addValue("id", null, Types.BIGINT),
                         BeanPropertyRowMapper.newInstance(RelatorioFotograficoDto.class)));
     }
 
     @Override
-    public Optional<RelatorioFotograficoDto> buscar(Long id) {
+    public Optional<RelatorioFotograficoDto> buscar(Long id, Long idUsuario, boolean verTudo) {
         return executor.executar("Erro ao buscar relatório fotográfico", () ->
-                jdbc.query(q("SPS.RELATORIO.LISTAR"), contexto.escopo().aplicar(new MapSqlParameterSource().addValue("id", id, Types.BIGINT)),
+                jdbc.query(q("SPS.RELATORIO.LISTAR"), escopo(idUsuario, verTudo).addValue("id", id, Types.BIGINT),
                         BeanPropertyRowMapper.newInstance(RelatorioFotograficoDto.class)).stream().findFirst());
+    }
+
+    @Override
+    public void compartilhar(Long id, List<Long> idsUsuarios) {
+        executor.executar("Erro ao compartilhar relatório fotográfico", () -> {
+            jdbc.update(q("SPD.RELATORIO.COMPARTILHAMENTO.LIMPAR"), new MapSqlParameterSource("id", id));
+            for (Long idUsuario : idsUsuarios) {
+                jdbc.update(q("SPI.RELATORIO.COMPARTILHAMENTO.INSERIR"), new MapSqlParameterSource("id", id).addValue("idUsuario", idUsuario));
+            }
+        });
+    }
+
+    private static MapSqlParameterSource escopo(Long idUsuario, boolean verTudo) {
+        return new MapSqlParameterSource("idUsuario", idUsuario).addValue("verTudo", verTudo);
     }
 
     @Override

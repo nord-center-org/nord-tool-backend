@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import br.com.nord_tool_backend.dto.RelatorioFotoDto;
 import br.com.nord_tool_backend.dto.RelatorioFotograficoDto;
 import br.com.nord_tool_backend.dto.RelatorioItemDto;
@@ -20,7 +21,6 @@ import br.com.nord_tool_backend.security.Acao;
 import br.com.nord_tool_backend.security.Modulo;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
 import br.com.nord_tool_backend.service.AutorizacaoService;
-import br.com.nord_tool_backend.service.ContextoFaseService;
 import br.com.nord_tool_backend.storage.ArmazenamentoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,8 @@ class RelatorioFotograficoServiceImplTest {
 
     private AutorizacaoService autorizacao;
     private RelatorioFotograficoRepository repository;
-    private ContextoFaseService contexto;
+    private br.com.nord_tool_backend.repository.CronogramaSemanalRepository pessoas;
+    private br.com.nord_tool_backend.repository.CronogramaEquipeRepository equipes;
     private ArmazenamentoService armazenamento;
     private RelatorioFotograficoServiceImpl service;
 
@@ -60,18 +61,24 @@ class RelatorioFotograficoServiceImplTest {
     void setUp() {
         autorizacao = mock(AutorizacaoService.class);
         repository = mock(RelatorioFotograficoRepository.class);
-        contexto = mock(ContextoFaseService.class);
+        pessoas = mock(br.com.nord_tool_backend.repository.CronogramaSemanalRepository.class);
+        equipes = mock(br.com.nord_tool_backend.repository.CronogramaEquipeRepository.class);
         armazenamento = mock(ArmazenamentoService.class);
-        service = new RelatorioFotograficoServiceImpl(repository, autorizacao, contexto, armazenamento);
-        UsuarioAutenticado u = mock(UsuarioAutenticado.class);
-        when(u.getId()).thenReturn(7L);
+        service = new RelatorioFotograficoServiceImpl(repository, autorizacao, armazenamento, pessoas, equipes);
+        logar(7L, Acao.ESCRITA);
+    }
+
+    private void logar(Long id, Acao acao) {
+        UsuarioAutenticado u = new UsuarioAutenticado(id, "u" + id + "@obra.com", "USUARIO",
+                java.util.Collections.singletonMap(Modulo.RELATORIO_FOTOGRAFICO, acao), 0, java.time.Instant.now());
         when(autorizacao.exigir(any(), any())).thenReturn(u);
-        when(contexto.faseParaCriar(null)).thenReturn(11L);
     }
 
     private static RelatorioFotograficoDto relatorio(Long id, String status) {
         RelatorioFotograficoDto r = new RelatorioFotograficoDto();
         r.setId(id);
+        r.setIdAutor(7L);
+        r.setInProprio(true);
         r.setCdStatus(status);
         r.setNrFotosPagina(2);
         r.setNrVersao(1);
@@ -165,13 +172,13 @@ class RelatorioFotograficoServiceImplTest {
     void criarComModeloCopiaItensELayoutNaFaseDoContexto() {
         when(repository.listarModelos()).thenReturn(Collections.singletonList(modelo(true)));
         when(repository.listarItensDeModelos()).thenReturn(Arrays.asList(itemModelo(1, "Norte"), itemModelo(2, "Sul")));
-        when(repository.inserir(any(), eq(11L))).thenReturn(1L);
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(repository.inserir(any(), eq(null))).thenReturn(1L);
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         RelatorioFotograficoForm f = form("Fachada bloco A");
         f.setIdModelo(3L);
         service.criar(f);
         ArgumentCaptor<RelatorioFotograficoDto> r = ArgumentCaptor.forClass(RelatorioFotograficoDto.class);
-        verify(repository).inserir(r.capture(), eq(11L));
+        verify(repository).inserir(r.capture(), eq(null));
         assertEquals(4, r.getValue().getNrFotosPagina());
         assertEquals("R4", r.getValue().getCdLayout());
         assertEquals(7L, r.getValue().getIdAutor());
@@ -189,7 +196,7 @@ class RelatorioFotograficoServiceImplTest {
 
     @Test
     void relatorioConcluidoNaoAceitaEdicaoNemFoto() {
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "CONCLUIDO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "CONCLUIDO")));
         RelatorioFotograficoForm f = form("X");
         f.setNrVersao(1);
         assertThrows(NegocioException.class, () -> service.alterar(1L, f));
@@ -201,7 +208,7 @@ class RelatorioFotograficoServiceImplTest {
     @Test
     void edicaoExigeVersaoEConflitoVira409() {
         assertThrows(EntradaInvalidaException.class, () -> service.alterar(1L, form("X")));
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         when(repository.alterar(any(), anyInt())).thenReturn(0);
         RelatorioFotograficoForm f = form("X");
         f.setNrVersao(1);
@@ -210,7 +217,7 @@ class RelatorioFotograficoServiceImplTest {
 
     @Test
     void itensQueSaemDaListaSaoExcluidosComOsArquivos() {
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         when(repository.alterar(any(), anyInt())).thenReturn(1);
         when(repository.listarItens(1L)).thenReturn(Arrays.asList(item(20L), item(21L)));
         when(repository.listarFotos(1L)).thenReturn(Arrays.asList(foto(90L, 21L, 500L), foto(91L, 20L, 501L)));
@@ -228,7 +235,7 @@ class RelatorioFotograficoServiceImplTest {
 
     @Test
     void itemDeOutroRelatorioERecusado() {
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         when(repository.alterar(any(), anyInt())).thenReturn(1);
         when(repository.listarItens(1L)).thenReturn(Collections.singletonList(item(20L)));
         RelatorioFotograficoForm f = form("X");
@@ -241,7 +248,7 @@ class RelatorioFotograficoServiceImplTest {
     @Test
     void fotoValidaImagemENaoMexeNaVersao() {
         when(repository.relatorioDoItem(5L)).thenReturn(Optional.of(1L));
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         assertThrows(EntradaInvalidaException.class, () -> service.adicionarFoto(5L, "a.txt", "texto".getBytes(), null));
         when(armazenamento.salvar("a.jpg", "image/jpeg", JPEG)).thenReturn(500L);
         when(repository.inserirFoto(5L, 500L, "Fachada norte")).thenReturn(90L);
@@ -254,7 +261,7 @@ class RelatorioFotograficoServiceImplTest {
     @Test
     void fotoForaDoEscopoNaoAparece() {
         when(repository.buscarFoto(90L)).thenReturn(Optional.of(foto(90L, 5L, 500L)));
-        when(repository.buscar(1L)).thenReturn(Optional.empty());
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.empty());
         assertThrows(NaoEncontradoException.class, () -> service.baixarFoto(90L));
         assertThrows(NaoEncontradoException.class, () -> service.alterarFoto(90L, new RelatorioFotoForm()));
         verify(armazenamento, never()).abrir(anyLong());
@@ -263,7 +270,7 @@ class RelatorioFotograficoServiceImplTest {
     @Test
     void excluirFotoApagaArquivo() {
         when(repository.buscarFoto(90L)).thenReturn(Optional.of(foto(90L, 5L, 500L)));
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         service.excluirFoto(90L);
         verify(repository).deletarFoto(90L);
         verify(armazenamento).apagar(500L);
@@ -275,7 +282,7 @@ class RelatorioFotograficoServiceImplTest {
         f.setCdStatus("APROVADO");
         f.setNrVersao(1);
         assertThrows(EntradaInvalidaException.class, () -> service.alterarStatus(1L, f));
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         when(repository.alterarStatus(1L, "CONCLUIDO", 1)).thenReturn(1);
         f.setCdStatus("concluido");
         service.alterarStatus(1L, f);
@@ -284,7 +291,7 @@ class RelatorioFotograficoServiceImplTest {
 
     @Test
     void excluirRelatorioApagaTodasAsFotos() {
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "CONCLUIDO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "CONCLUIDO")));
         when(repository.listarFotos(1L)).thenReturn(Arrays.asList(foto(90L, 5L, 500L), foto(91L, 6L, 501L)));
         when(repository.deletar(1L, 1)).thenReturn(1);
         service.excluir(1L, 1);
@@ -294,13 +301,13 @@ class RelatorioFotograficoServiceImplTest {
 
     @Test
     void layoutPorCodigoDefineQuantidadeDeFotos() {
-        when(repository.inserir(any(), eq(11L))).thenReturn(1L);
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(repository.inserir(any(), eq(null))).thenReturn(1L);
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         RelatorioFotograficoForm f = form("Paisagem");
         f.setCdLayout("p3");
         service.criar(f);
         ArgumentCaptor<RelatorioFotograficoDto> r = ArgumentCaptor.forClass(RelatorioFotograficoDto.class);
-        verify(repository).inserir(r.capture(), eq(11L));
+        verify(repository).inserir(r.capture(), eq(null));
         assertEquals("P3", r.getValue().getCdLayout());
         assertEquals(3, r.getValue().getNrFotosPagina());
         RelatorioFotograficoForm ruim = form("X");
@@ -332,12 +339,12 @@ class RelatorioFotograficoServiceImplTest {
     @Test
     void trocarImagemDaFotoApagaOArquivoAntigo() {
         when(repository.buscarFoto(90L)).thenReturn(Optional.of(foto(90L, 5L, 500L)));
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
         when(armazenamento.salvar("a.jpg", "image/jpeg", JPEG)).thenReturn(600L);
         service.trocarImagemFoto(90L, "a.jpg", JPEG);
         verify(repository).trocarImagemFoto(90L, 600L);
         verify(armazenamento).apagar(500L);
-        when(repository.buscar(1L)).thenReturn(Optional.of(relatorio(1L, "CONCLUIDO")));
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "CONCLUIDO")));
         assertThrows(NegocioException.class, () -> service.trocarImagemFoto(90L, "a.jpg", JPEG));
     }
 
@@ -354,5 +361,96 @@ class RelatorioFotograficoServiceImplTest {
         assertThrows(NaoEncontradoException.class, () -> service.baixarImagemModelo(3L, "fundo"));
         service.removerImagemModelo(3L, "icone");
         verify(repository).alterarImagemModelo(3L, false, null);
+    }
+
+    // ---------- v2: por usuário, administrador vê tudo e compartilhamento ----------
+
+    private static RelatorioFotograficoDto deOutro(Long id) {
+        RelatorioFotograficoDto r = relatorio(id, "RASCUNHO");
+        r.setIdAutor(9L);
+        r.setInProprio(false);
+        return r;
+    }
+
+    @Test
+    void listaOsDaPessoaEOsCompartilhadosEOAdminVeTudo() {
+        service.listar();
+        verify(repository).listar(7L, false);
+        logar(8L, Acao.ADMIN);
+        service.listar();
+        verify(repository).listar(8L, true);
+    }
+
+    @Test
+    void relatorioCompartilhadoComigoESoParaVer() {
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(deOutro(1L)));
+        assertEquals(1L, service.detalhar(1L).getId());
+        RelatorioFotograficoForm f = new RelatorioFotograficoForm();
+        f.setNmTitulo("Outro título");
+        f.setDtRelatorio(java.time.LocalDate.of(2026, 11, 5));
+        f.setNrVersao(1);
+        assertThrows(br.com.nord_tool_backend.exception.AcessoNegadoException.class, () -> service.alterar(1L, f));
+        assertThrows(br.com.nord_tool_backend.exception.AcessoNegadoException.class, () -> service.excluir(1L, 1));
+        assertThrows(br.com.nord_tool_backend.exception.AcessoNegadoException.class, () -> service.compartilhar(1L, Collections.singletonList(3L)));
+        verify(repository, never()).alterar(any(), anyInt());
+        verify(repository, never()).deletar(any(), anyInt());
+        verify(repository, never()).compartilhar(any(), any());
+    }
+
+    @Test
+    void adminAlteraOuExcluiORelatorioDeOutraPessoa() {
+        logar(8L, Acao.ADMIN);
+        when(repository.buscar(1L, 8L, true)).thenReturn(Optional.of(deOutro(1L)));
+        when(repository.deletar(1L, 1)).thenReturn(1);
+        service.excluir(1L, 1);
+        verify(repository).deletar(1L, 1);
+    }
+
+    @Test
+    void relatorioQueNaoEnxergoNaoExiste() {
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.empty());
+        assertThrows(NaoEncontradoException.class, () -> service.detalhar(1L));
+    }
+
+    @Test
+    void compartilhaSemOAutorSemRepetirESoComQuemEstaAtivo() {
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        when(pessoas.contarUsuariosAtivos(any())).thenReturn(2);
+        service.compartilhar(1L, Arrays.asList(3L, 7L, 3L, null, 4L));
+        verify(repository).compartilhar(1L, Arrays.asList(3L, 4L));
+
+        when(pessoas.contarUsuariosAtivos(any())).thenReturn(1);
+        assertThrows(EntradaInvalidaException.class, () -> service.compartilhar(1L, Arrays.asList(3L, 4L)));
+
+        service.compartilhar(1L, Collections.emptyList());
+        verify(repository).compartilhar(1L, Collections.emptyList());
+    }
+
+    @Test
+    void limiteDeCompartilhamentos() {
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(relatorio(1L, "RASCUNHO")));
+        List<Long> muitos = new ArrayList<>();
+        for (long i = 100; i < 100 + RelatorioFotograficoServiceImpl.MAX_COMPARTILHAMENTOS + 1; i++) muitos.add(i);
+        assertThrows(EntradaInvalidaException.class, () -> service.compartilhar(1L, muitos));
+    }
+
+    @Test
+    void pessoasEEquipesParaCompartilhar() {
+        br.com.nord_tool_backend.domain.CronogramaEquipe e = new br.com.nord_tool_backend.domain.CronogramaEquipe();
+        e.setId(5L);
+        e.setNmEquipe("Acabamento");
+        e.setTxMembros("3,4");
+        when(equipes.listar(null, 7L, false)).thenReturn(Collections.singletonList(e));
+        assertEquals(Arrays.asList(3L, 4L), service.equipes().get(0).getIdsMembros());
+        service.pessoas();
+        verify(pessoas).listarPessoas();
+    }
+
+    @Test
+    void idsCompartilhadosVemDoTexto() {
+        RelatorioFotograficoDto r = new RelatorioFotograficoDto();
+        assertTrue(r.getIdsCompartilhados().isEmpty());
+        r.setTxCompartilhados("3, 9");
+        assertEquals(Arrays.asList(3L, 9L), r.getIdsCompartilhados());
     }
 }
