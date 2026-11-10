@@ -13,4 +13,7 @@ public interface AvatarRepository {
 
     /** O usuário, o superior, os colegas do mesmo superior e toda a equipe abaixo dele (ativos e aprovados). */
     List<AvatarDto> equipe(Long idUsuario, int limite);
+
+    /** Porta-voz das novidades: o usuário ativo do e-mail ou, sem ele, o ADMIN ativo mais antigo. */
+    Optional<AvatarDto> portaVoz(String email, Long idUsuario);
 }

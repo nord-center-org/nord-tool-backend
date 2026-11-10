@@ -28,6 +28,12 @@ public class AvatarReadController implements BaseResponse {
         return ok(service.meu());
     }
 
+    @Operation(summary = "Quem anuncia as novidades na tela inicial (primeiro nome e avatar); vazio = mascote padrão")
+    @GetMapping("/porta-voz")
+    public ResponseEntity<ApiResponseBody<AvatarDto>> portaVoz() {
+        return ok(service.portaVoz().orElse(null));
+    }
+
     @Operation(summary = "Avatares do usuário, do superior, dos colegas e da equipe abaixo dele")
     @GetMapping("/equipe")
     public ResponseEntity<ApiResponseBody<List<AvatarDto>>> equipe() {

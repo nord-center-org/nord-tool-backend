@@ -10,12 +10,14 @@ import br.com.nord_tool_backend.service.AvatarService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Avatar de cada usuário: basta estar logado; cada um só altera o próprio. A configuração é um JSON plano
@@ -31,10 +33,14 @@ public class AvatarServiceImpl implements AvatarService {
 
     private final AvatarRepository repository;
     private final AutorizacaoService autorizacao;
+    /** E-mail de quem anuncia as novidades (NORD_NOVIDADES_PORTA_VOZ_EMAIL ou NORD_ADMIN_EMAIL); pode ser vazio. */
+    private final String emailPortaVoz;
 
-    public AvatarServiceImpl(AvatarRepository repository, AutorizacaoService autorizacao) {
+    public AvatarServiceImpl(AvatarRepository repository, AutorizacaoService autorizacao,
+                             @Value("${nord-tool.novidades.porta-voz-email:}") String emailPortaVoz) {
         this.repository = repository;
         this.autorizacao = autorizacao;
+        this.emailPortaVoz = emailPortaVoz == null ? "" : emailPortaVoz.trim();
     }
 
     @Override
@@ -57,6 +63,23 @@ public class AvatarServiceImpl implements AvatarService {
     @Transactional(readOnly = true)
     public List<AvatarDto> equipe() {
         return repository.equipe(autorizacao.exigirAutenticado().getId(), LIMITE_EQUIPE);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<AvatarDto> portaVoz() {
+        Long eu = autorizacao.exigirAutenticado().getId();
+        return repository.portaVoz(emailPortaVoz, eu).map(a -> {
+            a.setNmNome(primeiroNome(a.getNmNome()));
+            return a;
+        });
+    }
+
+    /** Só o primeiro nome vai para todo mundo. */
+    static String primeiroNome(String nome) {
+        String limpo = nome == null ? "" : nome.trim();
+        int espaco = limpo.indexOf(' ');
+        return espaco < 0 ? limpo : limpo.substring(0, espaco);
     }
 
     /** Aceita só um objeto plano com chaves e valores curtos; devolve o JSON compacto. */

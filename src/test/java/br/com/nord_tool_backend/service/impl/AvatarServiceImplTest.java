@@ -37,7 +37,33 @@ class AvatarServiceImplTest {
         UsuarioAutenticado u = mock(UsuarioAutenticado.class);
         when(u.getId()).thenReturn(EU);
         when(autorizacao.exigirAutenticado()).thenReturn(u);
-        service = new AvatarServiceImpl(repository, autorizacao);
+        service = new AvatarServiceImpl(repository, autorizacao, " dono@obra.com ");
+    }
+
+    @Test
+    void portaVozVaiSoComOPrimeiroNome() {
+        AvatarDto dono = new AvatarDto();
+        dono.setNmNome("Fulano de Tal");
+        dono.setDsConfig("{}");
+        when(repository.portaVoz("dono@obra.com", EU)).thenReturn(Optional.of(dono));
+        AvatarDto r = service.portaVoz().orElseThrow(IllegalStateException::new);
+        assertEquals("Fulano", r.getNmNome());
+        assertEquals("{}", r.getDsConfig());
+    }
+
+    @Test
+    void semPortaVozDevolveVazioESemEmailProcuraOAdmin() {
+        AvatarServiceImpl semEmail = new AvatarServiceImpl(repository, autorizacao, null);
+        when(repository.portaVoz("", EU)).thenReturn(Optional.empty());
+        assertEquals(Optional.empty(), semEmail.portaVoz());
+        verify(repository).portaVoz("", EU);
+    }
+
+    @Test
+    void primeiroNome() {
+        assertEquals("Ana", AvatarServiceImpl.primeiroNome("  Ana Maria "));
+        assertEquals("Ana", AvatarServiceImpl.primeiroNome("Ana"));
+        assertEquals("", AvatarServiceImpl.primeiroNome(null));
     }
 
     private static AvatarForm form(String json) {

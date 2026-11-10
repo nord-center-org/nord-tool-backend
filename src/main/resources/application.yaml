@@ -55,6 +55,10 @@ nord-tool:
     email: ${NORD_ADMIN_EMAIL:}
     name: ${NORD_ADMIN_NAME:}
     password: ${NORD_ADMIN_PASSWORD:}
+  novidades:
+    # Quem anuncia as novidades na tela inicial (avatar e primeiro nome). Vazio: o ADMIN de NORD_ADMIN_EMAIL ou, sem
+    # ele, o ADMIN ativo mais antigo; sem nenhum, a tela mostra o mascote Lugia Nexus.
+    porta-voz-email: ${NORD_NOVIDADES_PORTA_VOZ_EMAIL:${NORD_ADMIN_EMAIL:}}
   cotacao:
     # Cotação dos fundos (brapi.dev, plano gratuito). Sem token só alguns tickers respondem; o token nunca é exposto à API.
     url: ${NORD_COTACAO_URL:https://brapi.dev/api}
