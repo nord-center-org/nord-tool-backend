@@ -16,6 +16,7 @@ import br.com.nord_tool_backend.security.Acao;
 import br.com.nord_tool_backend.security.Modulo;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
 import br.com.nord_tool_backend.service.AutorizacaoService;
+import br.com.nord_tool_backend.service.BlocoAssistenteService;
 import br.com.nord_tool_backend.service.LugiaService;
 import br.com.nord_tool_backend.service.lugia.LugiaAgenteClient;
 import br.com.nord_tool_backend.service.lugia.LugiaFalhaException;
@@ -50,6 +51,9 @@ public class LugiaServiceImpl implements LugiaService {
     static final String MODO_AGENTE = "agente";
     static final String PROVEDOR_AGENTE = "agente";
     static final String AUTOMATICO = "automatico";
+    /** Chat dos cadernos (Bloco de notas v4): o Bloco de notas da pessoa vai junto no prompt de sistema. */
+    static final String CONTEXTO_CADERNOS = "cadernos";
+    static final String PREFIXO_CADERNOS = "Cadernos · ";
     /** Pausa de um modelo que falhou sem o provedor dizer por quanto tempo esperar. */
     static final long PAUSA_PADRAO_SEGUNDOS = 60;
     static final long PAUSA_MAXIMA_SEGUNDOS = 24 * 60 * 60;
@@ -63,17 +67,19 @@ public class LugiaServiceImpl implements LugiaService {
     private final List<LugiaIaProvider> provedores;
     private final LugiaAgenteClient agente;
     private final LugiaProperties props;
+    private final BlocoAssistenteService blocoAssistente;
     private final Clock clock;
     /** Modelo (provedor:modelo) → até quando fica no fim da fila do modo Automático. Só em memória: some no restart. */
     private final Map<String, Instant> pausados = new ConcurrentHashMap<>();
 
     public LugiaServiceImpl(LugiaRepository repository, AutorizacaoService autorizacao, List<LugiaIaProvider> provedores,
-                            LugiaAgenteClient agente, LugiaProperties props, Clock clock) {
+                            LugiaAgenteClient agente, LugiaProperties props, BlocoAssistenteService blocoAssistente, Clock clock) {
         this.repository = repository;
         this.autorizacao = autorizacao;
         this.provedores = provedores;
         this.agente = agente;
         this.props = props;
+        this.blocoAssistente = blocoAssistente;
         this.clock = clock;
     }
 
@@ -138,6 +144,8 @@ public class LugiaServiceImpl implements LugiaService {
 
         List<LugiaParteDto> partes = partes(form);
         String texto = form.getTexto() == null ? "" : form.getTexto();
+        boolean cadernos = !modoAgente && CONTEXTO_CADERNOS.equals(form.getContexto());
+        String promptSistema = cadernos ? sistema() + "\n\n" + blocoAssistente.contexto(texto, form.getTipoAberto(), form.getIdAberto()) : sistema();
 
         LugiaConversaDto conversa;
         List<LugiaMensagemDto> historico = new ArrayList<>();
@@ -146,7 +154,7 @@ public class LugiaServiceImpl implements LugiaService {
             historico.addAll(repository.mensagens(conversa.getId()));
         } else {
             conversa = new LugiaConversaDto();
-            conversa.setTitulo(tituloInicial(texto, partes));
+            conversa.setTitulo((cadernos ? PREFIXO_CADERNOS : "") + tituloInicial(texto, partes));
             conversa.setId(repository.criarConversa(u.getId(), conversa.getTitulo()));
         }
         LugiaMensagemDto daVez = new LugiaMensagemDto(LugiaMensagemDto.USUARIO, null, partes, null);
@@ -176,7 +184,7 @@ public class LugiaServiceImpl implements LugiaService {
                     modelo = opcao.modelo;
                     if (automatico) saida.provedor(provedorId, modelo);
                     try {
-                        resposta = opcao.provedor.conversar(modelo, sistema(), historico, delta -> {
+                        resposta = opcao.provedor.conversar(modelo, promptSistema, historico, delta -> {
                             recebido.append(delta);
                             saida.texto(delta);
                         });
