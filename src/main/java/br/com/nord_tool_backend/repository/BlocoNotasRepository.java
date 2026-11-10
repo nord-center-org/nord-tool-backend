@@ -1,6 +1,7 @@
 package br.com.nord_tool_backend.repository;
 
 import br.com.nord_tool_backend.dto.BlocoCadernoDto;
+import br.com.nord_tool_backend.dto.BlocoDocumentoDto;
 import br.com.nord_tool_backend.dto.BlocoPaginaDto;
 
 import java.util.List;
@@ -44,4 +45,19 @@ public interface BlocoNotasRepository {
     Long inserirImagem(Long idCaderno, Long idArquivo);
 
     Optional<Long> arquivoDaImagem(Long id, Long idUsuario);
+
+    // ---------- v2 ----------
+
+    void girarPagina(Long id, int rotacao, int largura, int altura);
+
+    Optional<BlocoDocumentoDto> documento(Long idCaderno, Long idUsuario);
+
+    int salvarDocumento(Long idCaderno, Long idUsuario, String html, int nrVersao);
+
+    Long inserirPdf(Long idCaderno, Long idArquivo);
+
+    /** Arquivo do PDF, se for de um caderno da pessoa (e, com idCaderno, desse caderno). */
+    Optional<Long> arquivoDoPdf(Long idPdf, Long idUsuario, Long idCaderno);
+
+    void ligarPdf(Long idPagina, Long idPdf, Integer nrPagina);
 }

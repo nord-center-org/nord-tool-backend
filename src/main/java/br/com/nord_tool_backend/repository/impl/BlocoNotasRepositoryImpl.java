@@ -158,4 +158,45 @@ public class BlocoNotasRepositoryImpl implements BlocoNotasRepository {
                 jdbc.queryForList(q("SPS.BLOCO.IMAGEM.ARQUIVO"), new MapSqlParameterSource("id", id).addValue("idUsuario", idUsuario), Long.class)
                         .stream().findFirst());
     }
+
+    // ---------- v2 ----------
+
+    @Override
+    public void girarPagina(Long id, int rotacao, int largura, int altura) {
+        executor.executar("Erro ao girar página", () -> jdbc.update(q("SPU.BLOCO.PAGINA.GIRAR"), new MapSqlParameterSource("id", id)
+                .addValue("rotacao", rotacao).addValue("largura", largura).addValue("altura", altura)));
+    }
+
+    @Override
+    public Optional<br.com.nord_tool_backend.dto.BlocoDocumentoDto> documento(Long idCaderno, Long idUsuario) {
+        return executor.executar("Erro ao abrir o documento", () ->
+                jdbc.query(q("SPS.BLOCO.DOCUMENTO"), new MapSqlParameterSource("id", idCaderno).addValue("idUsuario", idUsuario),
+                        BeanPropertyRowMapper.newInstance(br.com.nord_tool_backend.dto.BlocoDocumentoDto.class)).stream().findFirst());
+    }
+
+    @Override
+    public int salvarDocumento(Long idCaderno, Long idUsuario, String html, int nrVersao) {
+        return executor.executar("Erro ao salvar o documento", () ->
+                jdbc.update(q("SPU.BLOCO.DOCUMENTO"), new MapSqlParameterSource("id", idCaderno).addValue("idUsuario", idUsuario)
+                        .addValue("html", html).addValue("nrVersao", nrVersao)));
+    }
+
+    @Override
+    public Long inserirPdf(Long idCaderno, Long idArquivo) {
+        return executor.executar("Erro ao guardar o PDF", () ->
+                jdbc.queryForObject(q("SPI.BLOCO.PDF"), new MapSqlParameterSource("idCaderno", idCaderno).addValue("idArquivo", idArquivo), Long.class));
+    }
+
+    @Override
+    public Optional<Long> arquivoDoPdf(Long idPdf, Long idUsuario, Long idCaderno) {
+        return executor.executar("Erro ao buscar o PDF", () ->
+                jdbc.queryForList(q("SPS.BLOCO.PDF"), new MapSqlParameterSource("id", idPdf).addValue("idUsuario", idUsuario)
+                        .addValue("idCaderno", idCaderno, Types.BIGINT), Long.class).stream().findFirst());
+    }
+
+    @Override
+    public void ligarPdf(Long idPagina, Long idPdf, Integer nrPagina) {
+        executor.executar("Erro ao ligar a página ao PDF", () -> jdbc.update(q("SPU.BLOCO.PAGINA.PDF"), new MapSqlParameterSource("id", idPagina)
+                .addValue("idPdf", idPdf, Types.BIGINT).addValue("nrPagina", nrPagina, Types.INTEGER)));
+    }
 }

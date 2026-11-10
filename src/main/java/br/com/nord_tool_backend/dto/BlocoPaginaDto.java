@@ -18,6 +18,11 @@ public class BlocoPaginaDto {
     private String cdFundo;
     private Integer nrLargura;
     private Integer nrAltura;
+    /** v2: 0, 90, 180 ou 270 (o fundo de PDF gira junto). */
+    private Integer nrRotacao;
+    /** v2: PDF original e a página dele (a tela desenha do PDF, na resolução do zoom). */
+    private Long idPdf;
+    private Integer nrPaginaPdf;
     private Boolean inFundo;
     @JsonIgnore
     private Long idArquivoFundo;

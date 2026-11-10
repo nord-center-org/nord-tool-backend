@@ -320,4 +320,129 @@ class BlocoNotasServiceImplTest {
         assertEquals("#2563eb", cor.getValue());
         verify(repository).inserirPagina(eq(1L), eq(1), eq("PAUTADO"), anyInt(), anyInt(), isNull(), anyString());
     }
+
+    // ---------- v2: girar a página e documento de texto ----------
+
+    private BlocoConteudoForm conteudoVazio(Integer giro) throws Exception {
+        BlocoConteudoForm f = new BlocoConteudoForm();
+        f.setConteudo(mapper.readTree("{\"itens\":[]}"));
+        f.setNrVersao(3);
+        f.setNrRotacao(giro);
+        return f;
+    }
+
+    @Test
+    void girarNoventaTrocaLarguraEAltura() throws Exception {
+        when(repository.pagina(10L, EU)).thenReturn(Optional.of(pagina(10L, null)));
+        when(repository.salvarConteudo(anyLongV2(), anyString(), anyString(), anyInt())).thenReturn(1);
+        service.salvar(10L, conteudoVazio(90));
+        verify(repository).girarPagina(10L, 90, 1123, 794);
+        service.salvar(10L, conteudoVazio(180));
+        verify(repository).girarPagina(10L, 180, 794, 1123);
+        service.salvar(10L, conteudoVazio(0));
+        service.salvar(10L, conteudoVazio(null));
+        verify(repository, never()).girarPagina(eq(10L), eq(0), anyInt(), anyInt());
+        assertThrows(EntradaInvalidaException.class, () -> service.salvar(10L, conteudoVazio(45)));
+    }
+
+    private static long anyLongV2() {
+        return org.mockito.ArgumentMatchers.anyLong();
+    }
+
+    @Test
+    void duplicarPaginaGiradaMantemOGiro() {
+        BlocoPaginaDto girada = pagina(10L, null);
+        girada.setNrRotacao(90);
+        when(repository.paginas(1L, EU)).thenReturn(Collections.singletonList(girada));
+        when(repository.pagina(10L, EU)).thenReturn(Optional.of(girada));
+        when(repository.conteudo(10L, EU)).thenReturn(Optional.of("{\"itens\":[]}"));
+        when(repository.inserirPagina(eq(1L), anyInt(), anyString(), anyInt(), anyInt(), any(), anyString())).thenReturn(11L);
+        when(repository.pagina(11L, EU)).thenReturn(Optional.of(pagina(11L, null)));
+        BlocoPaginaForm f = new BlocoPaginaForm();
+        f.setIdCopiarDe(10L);
+        service.novaPagina(1L, f);
+        verify(repository).girarPagina(11L, 90, 794, 1123);
+    }
+
+    @Test
+    void documentoDoCaderno() {
+        br.com.nord_tool_backend.dto.BlocoDocumentoDto d = new br.com.nord_tool_backend.dto.BlocoDocumentoDto();
+        d.setHtml("<p>Oi</p>");
+        d.setNrVersao(2);
+        when(repository.documento(1L, EU)).thenReturn(Optional.of(d));
+        assertEquals("<p>Oi</p>", service.documento(1L).getHtml());
+        when(repository.documento(2L, EU)).thenReturn(Optional.empty());
+        assertThrows(NaoEncontradoException.class, () -> service.documento(2L));
+
+        br.com.nord_tool_backend.form.BlocoDocumentoForm f = new br.com.nord_tool_backend.form.BlocoDocumentoForm();
+        f.setHtml("<h1>Vistoria</h1><p><b>Torre B</b> ok</p>");
+        f.setNrVersao(2);
+        when(repository.salvarDocumento(1L, EU, f.getHtml(), 2)).thenReturn(1);
+        service.salvarDocumento(1L, f);
+        verify(repository).salvarDocumento(1L, EU, f.getHtml(), 2);
+        when(repository.salvarDocumento(1L, EU, f.getHtml(), 2)).thenReturn(0);
+        assertThrows(ConflitoException.class, () -> service.salvarDocumento(1L, f));
+    }
+
+    @Test
+    void documentoRecusaCodigoETamanho() {
+        br.com.nord_tool_backend.form.BlocoDocumentoForm f = new br.com.nord_tool_backend.form.BlocoDocumentoForm();
+        f.setNrVersao(1);
+        for (String ruim : new String[]{"<script>alert(1)</script>", "<img src=x onerror=alert(1)>", "<a href=\"javascript:x\">a</a>", "<IFRAME src=x>", "<svg/onload=1>"}) {
+            f.setHtml(ruim);
+            assertThrows(EntradaInvalidaException.class, () -> service.salvarDocumento(1L, f), ruim);
+        }
+        StringBuilder grande = new StringBuilder();
+        for (int i = 0; i <= BlocoNotasServiceImpl.MAX_DOCUMENTO; i++) grande.append('x');
+        f.setHtml(grande.toString());
+        assertThrows(NegocioException.class, () -> service.salvarDocumento(1L, f));
+        verify(repository, never()).salvarDocumento(any(), any(), any(), anyInt());
+    }
+
+    // ---------- v2: PDF original ----------
+
+    @Test
+    void guardaOPdfOriginalELigaAsPaginas() {
+        byte[] pdf = "%PDF-1.7 teste".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        when(armazenamento.salvar(eq("projeto.pdf"), anyString(), eq(pdf))).thenReturn(80L);
+        when(repository.inserirPdf(1L, 80L)).thenReturn(4L);
+        assertEquals(4L, service.enviarPdf(1L, "projeto.pdf", pdf));
+        assertThrows(RuntimeException.class, () -> service.enviarPdf(1L, "x.pdf", JPEG));
+
+        when(repository.arquivoDoPdf(4L, EU, 1L)).thenReturn(Optional.of(80L));
+        when(repository.paginas(1L, EU)).thenReturn(Collections.emptyList());
+        when(armazenamento.salvar(eq("p.jpg"), anyString(), eq(JPEG))).thenReturn(81L);
+        when(repository.inserirPagina(eq(1L), anyInt(), anyString(), anyInt(), anyInt(), any(), anyString())).thenReturn(12L);
+        when(repository.pagina(12L, EU)).thenReturn(Optional.of(pagina(12L, 81L)));
+        service.paginaDePdf(1L, null, 794, 1123, "p.jpg", JPEG, 4L, 3);
+        verify(repository).ligarPdf(12L, 4L, 3);
+
+        when(repository.arquivoDoPdf(5L, EU, 1L)).thenReturn(Optional.empty());
+        assertThrows(EntradaInvalidaException.class, () -> service.paginaDePdf(1L, null, 794, 1123, "p.jpg", JPEG, 5L, 1));
+        assertThrows(EntradaInvalidaException.class, () -> service.paginaDePdf(1L, null, 794, 1123, "p.jpg", JPEG, 4L, 0));
+
+        when(repository.arquivoDoPdf(4L, EU, null)).thenReturn(Optional.of(80L));
+        when(armazenamento.abrir(80L)).thenReturn(new ArquivoConteudo("projeto.pdf", "application/pdf", pdf.length, pdf));
+        assertEquals(80L, service.baixarPdf(4L).getVersao());
+        when(repository.arquivoDoPdf(9L, EU, null)).thenReturn(Optional.empty());
+        assertThrows(NaoEncontradoException.class, () -> service.baixarPdf(9L));
+    }
+
+    @Test
+    void duplicarPaginaDePdfMantemOPdfOriginal() {
+        BlocoPaginaDto origem = pagina(10L, 50L);
+        origem.setIdPdf(4L);
+        origem.setNrPaginaPdf(2);
+        when(repository.paginas(1L, EU)).thenReturn(Collections.singletonList(origem));
+        when(repository.pagina(10L, EU)).thenReturn(Optional.of(origem));
+        when(repository.conteudo(10L, EU)).thenReturn(Optional.of("{\"itens\":[]}"));
+        when(armazenamento.abrir(50L)).thenReturn(new ArquivoConteudo("p.jpg", "image/jpeg", 6, JPEG));
+        when(armazenamento.salvar("p.jpg", "image/jpeg", JPEG)).thenReturn(60L);
+        when(repository.inserirPagina(eq(1L), anyInt(), anyString(), anyInt(), anyInt(), any(), anyString())).thenReturn(11L);
+        when(repository.pagina(11L, EU)).thenReturn(Optional.of(pagina(11L, 60L)));
+        BlocoPaginaForm f = new BlocoPaginaForm();
+        f.setIdCopiarDe(10L);
+        service.novaPagina(1L, f);
+        verify(repository).ligarPdf(11L, 4L, 2);
+    }
 }

@@ -65,8 +65,9 @@ public class BlocoNotasWriteController implements BaseResponse {
     @PostMapping(value = "/{id}/paginas/pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<BlocoPaginaDto>> paginaDePdf(@PathVariable Long id, @RequestParam("arquivo") MultipartFile arquivo,
             @RequestParam("nrLargura") int largura, @RequestParam("nrAltura") int altura,
-            @RequestParam(value = "nrPosicao", required = false) Integer posicao) {
-        return created(service.paginaDePdf(id, posicao, largura, altura, nome(arquivo, "pagina.jpg"), bytes(arquivo)));
+            @RequestParam(value = "nrPosicao", required = false) Integer posicao,
+            @RequestParam(value = "idPdf", required = false) Long idPdf, @RequestParam(value = "nrPaginaPdf", required = false) Integer nrPaginaPdf) {
+        return created(service.paginaDePdf(id, posicao, largura, altura, nome(arquivo, "pagina.jpg"), bytes(arquivo), idPdf, nrPaginaPdf));
     }
 
     @Operation(summary = "Salva o desenho da página (com a versão que a tela tinha)")
@@ -91,6 +92,19 @@ public class BlocoNotasWriteController implements BaseResponse {
     @PostMapping(value = "/{id}/imagens", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<Long>> imagem(@PathVariable Long id, @RequestParam("arquivo") MultipartFile arquivo) {
         return created(service.imagem(id, nome(arquivo, "imagem.jpg"), bytes(arquivo)));
+    }
+
+    @Operation(summary = "Salva o documento de texto do caderno (com a versão que a tela tinha)")
+    @PutMapping("/{id}/documento")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.BlocoDocumentoDto>> salvarDocumento(@PathVariable Long id,
+            @Valid @RequestBody br.com.nord_tool_backend.form.BlocoDocumentoForm form) {
+        return ok(service.salvarDocumento(id, form));
+    }
+
+    @Operation(summary = "Guarda o PDF original importado (até 15 MB) para a página manter a qualidade no zoom; devolve o id")
+    @PostMapping(value = "/{id}/pdfs", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponseBody<Long>> pdf(@PathVariable Long id, @RequestParam("arquivo") MultipartFile arquivo) {
+        return created(service.enviarPdf(id, nome(arquivo, "arquivo.pdf"), bytes(arquivo)));
     }
 
     private static String nome(MultipartFile arquivo, String padrao) {
