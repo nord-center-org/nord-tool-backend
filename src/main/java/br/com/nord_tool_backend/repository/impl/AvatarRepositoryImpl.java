@@ -27,6 +27,13 @@ public class AvatarRepositoryImpl implements AvatarRepository {
     }
 
     @Override
+    public Optional<AvatarDto> portaVoz(String email, Long idUsuario) {
+        return executor.executar("Erro ao buscar o porta-voz das novidades", () ->
+                jdbc.query(queries.get("SPS.AVATAR.PORTA_VOZ"), new MapSqlParameterSource("email", email).addValue("idUsuario", idUsuario),
+                        BeanPropertyRowMapper.newInstance(AvatarDto.class)).stream().findFirst());
+    }
+
+    @Override
     public Optional<AvatarDto> buscar(Long idUsuario) {
         return executor.executar("Erro ao buscar avatar", () ->
                 jdbc.query(queries.get("SPS.AVATAR.BUSCAR"), new MapSqlParameterSource("idUsuario", idUsuario),
