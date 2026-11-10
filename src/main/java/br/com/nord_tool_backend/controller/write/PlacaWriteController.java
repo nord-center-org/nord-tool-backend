@@ -89,4 +89,15 @@ public class PlacaWriteController implements BaseResponse {
         service.excluir(id);
         return noContent();
     }
+
+    @Operation(summary = "Envia uma imagem para pôr na folha (JPEG/PNG até 5 MB); devolve o id")
+    @PostMapping(value = "/imagens", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponseBody<Long>> imagemSolta(@RequestParam("arquivo") MultipartFile arquivo) {
+        String nome = arquivo.getOriginalFilename() == null ? "imagem.png" : arquivo.getOriginalFilename();
+        try {
+            return created(service.enviarImagemSolta(nome, arquivo.getBytes()));
+        } catch (IOException ex) {
+            throw new EntradaInvalidaException("Não foi possível ler o arquivo enviado", ex);
+        }
+    }
 }

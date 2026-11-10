@@ -159,6 +159,24 @@ public class PlacaServiceImpl implements PlacaService {
         repository.excluirPlaca(id);
     }
 
+    // ---------- v2: imagens soltas ----------
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long enviarImagemSolta(String nome, byte[] bytes) {
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.PLACAS, Acao.ESCRITA);
+        String contentType = ArquivoValidador.validarImagem(nome, bytes);
+        return repository.inserirImagem(armazenamento.salvar(nome, contentType, bytes), u.getId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ArquivoDownload baixarImagemSolta(Long idImagem) {
+        autorizacao.exigir(Modulo.PLACAS, Acao.LEITURA);
+        Long arquivo = repository.arquivoDaImagem(idImagem).orElseThrow(() -> new NaoEncontradoException("Imagem não encontrada"));
+        return new ArquivoDownload(armazenamento.abrir(arquivo), arquivo);
+    }
+
     private PlacaModeloDto modelo(Long id) {
         PlacaModeloDto m = repository.modelo(id).orElseThrow(() -> new NaoEncontradoException("Modelo de placa não encontrado"));
         lerConfig(m);

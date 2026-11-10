@@ -44,4 +44,10 @@ public class PlacaReadController implements BaseResponse {
                                          @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
         return ArquivoResponse.imagem(service.baixarImagem(id, tipo), ifNoneMatch);
     }
+
+    @Operation(summary = "Imagem solta posta na folha de um modelo ou de uma placa")
+    @GetMapping("/imagens/{id}")
+    public ResponseEntity<byte[]> imagemSolta(@PathVariable Long id, @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
+        return ArquivoResponse.imagem(service.baixarImagemSolta(id), ifNoneMatch);
+    }
 }

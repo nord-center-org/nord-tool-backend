@@ -31,4 +31,9 @@ public interface PlacaService {
     PlacaDto alterar(Long id, PlacaForm form);
 
     void excluir(Long id);
+
+    /** v2: imagem solta para pôr na folha (no modelo ou na placa): JPEG/PNG até 5 MB; devolve o id. */
+    Long enviarImagemSolta(String nome, byte[] bytes);
+
+    ArquivoDownload baixarImagemSolta(Long idImagem);
 }
