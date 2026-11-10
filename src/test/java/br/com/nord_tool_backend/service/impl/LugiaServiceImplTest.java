@@ -15,6 +15,7 @@ import br.com.nord_tool_backend.security.Acao;
 import br.com.nord_tool_backend.security.Modulo;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
 import br.com.nord_tool_backend.service.AutorizacaoService;
+import br.com.nord_tool_backend.service.BlocoAssistenteService;
 import br.com.nord_tool_backend.service.lugia.LugiaAgenteClient;
 import br.com.nord_tool_backend.service.lugia.LugiaFalhaException;
 import br.com.nord_tool_backend.service.lugia.LugiaIaProvider;
@@ -61,6 +62,7 @@ class LugiaServiceImplTest {
     private LugiaIaProvider claude;
     private LugiaIaProvider gemini;
     private LugiaAgenteClient agente;
+    private BlocoAssistenteService blocoAssistente;
     private LugiaServiceImpl service;
     private SaidaGravada saida;
     private MutableClock relogio;
@@ -72,8 +74,9 @@ class LugiaServiceImplTest {
         claude = provedor("claude", "Claude", true, "claude-opus-5-5");
         gemini = provedor("gemini", "Gemini", false, "gemini-flash-latest");
         agente = mock(LugiaAgenteClient.class);
+        blocoAssistente = mock(BlocoAssistenteService.class);
         relogio = new MutableClock(Instant.parse("2026-10-29T12:00:00Z"));
-        service = new LugiaServiceImpl(repository, autorizacao, Arrays.asList(claude, gemini), agente, propriedades(""), relogio);
+        service = new LugiaServiceImpl(repository, autorizacao, Arrays.asList(claude, gemini), agente, propriedades(""), blocoAssistente, relogio);
         saida = new SaidaGravada();
         logado(Acao.LEITURA);
         when(repository.criarConversa(eq(7L), anyString())).thenReturn(30L);
@@ -107,7 +110,7 @@ class LugiaServiceImplTest {
     private LugiaServiceImpl comGratuitos(String cadeia, LugiaIaProvider... gratuitos) {
         List<LugiaIaProvider> todos = new ArrayList<>(Collections.singletonList(claude));
         todos.addAll(Arrays.asList(gratuitos));
-        return new LugiaServiceImpl(repository, autorizacao, todos, agente, propriedades(cadeia), relogio);
+        return new LugiaServiceImpl(repository, autorizacao, todos, agente, propriedades(cadeia), blocoAssistente, relogio);
     }
 
     private static void responde(LugiaIaProvider p, String texto) {
@@ -202,6 +205,34 @@ class LugiaServiceImplTest {
         assertEquals("Olá, Nick!", resposta.getPartes().get(0).getTexto());
         assertEquals("{\"content\":[]}", resposta.getNativo());
         verify(repository).adicionarMensagem(eq(30L), eq(resposta), eq("claude-opus-5-5"), eq(10), eq(3));
+    }
+
+    @Test
+    void chatDosCadernosLevaOBlocoDeNotasNoPromptEMarcaOTitulo() {
+        claudeResponde("Achei no caderno 12");
+        when(blocoAssistente.contexto("Onde anotei o cimento?", "CADERNO", 12L)).thenReturn("## Bloco de notas da pessoa");
+        LugiaChatForm form = chat("Onde anotei o cimento?");
+        form.setContexto("cadernos");
+        form.setTipoAberto("CADERNO");
+        form.setIdAberto(12L);
+
+        service.conversar(form, saida);
+
+        verify(repository).criarConversa(7L, "Cadernos · Onde anotei o cimento?");
+        ArgumentCaptor<String> sistema = ArgumentCaptor.forClass(String.class);
+        verify(claude).conversar(eq("claude-opus-5-5"), sistema.capture(), anyList(), any());
+        assertTrue(sistema.getValue().startsWith(LugiaServiceImpl.sistema()));
+        assertTrue(sistema.getValue().endsWith("## Bloco de notas da pessoa"));
+    }
+
+    @Test
+    void chatNormalNaoLeOBlocoDeNotas() {
+        claudeResponde("Oi");
+
+        service.conversar(chat("Oi"), saida);
+
+        verify(blocoAssistente, never()).contexto(any(), any(), any());
+        verify(claude).conversar(eq("claude-opus-5-5"), eq(LugiaServiceImpl.sistema()), anyList(), any());
     }
 
     @Test
