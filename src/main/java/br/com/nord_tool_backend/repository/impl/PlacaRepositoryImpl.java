@@ -118,4 +118,16 @@ public class PlacaRepositoryImpl implements PlacaRepository {
         return executor.executar("Erro ao excluir placa", () ->
                 jdbc.update(q("SPD.PLACA.EXCLUIR"), new MapSqlParameterSource("id", id)));
     }
+
+    @Override
+    public Long inserirImagem(Long idArquivo, Long idUsuario) {
+        return executor.executar("Erro ao salvar imagem da placa", () ->
+                jdbc.queryForObject(q("SPI.PLACA.IMAGEM"), new MapSqlParameterSource("idArquivo", idArquivo).addValue("idUsuario", idUsuario), Long.class));
+    }
+
+    @Override
+    public Optional<Long> arquivoDaImagem(Long idImagem) {
+        return executor.executar("Erro ao buscar imagem da placa", () ->
+                jdbc.queryForList(q("SPS.PLACA.IMAGEM.ARQUIVO"), new MapSqlParameterSource("id", idImagem), Long.class).stream().findFirst());
+    }
 }

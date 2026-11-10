@@ -31,4 +31,9 @@ public interface PlacaRepository {
     int alterarPlaca(Long id, Long idModelo, String titulo, String valores, Long idUsuario);
 
     int excluirPlaca(Long id);
+
+    /** v2: guarda uma imagem solta e devolve o id que o JSON usa. */
+    Long inserirImagem(Long idArquivo, Long idUsuario);
+
+    Optional<Long> arquivoDaImagem(Long idImagem);
 }

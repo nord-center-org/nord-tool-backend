@@ -121,4 +121,25 @@ class PlacaServiceImplTest {
         assertThrows(EntradaInvalidaException.class, () -> service.removerImagem(3L, "outra"));
         assertThrows(NaoEncontradoException.class, () -> service.baixarImagem(3L, "logo"));
     }
+
+    // ---------- v2: imagens soltas ----------
+
+    @Test
+    void imagemSoltaGuardaOArquivoEDevolveOId() {
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n', 0, 0};
+        when(armazenamento.salvar(org.mockito.ArgumentMatchers.eq("selo.png"), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(png))).thenReturn(40L);
+        when(repository.inserirImagem(40L, 1L)).thenReturn(9L);
+        org.junit.jupiter.api.Assertions.assertEquals(9L, service.enviarImagemSolta("selo.png", png));
+        org.mockito.Mockito.verify(autorizacao).exigir(Modulo.PLACAS, Acao.ESCRITA);
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.enviarImagemSolta("x.txt", new byte[]{1, 2, 3}));
+    }
+
+    @Test
+    void baixaImagemSoltaOuNaoEncontrada() {
+        when(repository.arquivoDaImagem(9L)).thenReturn(java.util.Optional.of(40L));
+        when(armazenamento.abrir(40L)).thenReturn(new br.com.nord_tool_backend.storage.ArquivoConteudo("selo.png", "image/png", 3, new byte[]{1, 2, 3}));
+        org.junit.jupiter.api.Assertions.assertEquals(40L, service.baixarImagemSolta(9L).getVersao());
+        when(repository.arquivoDaImagem(8L)).thenReturn(java.util.Optional.empty());
+        org.junit.jupiter.api.Assertions.assertThrows(br.com.nord_tool_backend.exception.NaoEncontradoException.class, () -> service.baixarImagemSolta(8L));
+    }
 }
