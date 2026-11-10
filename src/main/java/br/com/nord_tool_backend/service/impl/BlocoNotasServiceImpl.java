@@ -131,6 +131,9 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
             }
             id = repository.inserirPagina(idCaderno, ordem, origem.getCdFundo(), origem.getNrLargura(), origem.getNrAltura(), arquivo,
                     repository.conteudo(origem.getId(), u.getId()).orElse(VAZIO));
+            if (origem.getIdPdf() != null) repository.ligarPdf(id, origem.getIdPdf(), origem.getNrPaginaPdf());
+            int giro = origem.getNrRotacao() == null ? 0 : origem.getNrRotacao();
+            if (giro != 0) repository.girarPagina(id, giro, origem.getNrLargura(), origem.getNrAltura());
         } else {
             int largura = form.getNrLargura() == null ? LARGURA_A4 : form.getNrLargura();
             int altura = form.getNrAltura() == null ? ALTURA_A4 : form.getNrAltura();
@@ -143,13 +146,24 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BlocoPaginaDto paginaDePdf(Long idCaderno, Integer posicao, int largura, int altura, String nome, byte[] bytes) {
+        return paginaDePdf(idCaderno, posicao, largura, altura, nome, bytes, null, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BlocoPaginaDto paginaDePdf(Long idCaderno, Integer posicao, int largura, int altura, String nome, byte[] bytes, Long idPdf, Integer nrPagina) {
         UsuarioAutenticado u = eu();
+        if (idPdf != null) {
+            repository.arquivoDoPdf(idPdf, u.getId(), idCaderno).orElseThrow(() -> new EntradaInvalidaException("O PDF não é deste caderno"));
+            if (nrPagina == null || nrPagina < 1) throw new EntradaInvalidaException("Informe a página do PDF");
+        }
         caderno(idCaderno, u);
         if (largura < 100 || largura > 4000 || altura < 100 || altura > 4000) throw new EntradaInvalidaException("Tamanho de página inválido");
         List<BlocoPaginaDto> paginas = cabeNaoMais(idCaderno, u);
         String tipo = ArquivoValidador.validarImagem(nome, bytes);
         Long arquivo = armazenamento.salvar(nome, tipo, bytes);
         Long id = repository.inserirPagina(idCaderno, posicao(posicao, paginas.size()), PDF, largura, altura, arquivo, VAZIO);
+        if (idPdf != null) repository.ligarPdf(id, idPdf, nrPagina);
         repository.tocarCaderno(idCaderno);
         return paginaDoDono(id, u);
     }
@@ -174,6 +188,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
         String fundo = PDF;
         if (p.getIdArquivoFundo() == null) fundo = form.getCdFundo() == null ? p.getCdFundo() : fundo(form.getCdFundo());
         if (repository.salvarConteudo(idPagina, texto, fundo, form.getNrVersao()) == 0) throw new ConflitoException(MSG_CONFLITO);
+        girarSePreciso(p, form.getNrRotacao());
         repository.tocarCaderno(p.getIdCaderno());
         return paginaDoDono(idPagina, u);
     }
@@ -207,6 +222,53 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
         return comPaginas(caderno(p.getIdCaderno(), u), u);
     }
 
+    // ---------- v2: documento de texto ----------
+
+    static final int MAX_DOCUMENTO = 2_000_000;
+    /** Defesa a mais (o app já limpa o HTML): nada que execute código entra no documento. */
+    static final java.util.regex.Pattern PERIGOSO = java.util.regex.Pattern.compile(
+            "<\\s*(script|iframe|object|embed|link|meta|style|form|input|svg|math)\\b|\\son[a-z]+\\s*=|javascript:|data:text/html",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    @Override
+    @Transactional(readOnly = true)
+    public br.com.nord_tool_backend.dto.BlocoDocumentoDto documento(Long idCaderno) {
+        UsuarioAutenticado u = eu();
+        return repository.documento(idCaderno, u.getId()).orElseThrow(() -> new NaoEncontradoException("Caderno não encontrado"));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public br.com.nord_tool_backend.dto.BlocoDocumentoDto salvarDocumento(Long idCaderno, br.com.nord_tool_backend.form.BlocoDocumentoForm form) {
+        UsuarioAutenticado u = eu();
+        caderno(idCaderno, u);
+        String html = form.getHtml();
+        if (html.length() > MAX_DOCUMENTO) throw new NegocioException("O documento ficou grande demais (até 2 MB de texto).");
+        if (PERIGOSO.matcher(html).find()) throw new EntradaInvalidaException("O documento tem conteúdo que não é permitido");
+        if (repository.salvarDocumento(idCaderno, u.getId(), html, form.getNrVersao()) == 0) {
+            throw new ConflitoException("O documento mudou em outro aparelho. Recarregue para ver a versão mais nova.");
+        }
+        return documento(idCaderno);
+    }
+
+    // ---------- v2: PDF original ----------
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long enviarPdf(Long idCaderno, String nome, byte[] bytes) {
+        UsuarioAutenticado u = eu();
+        caderno(idCaderno, u);
+        String tipo = ArquivoValidador.validarPdf(nome, bytes);
+        return repository.inserirPdf(idCaderno, armazenamento.salvar(nome, tipo, bytes));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ArquivoDownload baixarPdf(Long idPdf) {
+        Long arquivo = repository.arquivoDoPdf(idPdf, eu().getId(), null).orElseThrow(() -> new NaoEncontradoException("PDF não encontrado"));
+        return new ArquivoDownload(armazenamento.abrir(arquivo), arquivo);
+    }
+
     // ---------- imagens ----------
 
     @Override
@@ -234,6 +296,16 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     }
 
     // ---------- apoio ----------
+
+    /** v2: guarda o giro novo; 90° ou 270° de diferença trocam largura e altura. */
+    private void girarSePreciso(BlocoPaginaDto p, Integer nova) {
+        if (nova == null) return;
+        if (nova != 0 && nova != 90 && nova != 180 && nova != 270) throw new EntradaInvalidaException("Giro inválido (use 0, 90, 180 ou 270)");
+        int atual = p.getNrRotacao() == null ? 0 : p.getNrRotacao();
+        if (nova == atual) return;
+        boolean troca = Math.abs(nova - atual) % 180 == 90;
+        repository.girarPagina(p.getId(), nova, troca ? p.getNrAltura() : p.getNrLargura(), troca ? p.getNrLargura() : p.getNrAltura());
+    }
 
     private UsuarioAutenticado eu() {
         return autorizacao.exigirAutenticado();

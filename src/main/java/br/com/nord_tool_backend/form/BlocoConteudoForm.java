@@ -13,4 +13,6 @@ public class BlocoConteudoForm {
     private String cdFundo;
     @NotNull(message = "Informe a versão (nrVersao)")
     private Integer nrVersao;
+    /** v2: giro da página (0, 90, 180, 270); vazio = não muda. O desenho já vem girado pela tela. */
+    private Integer nrRotacao;
 }

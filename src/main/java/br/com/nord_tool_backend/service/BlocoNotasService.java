@@ -31,6 +31,14 @@ public interface BlocoNotasService {
     /** Página com fundo de PDF: a imagem da página do PDF (o navegador converte), na posição e no tamanho dados. */
     BlocoPaginaDto paginaDePdf(Long idCaderno, Integer posicao, int largura, int altura, String nome, byte[] bytes);
 
+    /** v2: a mesma, ligada à página nrPagina do PDF original idPdf (guardado antes com enviarPdf). */
+    BlocoPaginaDto paginaDePdf(Long idCaderno, Integer posicao, int largura, int altura, String nome, byte[] bytes, Long idPdf, Integer nrPagina);
+
+    /** v2: guarda o PDF original importado (até 15 MB); devolve o id. */
+    Long enviarPdf(Long idCaderno, String nome, byte[] bytes);
+
+    ArquivoDownload baixarPdf(Long idPdf);
+
     /** Salva o desenho; devolve a página com a versão nova. */
     BlocoPaginaDto salvar(Long idPagina, BlocoConteudoForm form);
 
@@ -44,4 +52,9 @@ public interface BlocoNotasService {
     ArquivoDownload baixarImagem(Long idImagem);
 
     ArquivoDownload baixarFundo(Long idPagina);
+
+    /** v2: o documento de texto do caderno (estilo Word). */
+    br.com.nord_tool_backend.dto.BlocoDocumentoDto documento(Long idCaderno);
+
+    br.com.nord_tool_backend.dto.BlocoDocumentoDto salvarDocumento(Long idCaderno, br.com.nord_tool_backend.form.BlocoDocumentoForm form);
 }

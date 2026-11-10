@@ -55,4 +55,16 @@ public class BlocoNotasReadController implements BaseResponse {
     public ResponseEntity<byte[]> imagem(@PathVariable Long id, @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
         return ArquivoResponse.imagem(service.baixarImagem(id), ifNoneMatch);
     }
+
+    @Operation(summary = "Documento de texto do caderno (estilo Word)")
+    @GetMapping("/{id}/documento")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.BlocoDocumentoDto>> documento(@PathVariable Long id) {
+        return ok(service.documento(id));
+    }
+
+    @Operation(summary = "PDF original de páginas importadas")
+    @GetMapping("/pdfs/{id}")
+    public ResponseEntity<byte[]> pdf(@PathVariable Long id, @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
+        return ArquivoResponse.pdf(service.baixarPdf(id), ifNoneMatch);
+    }
 }
