@@ -100,7 +100,7 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
     }
 
     /** v3: o fim precisa de um início e não pode ser antes dele; no máximo um ano de duração. */
-    static void validarPeriodo(java.time.LocalDateTime inicio, java.time.LocalDateTime fim) {
+    static void validarPeriodo(LocalDateTime inicio, LocalDateTime fim) {
         if (fim == null) return;
         if (inicio == null) throw new EntradaInvalidaException("Escolha o dia de início antes do dia de fim.");
         if (fim.toLocalDate().isBefore(inicio.toLocalDate())) throw new EntradaInvalidaException("O dia de fim não pode ser antes do dia de início.");
