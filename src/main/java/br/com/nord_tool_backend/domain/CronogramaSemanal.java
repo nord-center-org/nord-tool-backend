@@ -26,6 +26,8 @@ public class CronogramaSemanal extends GlobalDomain {
     private LocalDateTime dtFinalizacao;
     private String nmTag;
     private LocalDateTime dtAgendamento;
+    /** v3: último dia de uma demanda pontual que dura vários dias (nulo = um dia só). */
+    private LocalDateTime dtFimAgendamento;
     private Boolean inCronogramaFixo;
     /** Cronograma pessoal: dono do item (null = item antigo, de antes do cronograma pessoal). */
     private Long idDono;

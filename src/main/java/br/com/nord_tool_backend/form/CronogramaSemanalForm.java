@@ -31,6 +31,9 @@ public class CronogramaSemanalForm {
     private String nmTag;
     @JsonDeserialize(using = FormatDateTimeDeserializer.class)
     private LocalDateTime dtAgendamento;
+    /** v3: último dia da demanda pontual; precisa de dtAgendamento e não pode ser antes dele. */
+    @JsonDeserialize(using = FormatDateTimeDeserializer.class)
+    private LocalDateTime dtFimAgendamento;
     private Boolean flFixo;
 
     public CronogramaSemanal converterToDomain() {
@@ -46,6 +49,7 @@ public class CronogramaSemanalForm {
                 .dtFinalizacao(dtFinalizacao)
                 .nmTag(nmTag)
                 .dtAgendamento(dtAgendamento)
+                .dtFimAgendamento(dtFimAgendamento)
                 .inCronogramaFixo(flFixo != null ? flFixo : Boolean.TRUE)
                 .build();
     }

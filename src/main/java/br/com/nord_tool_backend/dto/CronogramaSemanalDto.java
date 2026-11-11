@@ -31,6 +31,9 @@ public class CronogramaSemanalDto {
     private String nmTag;
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime dtAgendamento;
+    /** v3: último dia da demanda pontual (nulo = um dia só). */
+    @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
+    private LocalDateTime dtFimAgendamento;
     private Boolean flFixo;
     private Long idDono;
     private String nmDono;
@@ -52,6 +55,7 @@ public class CronogramaSemanalDto {
                 .dtFinalizacao(cronogramaSemanal.getDtFinalizacao())
                 .nmTag(cronogramaSemanal.getNmTag())
                 .dtAgendamento(cronogramaSemanal.getDtAgendamento())
+                .dtFimAgendamento(cronogramaSemanal.getDtFimAgendamento())
                 .flFixo(cronogramaSemanal.getInCronogramaFixo())
                 .idDono(cronogramaSemanal.getIdDono())
                 .nmDono(cronogramaSemanal.getNmDono())
