@@ -211,6 +211,51 @@ public class CronogramaSemanalServiceImplTest {
     }
 
     @Test
+    void demandaPontualComPeriodoGuardaOFimEValida() {
+        when(cronogramaSemanalRepository.salvarCronogramaSemanal(any(CronogramaSemanal.class))).thenReturn(cronogramaSemanalDto);
+        CronogramaSemanalForm periodo = new CronogramaSemanalForm();
+        periodo.setFlFixo(false);
+        periodo.setDtAgendamento(java.time.LocalDateTime.of(2026, 11, 10, 8, 0));
+        periodo.setDtFimAgendamento(java.time.LocalDateTime.of(2026, 11, 14, 0, 0));
+        cronogramaSemanalService.salvarCronogramaSemanal(periodo);
+        org.mockito.ArgumentCaptor<CronogramaSemanal> salvo = org.mockito.ArgumentCaptor.forClass(CronogramaSemanal.class);
+        verify(cronogramaSemanalRepository).salvarCronogramaSemanal(salvo.capture());
+        assertEquals(java.time.LocalDateTime.of(2026, 11, 14, 0, 0), salvo.getValue().getDtFimAgendamento());
+
+        // Fim no mesmo dia do início é um dia só.
+        CronogramaSemanalForm mesmoDia = new CronogramaSemanalForm();
+        mesmoDia.setFlFixo(false);
+        mesmoDia.setDtAgendamento(java.time.LocalDateTime.of(2026, 11, 10, 8, 0));
+        mesmoDia.setDtFimAgendamento(java.time.LocalDateTime.of(2026, 11, 10, 0, 0));
+        cronogramaSemanalService.salvarCronogramaSemanal(mesmoDia);
+        verify(cronogramaSemanalRepository, org.mockito.Mockito.times(2)).salvarCronogramaSemanal(salvo.capture());
+        assertEquals(null, salvo.getValue().getDtFimAgendamento());
+
+        // Atividade fixa não tem período.
+        CronogramaSemanalForm fixa = new CronogramaSemanalForm();
+        fixa.setFlFixo(true);
+        fixa.setIdDiaSemana(2);
+        fixa.setDtFimAgendamento(java.time.LocalDateTime.of(2026, 11, 14, 0, 0));
+        cronogramaSemanalService.salvarCronogramaSemanal(fixa);
+        verify(cronogramaSemanalRepository, org.mockito.Mockito.times(3)).salvarCronogramaSemanal(salvo.capture());
+        assertEquals(null, salvo.getValue().getDtFimAgendamento());
+    }
+
+    @Test
+    void periodoInvalidoERecusado() {
+        java.time.LocalDateTime inicio = java.time.LocalDateTime.of(2026, 11, 10, 8, 0);
+        assertThrows(EntradaInvalidaException.class, () -> CronogramaSemanalServiceImpl.validarPeriodo(null, inicio));
+        assertThrows(EntradaInvalidaException.class, () -> CronogramaSemanalServiceImpl.validarPeriodo(inicio, inicio.minusDays(1)));
+        assertThrows(EntradaInvalidaException.class, () -> CronogramaSemanalServiceImpl.validarPeriodo(inicio, inicio.plusYears(1).plusDays(1)));
+        CronogramaSemanalServiceImpl.validarPeriodo(inicio, null);
+        CronogramaSemanalServiceImpl.validarPeriodo(inicio, inicio.plusYears(1));
+        CronogramaSemanalForm semInicio = new CronogramaSemanalForm();
+        semInicio.setFlFixo(false);
+        semInicio.setDtFimAgendamento(inicio);
+        assertThrows(EntradaInvalidaException.class, () -> cronogramaSemanalService.salvarCronogramaSemanal(semInicio));
+    }
+
+    @Test
     void moverStatusValeParaQuemEnxergaOItemEValidaOStatus() {
         when(cronogramaSemanalRepository.moverStatus(1L, "executar")).thenReturn(1);
         when(cronogramaSemanalRepository.buscarPorIdCronogramaSemanal(1L)).thenReturn(cronogramaSemanal);

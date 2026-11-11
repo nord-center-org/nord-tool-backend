@@ -90,6 +90,21 @@ public class CronogramaSemanalServiceImpl implements CronogramaSemanalService {
         if (fixo && cronogramaSemanal.getIdDiaSemana() == null) {
             throw new EntradaInvalidaException("Atividades fixas precisam de um dia da semana.");
         }
+        // v3: atividade fixa não tem período; fim no mesmo dia do início é um dia só.
+        if (fixo) cronogramaSemanal.setDtFimAgendamento(null);
+        validarPeriodo(cronogramaSemanal.getDtAgendamento(), cronogramaSemanal.getDtFimAgendamento());
+        if (cronogramaSemanal.getDtFimAgendamento() != null
+                && cronogramaSemanal.getDtFimAgendamento().toLocalDate().equals(cronogramaSemanal.getDtAgendamento().toLocalDate())) {
+            cronogramaSemanal.setDtFimAgendamento(null);
+        }
+    }
+
+    /** v3: o fim precisa de um início e não pode ser antes dele; no máximo um ano de duração. */
+    static void validarPeriodo(LocalDateTime inicio, LocalDateTime fim) {
+        if (fim == null) return;
+        if (inicio == null) throw new EntradaInvalidaException("Escolha o dia de início antes do dia de fim.");
+        if (fim.toLocalDate().isBefore(inicio.toLocalDate())) throw new EntradaInvalidaException("O dia de fim não pode ser antes do dia de início.");
+        if (fim.toLocalDate().isAfter(inicio.toLocalDate().plusYears(1))) throw new EntradaInvalidaException("A atividade pode durar no máximo um ano.");
     }
 
     @Override
