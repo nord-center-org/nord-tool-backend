@@ -10,6 +10,7 @@ import br.com.nord_tool_backend.form.RelatorioFotoForm;
 import br.com.nord_tool_backend.form.RelatorioFotograficoForm;
 import br.com.nord_tool_backend.form.RelatorioModeloForm;
 import br.com.nord_tool_backend.form.RelatorioStatusForm;
+import br.com.nord_tool_backend.form.RelatorioTrocaModeloForm;
 import br.com.nord_tool_backend.service.RelatorioFotograficoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -59,6 +60,12 @@ public class RelatorioFotograficoWriteController implements BaseResponse {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponseBody<RelatorioFotograficoDto>> alterar(@PathVariable Long id, @Valid @RequestBody RelatorioFotograficoForm form) {
         return ok(service.alterar(id, form));
+    }
+
+    @Operation(summary = "Troca o modelo do relatório (idModelo nulo = sem modelo); itens e layout do modelo se pedido")
+    @PutMapping("/{id}/modelo")
+    public ResponseEntity<ApiResponseBody<RelatorioFotograficoDto>> trocarModelo(@PathVariable Long id, @Valid @RequestBody RelatorioTrocaModeloForm form) {
+        return ok(service.trocarModelo(id, form));
     }
 
     @Operation(summary = "Conclui (CONCLUIDO) ou reabre (RASCUNHO); exige nrVersao")

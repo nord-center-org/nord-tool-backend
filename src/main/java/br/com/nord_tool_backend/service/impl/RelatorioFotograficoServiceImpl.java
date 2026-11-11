@@ -14,6 +14,7 @@ import br.com.nord_tool_backend.form.RelatorioFotograficoForm;
 import br.com.nord_tool_backend.form.RelatorioItemForm;
 import br.com.nord_tool_backend.form.RelatorioModeloForm;
 import br.com.nord_tool_backend.form.RelatorioStatusForm;
+import br.com.nord_tool_backend.form.RelatorioTrocaModeloForm;
 import br.com.nord_tool_backend.dto.CronogramaEquipeDto;
 import br.com.nord_tool_backend.dto.PessoaCronogramaDto;
 import br.com.nord_tool_backend.exception.AcessoNegadoException;
@@ -35,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,6 +56,8 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
     static final String ICONE = "icone";
     static final int MAX_FOTOS = 200;
     static final int MAX_COMPARTILHAMENTOS = 200;
+    /** Mesmo limite do formulário do relatório. */
+    static final int MAX_ITENS = 100;
     static final String MSG_CONFLITO = "O relatório mudou. Sincronize e tente novamente.";
 
     private final RelatorioFotograficoRepository repository;
@@ -164,6 +168,45 @@ public class RelatorioFotograficoServiceImpl implements RelatorioFotograficoServ
         if (repository.alterar(r, versao) == 0) throw new ConflitoException(MSG_CONFLITO);
         if (form.getItens() != null) sincronizarItens(id, form.getItens());
         return completo(id, u);
+    }
+
+    /**
+     * v3: troca o modelo. Itens, observações e fotos ficam; se pedido, entram no fim os itens do modelo que o relatório
+     * ainda não tem (comparando o nome sem maiúsculas e espaços) e o layout do modelo. Modelo desativado só vale se já
+     * era o do relatório.
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RelatorioFotograficoDto trocarModelo(Long id, RelatorioTrocaModeloForm form) {
+        UsuarioAutenticado u = autorizacao.exigir(Modulo.RELATORIO_FOTOGRAFICO, Acao.ESCRITA);
+        int versao = versaoObrigatoria(form.getNrVersao());
+        RelatorioFotograficoDto atual = editavel(id, u);
+        RelatorioModeloDto modelo = form.getIdModelo() == null ? null : modelo(form.getIdModelo());
+        if (modelo != null && Boolean.FALSE.equals(modelo.getInAtivo()) && !modelo.getId().equals(atual.getIdModelo())) {
+            throw new EntradaInvalidaException("Este modelo está desativado");
+        }
+        RelatorioFotograficoDto layout = new RelatorioFotograficoDto();
+        usarLayout(layout, modelo != null && Boolean.TRUE.equals(form.getInUsarLayout()) ? modelo.getCdLayout() : atual.getCdLayout());
+        if (repository.trocarModelo(id, modelo == null ? null : modelo.getId(), layout.getCdLayout(), layout.getNrFotosPagina(), versao) == 0) {
+            throw new ConflitoException(MSG_CONFLITO);
+        }
+        if (modelo != null && Boolean.TRUE.equals(form.getInAdicionarItens())) adicionarItensDoModelo(id, modelo);
+        return completo(id, u);
+    }
+
+    private void adicionarItensDoModelo(Long idRelatorio, RelatorioModeloDto modelo) {
+        List<RelatorioItemDto> atuais = repository.listarItens(idRelatorio);
+        Set<String> nomes = atuais.stream().map(i -> chaveDoItem(i.getNmItem())).collect(Collectors.toSet());
+        int ordem = atuais.stream().mapToInt(i -> i.getNrOrdem() == null ? 0 : i.getNrOrdem()).max().orElse(0);
+        for (RelatorioModeloItemDto mi : modelo.getItens()) {
+            if (nomes.size() >= MAX_ITENS) break;
+            if (!nomes.add(chaveDoItem(mi.getNmItem()))) continue;
+            repository.inserirItem(item(idRelatorio, ++ordem, mi.getNmItem(), mi.getTxOrientacao(), null));
+        }
+    }
+
+    static String chaveDoItem(String nome) {
+        return nome == null ? "" : nome.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     @Override

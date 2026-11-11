@@ -7,6 +7,7 @@ import br.com.nord_tool_backend.form.RelatorioFotoForm;
 import br.com.nord_tool_backend.form.RelatorioFotograficoForm;
 import br.com.nord_tool_backend.form.RelatorioModeloForm;
 import br.com.nord_tool_backend.form.RelatorioStatusForm;
+import br.com.nord_tool_backend.form.RelatorioTrocaModeloForm;
 import br.com.nord_tool_backend.storage.ArquivoDownload;
 
 import java.util.List;
@@ -37,6 +38,9 @@ public interface RelatorioFotograficoService {
     RelatorioFotograficoDto alterar(Long id, RelatorioFotograficoForm form);
 
     RelatorioFotograficoDto alterarStatus(Long id, RelatorioStatusForm form);
+
+    /** v3: troca o modelo do relatório (quem pode editar, enquanto não está concluído). */
+    RelatorioFotograficoDto trocarModelo(Long id, RelatorioTrocaModeloForm form);
 
     void excluir(Long id, Integer nrVersao);
 
