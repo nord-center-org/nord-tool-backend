@@ -147,6 +147,14 @@ public class RelatorioFotograficoRepositoryImpl implements RelatorioFotograficoR
     }
 
     @Override
+    public int trocarModelo(Long id, Long idModelo, String cdLayout, Integer nrFotosPagina, int nrVersao) {
+        return executor.executar("Erro ao trocar o modelo do relatório", () ->
+                jdbc.update(q("SPU.RELATORIO.TROCAR.MODELO"), new MapSqlParameterSource().addValue("id", id)
+                        .addValue("idModelo", idModelo, Types.BIGINT).addValue("cdLayout", cdLayout)
+                        .addValue("nrFotosPagina", nrFotosPagina).addValue("nrVersao", nrVersao)));
+    }
+
+    @Override
     public int alterarStatus(Long id, String cdStatus, int nrVersao) {
         return executor.executar("Erro ao alterar o status do relatório", () ->
                 jdbc.update(q("SPU.RELATORIO.STATUS"), new MapSqlParameterSource().addValue("id", id)

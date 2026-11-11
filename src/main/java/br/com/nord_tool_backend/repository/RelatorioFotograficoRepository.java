@@ -43,6 +43,9 @@ public interface RelatorioFotograficoRepository {
 
     int alterar(RelatorioFotograficoDto r, int nrVersao);
 
+    /** v3: novo modelo (ou nenhum) e o layout; 0 = versão mudou. */
+    int trocarModelo(Long id, Long idModelo, String cdLayout, Integer nrFotosPagina, int nrVersao);
+
     int alterarStatus(Long id, String cdStatus, int nrVersao);
 
     int deletar(Long id, int nrVersao);

@@ -16,6 +16,7 @@ import br.com.nord_tool_backend.form.RelatorioFotograficoForm;
 import br.com.nord_tool_backend.form.RelatorioItemForm;
 import br.com.nord_tool_backend.form.RelatorioModeloForm;
 import br.com.nord_tool_backend.form.RelatorioStatusForm;
+import br.com.nord_tool_backend.form.RelatorioTrocaModeloForm;
 import br.com.nord_tool_backend.repository.RelatorioFotograficoRepository;
 import br.com.nord_tool_backend.security.Acao;
 import br.com.nord_tool_backend.security.Modulo;
@@ -452,5 +453,111 @@ class RelatorioFotograficoServiceImplTest {
         assertTrue(r.getIdsCompartilhados().isEmpty());
         r.setTxCompartilhados("3, 9");
         assertEquals(Arrays.asList(3L, 9L), r.getIdsCompartilhados());
+    }
+
+    // ---------- v3: trocar o modelo ----------
+
+    private static RelatorioTrocaModeloForm troca(Long idModelo, boolean itens, boolean layout) {
+        RelatorioTrocaModeloForm f = new RelatorioTrocaModeloForm();
+        f.setIdModelo(idModelo);
+        f.setNrVersao(1);
+        f.setInAdicionarItens(itens);
+        f.setInUsarLayout(layout);
+        return f;
+    }
+
+    private static RelatorioItemDto itemComNome(Long id, int ordem, String nome) {
+        RelatorioItemDto i = item(id);
+        i.setNrOrdem(ordem);
+        i.setNmItem(nome);
+        return i;
+    }
+
+    @Test
+    void trocarModeloAcrescentaOsItensQueFaltamEUsaOLayout() {
+        RelatorioFotograficoDto r = relatorio(1L, "RASCUNHO");
+        r.setCdLayout("R2");
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(r));
+        when(repository.listarModelos()).thenReturn(Collections.singletonList(modelo(true)));
+        when(repository.listarItensDeModelos()).thenReturn(Arrays.asList(itemModelo(1, " norte "), itemModelo(2, "Sul"), itemModelo(3, "Leste")));
+        when(repository.listarItens(1L)).thenReturn(Arrays.asList(itemComNome(10L, 1, "Norte"), itemComNome(11L, 4, "Cobertura")));
+        when(repository.trocarModelo(1L, 3L, "R4", 4, 1)).thenReturn(1);
+
+        service.trocarModelo(1L, troca(3L, true, true));
+
+        verify(repository).trocarModelo(1L, 3L, "R4", 4, 1);
+        org.mockito.ArgumentCaptor<RelatorioItemDto> novos = org.mockito.ArgumentCaptor.forClass(RelatorioItemDto.class);
+        verify(repository, times(2)).inserirItem(novos.capture());
+        assertEquals(Arrays.asList("Sul", "Leste"), novos.getAllValues().stream().map(RelatorioItemDto::getNmItem).collect(java.util.stream.Collectors.toList()));
+        assertEquals(Arrays.asList(5, 6), novos.getAllValues().stream().map(RelatorioItemDto::getNrOrdem).collect(java.util.stream.Collectors.toList()));
+        verify(repository, never()).deletarItem(anyLong(), anyLong());
+    }
+
+    @Test
+    void trocarModeloSemItensNemLayoutMantemOLayoutAtual() {
+        RelatorioFotograficoDto r = relatorio(1L, "RASCUNHO");
+        r.setCdLayout("R6");
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(r));
+        when(repository.listarModelos()).thenReturn(Collections.singletonList(modelo(true)));
+        when(repository.trocarModelo(1L, 3L, "R6", 6, 1)).thenReturn(1);
+
+        service.trocarModelo(1L, troca(3L, false, false));
+
+        verify(repository).trocarModelo(1L, 3L, "R6", 6, 1);
+        verify(repository, never()).inserirItem(any());
+    }
+
+    @Test
+    void tirarOModeloDeixaSemModelo() {
+        RelatorioFotograficoDto r = relatorio(1L, "RASCUNHO");
+        r.setIdModelo(3L);
+        r.setCdLayout("R4");
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(r));
+        when(repository.trocarModelo(1L, null, "R4", 4, 1)).thenReturn(1);
+
+        service.trocarModelo(1L, troca(null, true, true));
+
+        verify(repository).trocarModelo(1L, null, "R4", 4, 1);
+        verify(repository, never()).listarModelos();
+        verify(repository, never()).inserirItem(any());
+    }
+
+    @Test
+    void trocarModeloRecusaDesativadoConcluidoEVersaoVelha() {
+        RelatorioFotograficoDto r = relatorio(1L, "RASCUNHO");
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(r));
+        when(repository.listarModelos()).thenReturn(Collections.singletonList(modelo(false)));
+        assertThrows(EntradaInvalidaException.class, () -> service.trocarModelo(1L, troca(3L, false, false)));
+
+        r.setIdModelo(3L);
+        r.setCdLayout("R2");
+        when(repository.trocarModelo(1L, 3L, "R2", 2, 1)).thenReturn(0);
+        assertThrows(ConflitoException.class, () -> service.trocarModelo(1L, troca(3L, false, false)), "desativado vale se já era o dele");
+
+        when(repository.buscar(2L, 7L, false)).thenReturn(Optional.of(relatorio(2L, "CONCLUIDO")));
+        assertThrows(NegocioException.class, () -> service.trocarModelo(2L, troca(null, false, false)));
+
+        RelatorioTrocaModeloForm semVersao = troca(null, false, false);
+        semVersao.setNrVersao(null);
+        assertThrows(EntradaInvalidaException.class, () -> service.trocarModelo(1L, semVersao));
+    }
+
+    @Test
+    void trocarModeloRespeitaOLimiteDeItens() {
+        RelatorioFotograficoDto r = relatorio(1L, "RASCUNHO");
+        r.setCdLayout("R2");
+        when(repository.buscar(1L, 7L, false)).thenReturn(Optional.of(r));
+        when(repository.listarModelos()).thenReturn(Collections.singletonList(modelo(true)));
+        when(repository.listarItensDeModelos()).thenReturn(Arrays.asList(itemModelo(1, "Novo A"), itemModelo(2, "Novo B")));
+        List<RelatorioItemDto> cheios = new java.util.ArrayList<>();
+        for (int i = 0; i < RelatorioFotograficoServiceImpl.MAX_ITENS - 1; i++) cheios.add(itemComNome((long) i, i + 1, "Item " + i));
+        when(repository.listarItens(1L)).thenReturn(cheios);
+        when(repository.trocarModelo(eq(1L), eq(3L), anyString(), any(), anyInt())).thenReturn(1);
+
+        service.trocarModelo(1L, troca(3L, true, false));
+
+        verify(repository, times(1)).inserirItem(any());
+        assertEquals("", RelatorioFotograficoServiceImpl.chaveDoItem(null));
+        assertEquals("fachada norte", RelatorioFotograficoServiceImpl.chaveDoItem("  Fachada   NORTE "));
     }
 }
