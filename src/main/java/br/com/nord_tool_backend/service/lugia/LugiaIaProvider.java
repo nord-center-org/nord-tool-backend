@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 /** Um provedor de IA da Lugia (Claude, ChatGPT, Gemini, gratuitos). Fica disponível com chave e ao menos um modelo. */
 public interface LugiaIaProvider {
 
-    /** Identificador gravado nas mensagens: claude, openai, gemini, groq, openrouter, mistral ou nvidia. */
+    /** Identificador gravado nas mensagens: claude, openai, gemini, groq, openrouter, mistral, nvidia ou ollama. */
     String id();
 
     /** Nome exibido no seletor. */

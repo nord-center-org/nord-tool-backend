@@ -104,6 +104,22 @@ nord-tool:
     # na ordem Gemini, Groq, OpenRouter, Mistral, NVIDIA. Quem bate no limite fica de fora até a cota voltar.
     cadeia-automatico: ${LUGIA_CADEIA_AUTOMATICO:}
     anexo-max-mb: ${LUGIA_ANEXO_MAX_MB:10}
+    # Secretária local: Ollama na máquina do dono, por túnel (Cloudflare Tunnel + Access). Liga com URL e modelo; fora de
+    # localhost exige HTTPS e o service token do Access (ou OLLAMA_TOKEN). Fila, tempos e limites protegem o hardware.
+    ollama:
+      url: ${OLLAMA_URL:}
+      modelos: ${LUGIA_MODELOS_OLLAMA:}
+      cf-access-client-id: ${CF_ACCESS_CLIENT_ID:}
+      cf-access-client-secret: ${CF_ACCESS_CLIENT_SECRET:}
+      token: ${OLLAMA_TOKEN:}
+      max-simultaneos: ${OLLAMA_MAX_SIMULTANEOS:1}
+      fila-max: ${OLLAMA_FILA_MAX:4}
+      espera-max-s: ${OLLAMA_ESPERA_MAX_S:60}
+      primeiro-pedaco-s: ${OLLAMA_PRIMEIRO_PEDACO_S:90}
+      timeout-s: ${OLLAMA_TIMEOUT_S:300}
+      num-ctx: ${OLLAMA_NUM_CTX:8192}
+      max-tokens: ${OLLAMA_MAX_TOKENS:1024}
+      keep-alive: ${OLLAMA_KEEP_ALIVE:30m}
     # Agente executor (ADMIN do módulo LUGIA): token fine-grained do GitHub com Contents e Pull requests (leitura e escrita)
     # nos repositórios da organização. Agente, ambiente e vault são criados no primeiro uso e guardados em lugia_configuracao.
     github-token: ${LUGIA_GITHUB_TOKEN:}

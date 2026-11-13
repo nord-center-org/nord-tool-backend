@@ -73,10 +73,24 @@ final class LugiaSseHttp {
 
     static void postar(String url, Map<String, String> cabecalhos, String corpo, Consumer<String> aoDado)
             throws IOException, InterruptedException {
+        postar(url, cabecalhos, corpo, Duration.ofMinutes(10), true, aoDado);
+    }
+
+    /**
+     * POST com resposta NDJSON (uma linha JSON por pedaço, como a API nativa do Ollama). {@code esperaResposta} limita
+     * o tempo até os cabeçalhos chegarem (no Ollama, inclui carregar o modelo).
+     */
+    static void postarLinhas(String url, Map<String, String> cabecalhos, String corpo, Duration esperaResposta, Consumer<String> aoLinha)
+            throws IOException, InterruptedException {
+        postar(url, cabecalhos, corpo, esperaResposta, false, aoLinha);
+    }
+
+    private static void postar(String url, Map<String, String> cabecalhos, String corpo, Duration esperaResposta, boolean sse,
+                               Consumer<String> aoDado) throws IOException, InterruptedException {
         HttpRequest.Builder pedido = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofMinutes(10))
+                .timeout(esperaResposta)
                 .header("Content-Type", "application/json")
-                .header("Accept", "text/event-stream")
+                .header("Accept", sse ? "text/event-stream" : "application/x-ndjson")
                 .POST(HttpRequest.BodyPublishers.ofString(corpo, StandardCharsets.UTF_8));
         cabecalhos.forEach(pedido::header);
         HttpResponse<InputStream> resposta = HTTP.send(pedido.build(), HttpResponse.BodyHandlers.ofInputStream());
@@ -89,7 +103,9 @@ final class LugiaSseHttp {
             }
             String linha;
             while ((linha = leitor.readLine()) != null) {
-                if (linha.startsWith("data:")) {
+                if (!sse) {
+                    if (!linha.trim().isEmpty()) aoDado.accept(linha.trim());
+                } else if (linha.startsWith("data:")) {
                     String dado = linha.substring(5).trim();
                     if (!dado.isEmpty() && !"[DONE]".equals(dado)) aoDado.accept(dado);
                 }
