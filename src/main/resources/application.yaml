@@ -73,6 +73,9 @@ nord-tool:
   storage:
     # Provedor de arquivos: POSTGRES (provisório). Definitivo ainda a decidir (Drive/S3).
     provider: ${NORD_STORAGE_PROVIDER:POSTGRES}
+  repertorio:
+    # Espaço de áudio do Repertório por pessoa, em MB (as músicas ficam no banco, junto dos outros arquivos).
+    cota-mb: ${NORD_REPERTORIO_COTA_MB:300}
   push:
     # Notificações no celular (Web Push). Sem as chaves no ambiente, o servidor gera um par VAPID na primeira vez e
     # guarda no banco (push_chave). Para usar o seu: npx web-push generate-vapid-keys (nunca versione a privada).
