@@ -43,6 +43,9 @@ import java.util.regex.Pattern;
  * conteúdo, espaço total por pessoa (configurável, padrão 300 MB), até 300 músicas e 200 criações, e os dados em JSON.
  * v12: a cifra pode ser compartilhada com outras pessoas ativas (uma cópia para cada uma, sem o áudio), com limite de
  * pessoas por envio e de cópias por dia, para não virar spam.
+ * v16: a aba é aberta a todos que entram no NordTool: qualquer pessoa vê, abre e edita as músicas e criações de
+ * todos (fica registrado quem criou e quem mexeu por último); só quem criou exclui. A cota de espaço e os limites de
+ * quantidade contam para quem criou.
  */
 @Service
 public class RepertorioServiceImpl implements RepertorioService {
@@ -128,13 +131,16 @@ public class RepertorioServiceImpl implements RepertorioService {
         Long u = eu().getId();
         String c = chave(chave);
         RepertorioMusicaDto atual = musica(u, c);
+        Long dono = atual.getIdUsuario() == null ? u : atual.getIdUsuario();
         ArquivoValidador.validarNome(nome);
         if (bytes == null || bytes.length == 0) throw new EntradaInvalidaException("O áudio está vazio");
         if (bytes.length > MAX_AUDIO) throw new EntradaInvalidaException("O áudio deve ter no máximo 15 MB para ir para a conta");
         String tipo = tipoDoAudio(bytes);
-        long usados = repository.bytesUsados(u, c);
+        long usados = repository.bytesUsados(dono, c);
         if (usados + bytes.length > cotaBytes) {
-            throw new NegocioException("O espaço do Repertório na conta acabou (" + (cotaBytes / MB) + " MB). Exclua alguma música para guardar outra.");
+            throw new NegocioException(dono.equals(u)
+                    ? "O espaço do Repertório na conta acabou (" + (cotaBytes / MB) + " MB). Exclua alguma música para guardar outra."
+                    : "O espaço de quem criou esta música acabou (" + (cotaBytes / MB) + " MB). O áudio fica só neste aparelho.");
         }
         Long novo = armazenamento.salvar(nome, tipo, bytes);
         repository.ligarAudio(u, c, novo, nome, bytes.length);
@@ -159,6 +165,7 @@ public class RepertorioServiceImpl implements RepertorioService {
         String c = chave(chave);
         RepertorioMusicaDto m = repository.buscarMusica(u, c).orElse(null);
         if (m == null) return;
+        if (!Boolean.TRUE.equals(m.getInMinha())) throw new NegocioException("Só quem criou a música pode excluí-la.");
         repository.excluirMusica(u, c);
         if (m.getIdArquivo() != null) armazenamento.apagar(m.getIdArquivo());
     }
@@ -202,7 +209,12 @@ public class RepertorioServiceImpl implements RepertorioService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluirProjeto(String chave) {
-        repository.excluirProjeto(eu().getId(), chave(chave));
+        Long u = eu().getId();
+        String c = chave(chave);
+        RepertorioProjetoDto p = repository.buscarProjeto(u, c).orElse(null);
+        if (p == null) return;
+        if (!Boolean.TRUE.equals(p.getInMinha())) throw new NegocioException("Só quem criou a criação pode excluí-la.");
+        repository.excluirProjeto(u, c);
     }
 
     // ---------------------------------------------------------------- v12: cifras compartilhadas
