@@ -1,13 +1,18 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.dto.PessoaCronogramaDto;
+import br.com.nord_tool_backend.dto.RepertorioCifraDto;
+import br.com.nord_tool_backend.dto.RepertorioEnvioDto;
 import br.com.nord_tool_backend.dto.RepertorioMusicaDto;
 import br.com.nord_tool_backend.dto.RepertorioProjetoDto;
 import br.com.nord_tool_backend.dto.RepertorioUsoDto;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.exception.NaoEncontradoException;
 import br.com.nord_tool_backend.exception.NegocioException;
+import br.com.nord_tool_backend.form.RepertorioCifraEnvioForm;
 import br.com.nord_tool_backend.form.RepertorioMusicaForm;
 import br.com.nord_tool_backend.form.RepertorioProjetoForm;
+import br.com.nord_tool_backend.repository.CronogramaSemanalRepository;
 import br.com.nord_tool_backend.repository.RepertorioRepository;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
 import br.com.nord_tool_backend.service.AutorizacaoService;
@@ -24,13 +29,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
  * Repertório v7: as músicas (dados + áudio) e as criações do estúdio na conta, para abrir em qualquer aparelho. O
  * aparelho dá a chave (m.../p...) e continua com a cópia local; aqui ficam os limites: áudio de até 15 MB conferido pelo
  * conteúdo, espaço total por pessoa (configurável, padrão 300 MB), até 300 músicas e 200 criações, e os dados em JSON.
+ * v12: a cifra pode ser compartilhada com outras pessoas ativas (uma cópia para cada uma, sem o áudio), com limite de
+ * pessoas por envio e de cópias por dia, para não virar spam.
  */
 @Service
 public class RepertorioServiceImpl implements RepertorioService {
@@ -42,19 +54,33 @@ public class RepertorioServiceImpl implements RepertorioService {
     static final int MAX_DADOS_MUSICA = 3_000_000;
     static final int MAX_DADOS_PROJETO = 2_000_000;
     static final long MB = 1024L * 1024L;
+    static final int MAX_DESTINOS = 30;
+    static final int MAX_ENVIOS_DIA = 300;
+    static final int MAX_CIFRA = 64_000;
+    static final int MAX_MENSAGEM = 300;
 
     private final RepertorioRepository repository;
     private final AutorizacaoService autorizacao;
     private final ArmazenamentoService armazenamento;
     private final ObjectMapper mapper;
+    private final CronogramaSemanalRepository pessoas;
+    private final Clock relogio;
     private final long cotaBytes;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public RepertorioServiceImpl(RepertorioRepository repository, AutorizacaoService autorizacao, ArmazenamentoService armazenamento,
-                                 ObjectMapper mapper, @Value("${nord-tool.repertorio.cota-mb:300}") long cotaMb) {
+                                 ObjectMapper mapper, CronogramaSemanalRepository pessoas, @Value("${nord-tool.repertorio.cota-mb:300}") long cotaMb) {
+        this(repository, autorizacao, armazenamento, mapper, pessoas, Clock.systemDefaultZone(), cotaMb);
+    }
+
+    RepertorioServiceImpl(RepertorioRepository repository, AutorizacaoService autorizacao, ArmazenamentoService armazenamento,
+                          ObjectMapper mapper, CronogramaSemanalRepository pessoas, Clock relogio, long cotaMb) {
         this.repository = repository;
         this.autorizacao = autorizacao;
         this.armazenamento = armazenamento;
         this.mapper = mapper;
+        this.pessoas = pessoas;
+        this.relogio = relogio;
         this.cotaBytes = Math.max(0, cotaMb) * MB;
     }
 
@@ -177,6 +203,67 @@ public class RepertorioServiceImpl implements RepertorioService {
     @Transactional(rollbackFor = Exception.class)
     public void excluirProjeto(String chave) {
         repository.excluirProjeto(eu().getId(), chave(chave));
+    }
+
+    // ---------------------------------------------------------------- v12: cifras compartilhadas
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PessoaCronogramaDto> pessoas() {
+        eu();
+        return pessoas.listarPessoas();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RepertorioEnvioDto enviarCifra(RepertorioCifraEnvioForm form) {
+        Long u = eu().getId();
+        Set<Long> destinos = new LinkedHashSet<>();
+        for (Long d : form.getIdsUsuarios() == null ? new ArrayList<Long>() : form.getIdsUsuarios()) {
+            if (d != null && !d.equals(u)) destinos.add(d);
+        }
+        if (destinos.isEmpty()) throw new EntradaInvalidaException("Escolha com quem compartilhar");
+        if (destinos.size() > MAX_DESTINOS) throw new EntradaInvalidaException("Compartilhe com no máximo " + MAX_DESTINOS + " pessoas de cada vez");
+        String cifra = form.getTxCifra() == null ? "" : form.getTxCifra().replace("\r\n", "\n").replace('\r', '\n');
+        if (cifra.trim().isEmpty()) throw new EntradaInvalidaException("A cifra está vazia");
+        if (cifra.length() > MAX_CIFRA) throw new EntradaInvalidaException("A cifra passou do tamanho máximo para compartilhar");
+        String mensagem = texto(form.getTxMensagem(), MAX_MENSAGEM, "");
+        if (pessoas.contarUsuariosAtivos(destinos) != destinos.size()) {
+            throw new EntradaInvalidaException("Há pessoas inativas ou inexistentes na lista");
+        }
+        int hoje = repository.contarCifrasEnviadasDesde(u, LocalDateTime.now(relogio).minusDays(1));
+        if (hoje + destinos.size() > MAX_ENVIOS_DIA) {
+            throw new NegocioException("Você chegou ao limite de " + MAX_ENVIOS_DIA + " cifras compartilhadas por dia. Tente amanhã.");
+        }
+        String titulo = texto(form.getNmTitulo(), 200, "Música");
+        String artista = texto(form.getNmArtista(), 200, "");
+        String tom = texto(form.getNmTom(), 12, null);
+        for (Long d : destinos) repository.enviarCifra(u, d, titulo, artista, tom, cifra, mensagem);
+        return new RepertorioEnvioDto(destinos.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RepertorioCifraDto> cifrasRecebidas() {
+        return repository.listarCifrasRecebidas(eu().getId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RepertorioCifraDto abrirCifraRecebida(Long id) {
+        Long u = eu().getId();
+        RepertorioCifraDto c = repository.buscarCifraRecebida(u, id).orElseThrow(() -> new NaoEncontradoException("Cifra não encontrada"));
+        if (c.getDhLeitura() == null) {
+            repository.marcarCifraLida(u, id);
+            c.setDhLeitura(LocalDateTime.now(relogio));
+        }
+        return c;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void excluirCifraRecebida(Long id) {
+        repository.excluirCifraRecebida(eu().getId(), id);
     }
 
     // ---------------------------------------------------------------- apoio

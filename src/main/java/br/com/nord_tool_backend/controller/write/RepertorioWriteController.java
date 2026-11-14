@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -66,6 +67,25 @@ public class RepertorioWriteController implements BaseResponse {
     @DeleteMapping("/projetos/{chave}")
     public ResponseEntity<ApiResponseBody<Void>> excluirProjeto(@PathVariable String chave) {
         service.excluirProjeto(chave);
+        return noContent();
+    }
+
+    @Operation(summary = "Compartilha a cifra com outras pessoas (cada uma recebe uma cópia, sem o áudio)")
+    @PostMapping("/cifras-enviadas")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.RepertorioEnvioDto>> enviarCifra(@RequestBody br.com.nord_tool_backend.form.RepertorioCifraEnvioForm form) {
+        return ok(service.enviarCifra(form));
+    }
+
+    @Operation(summary = "Abre uma cifra recebida (com o texto) e marca como lida")
+    @PostMapping("/cifras-recebidas/{id}/abrir")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.RepertorioCifraDto>> abrirCifra(@PathVariable Long id) {
+        return ok(service.abrirCifraRecebida(id));
+    }
+
+    @Operation(summary = "Exclui uma cifra recebida")
+    @DeleteMapping("/cifras-recebidas/{id}")
+    public ResponseEntity<ApiResponseBody<Void>> excluirCifra(@PathVariable Long id) {
+        service.excluirCifraRecebida(id);
         return noContent();
     }
 }

@@ -58,6 +58,18 @@ public class RepertorioReadController implements BaseResponse {
         return ok(service.listarProjetos());
     }
 
+    @Operation(summary = "Pessoas com quem dá para compartilhar a cifra")
+    @GetMapping("/pessoas")
+    public ResponseEntity<ApiResponseBody<List<br.com.nord_tool_backend.dto.PessoaCronogramaDto>>> pessoas() {
+        return ok(service.pessoas());
+    }
+
+    @Operation(summary = "Cifras que compartilharam comigo (sem o texto)")
+    @GetMapping("/cifras-recebidas")
+    public ResponseEntity<ApiResponseBody<List<br.com.nord_tool_backend.dto.RepertorioCifraDto>>> cifrasRecebidas() {
+        return ok(service.cifrasRecebidas());
+    }
+
     @Operation(summary = "Criação com os dados")
     @GetMapping("/projetos/{chave}")
     public ResponseEntity<ApiResponseBody<RepertorioProjetoDto>> projeto(@PathVariable String chave) {

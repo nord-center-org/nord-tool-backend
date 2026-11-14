@@ -33,4 +33,18 @@ public interface RepertorioService {
     RepertorioProjetoDto salvarProjeto(String chave, RepertorioProjetoForm form);
 
     void excluirProjeto(String chave);
+
+    // v12: cifras compartilhadas
+
+    /** Com quem dá para compartilhar (as pessoas ativas, menos quem está logado). */
+    List<br.com.nord_tool_backend.dto.PessoaCronogramaDto> pessoas();
+
+    br.com.nord_tool_backend.dto.RepertorioEnvioDto enviarCifra(br.com.nord_tool_backend.form.RepertorioCifraEnvioForm form);
+
+    List<br.com.nord_tool_backend.dto.RepertorioCifraDto> cifrasRecebidas();
+
+    /** Abre a cifra recebida (com o texto) e marca como lida. */
+    br.com.nord_tool_backend.dto.RepertorioCifraDto abrirCifraRecebida(Long id);
+
+    void excluirCifraRecebida(Long id);
 }
