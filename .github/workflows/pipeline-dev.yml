@@ -110,7 +110,7 @@ jobs:
       # Só alerta: a linha Spring Boot 2.7 (fixada no AGENTS.md) tem CVEs conhecidas sem correção nela.
       - name: OSV-Scanner (pom.xml)
         id: osv
-        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+        uses: google/osv-scanner-action/osv-scanner-action@32d3cd482bdadfb38b186c0ad1b031902d55d932 # v2.7.1
         continue-on-error: true
         with:
           scan-args: |-
