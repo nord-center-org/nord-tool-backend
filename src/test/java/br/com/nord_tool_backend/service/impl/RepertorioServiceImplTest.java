@@ -76,6 +76,7 @@ class RepertorioServiceImplTest {
         m.setNmTitulo("Canção");
         m.setIdArquivo(arquivo);
         m.setTxDados("{\"cifra\":\"\"}");
+        m.setInMinha(true);
         return m;
     }
 
@@ -84,6 +85,7 @@ class RepertorioServiceImplTest {
         p.setCdChave(chave);
         p.setNmTitulo("Música 1");
         p.setTxDados("{}");
+        p.setInMinha(true);
         return p;
     }
 
@@ -231,6 +233,39 @@ class RepertorioServiceImplTest {
         verify(repository).excluirMusica(EU, "m1");
         service.excluirMusica("nao-existe");
         verify(repository, never()).excluirMusica(EU, "nao-existe");
+    }
+
+    @Test
+    void v16AbertaATodosMasSoQuemCriouExclui() {
+        RepertorioMusicaDto deOutro = musica("m9", 70L);
+        deOutro.setInMinha(false);
+        deOutro.setIdUsuario(42L);
+        deOutro.setNmCriador("Outra Pessoa");
+        when(repository.buscarMusica(EU, "m9")).thenReturn(Optional.of(deOutro));
+        assertEquals("Outra Pessoa", service.abrirMusica("m9").getNmCriador());
+        // editar a música de outra pessoa grava como quem mexeu
+        service.salvarMusica("m9", new RepertorioMusicaForm());
+        verify(repository).salvarMusica(eq(EU), eq("m9"), any());
+        // o áudio conta no espaço de quem criou
+        when(armazenamento.salvar(anyString(), anyString(), any())).thenReturn(98L);
+        when(repository.bytesUsados(42L, "m9")).thenReturn(0L);
+        service.enviarAudio("m9", "a.mp3", mp3());
+        verify(repository).bytesUsados(42L, "m9");
+        verify(repository).ligarAudio(EU, "m9", 98L, "a.mp3", 100);
+        when(repository.bytesUsados(42L, "m9")).thenReturn(1024L * 1024L);
+        NegocioException cheio = assertThrows(NegocioException.class, () -> service.enviarAudio("m9", "a.mp3", mp3()));
+        assertEquals(true, cheio.getMessage().contains("quem criou"));
+        // excluir, só quem criou
+        assertThrows(NegocioException.class, () -> service.excluirMusica("m9"));
+        verify(repository, never()).excluirMusica(EU, "m9");
+        verify(armazenamento, times(1)).apagar(70L);
+        RepertorioProjetoDto criacao = projeto("p9");
+        criacao.setInMinha(false);
+        when(repository.buscarProjeto(EU, "p9")).thenReturn(Optional.of(criacao));
+        assertThrows(NegocioException.class, () -> service.excluirProjeto("p9"));
+        verify(repository, never()).excluirProjeto(EU, "p9");
+        service.excluirProjeto("nao-existe");
+        verify(repository, never()).excluirProjeto(EU, "nao-existe");
     }
 
     @Test
