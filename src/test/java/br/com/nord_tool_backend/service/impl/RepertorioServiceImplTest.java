@@ -1,13 +1,17 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.dto.PessoaCronogramaDto;
+import br.com.nord_tool_backend.dto.RepertorioCifraDto;
 import br.com.nord_tool_backend.dto.RepertorioMusicaDto;
 import br.com.nord_tool_backend.dto.RepertorioProjetoDto;
 import br.com.nord_tool_backend.dto.RepertorioUsoDto;
 import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.exception.NaoEncontradoException;
 import br.com.nord_tool_backend.exception.NegocioException;
+import br.com.nord_tool_backend.form.RepertorioCifraEnvioForm;
 import br.com.nord_tool_backend.form.RepertorioMusicaForm;
 import br.com.nord_tool_backend.form.RepertorioProjetoForm;
+import br.com.nord_tool_backend.repository.CronogramaSemanalRepository;
 import br.com.nord_tool_backend.repository.RepertorioRepository;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
 import br.com.nord_tool_backend.service.AutorizacaoService;
@@ -21,7 +25,11 @@ import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +54,8 @@ class RepertorioServiceImplTest {
     private RepertorioRepository repository;
     private ArmazenamentoService armazenamento;
     private RepertorioServiceImpl service;
+    private CronogramaSemanalRepository pessoas;
+    private static final Instant AGORA = Instant.parse("2026-11-14T12:00:00Z");
 
     @BeforeEach
     void setUp() {
@@ -53,7 +63,8 @@ class RepertorioServiceImplTest {
         armazenamento = mock(ArmazenamentoService.class);
         AutorizacaoService autorizacao = mock(AutorizacaoService.class);
         when(autorizacao.exigirAutenticado()).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO", Collections.emptyMap(), 0, Instant.now()));
-        service = new RepertorioServiceImpl(repository, autorizacao, armazenamento, new ObjectMapper(), 1);
+        pessoas = mock(CronogramaSemanalRepository.class);
+        service = new RepertorioServiceImpl(repository, autorizacao, armazenamento, new ObjectMapper(), pessoas, Clock.fixed(AGORA, ZoneOffset.UTC), 1);
         when(repository.buscarMusica(EU, "m1")).thenReturn(Optional.of(musica("m1", null)));
         when(repository.buscarMusica(EU, "m2")).thenReturn(Optional.of(musica("m2", 50L)));
         when(repository.buscarProjeto(EU, "p1")).thenReturn(Optional.of(projeto("p1")));
@@ -253,8 +264,111 @@ class RepertorioServiceImplTest {
     void cotaNegativaViraZeroETextoSemControle() {
         AutorizacaoService autorizacao = mock(AutorizacaoService.class);
         when(autorizacao.exigirAutenticado()).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO", Collections.emptyMap(), 0, Instant.now()));
-        RepertorioServiceImpl s = new RepertorioServiceImpl(repository, autorizacao, armazenamento, new ObjectMapper(), -5);
+        RepertorioServiceImpl s = new RepertorioServiceImpl(repository, autorizacao, armazenamento, new ObjectMapper(), pessoas, -5);
         assertEquals(0L, s.uso().getBytesCota());
         assertEquals("x", RepertorioServiceImpl.texto("\u0001x\u0002", 10, "p"));
+    }
+
+    // ---------------------------------------------------------------- v12: cifras compartilhadas
+
+    private static RepertorioCifraEnvioForm envio(Long... ids) {
+        RepertorioCifraEnvioForm f = new RepertorioCifraEnvioForm();
+        f.setIdsUsuarios(ids == null ? null : Arrays.asList(ids));
+        f.setNmTitulo("  Canção da Obra ");
+        f.setNmArtista("Banda");
+        f.setNmTom("G");
+        f.setTxCifra("G   D\r\nLevanta a parede\rEm");
+        f.setTxMensagem("Olha essa\u0007!");
+        return f;
+    }
+
+    @Test
+    void pessoasParaCompartilhar() {
+        List<PessoaCronogramaDto> lista = Collections.singletonList(new PessoaCronogramaDto());
+        when(pessoas.listarPessoas()).thenReturn(lista);
+        assertSame(lista, service.pessoas());
+    }
+
+    @Test
+    void compartilhaUmaCopiaParaCadaPessoaSemRepetirNemMandarParaSiMesmo() {
+        when(pessoas.contarUsuariosAtivos(any())).thenReturn(2);
+        assertEquals(2, service.enviarCifra(envio(3L, EU, 3L, null, 4L)).getNrEnviadas());
+        verify(repository).enviarCifra(EU, 3L, "Canção da Obra", "Banda", "G", "G   D\nLevanta a parede\nEm", "Olha essa !");
+        verify(repository).enviarCifra(eq(EU), eq(4L), anyString(), anyString(), anyString(), anyString(), anyString());
+        verify(repository).contarCifrasEnviadasDesde(EU, LocalDateTime.of(2026, 11, 13, 12, 0));
+    }
+
+    @Test
+    void compartilharSemTituloNemTomUsaOPadrao() {
+        when(pessoas.contarUsuariosAtivos(any())).thenReturn(1);
+        RepertorioCifraEnvioForm f = envio(3L);
+        f.setNmTitulo(null);
+        f.setNmArtista(null);
+        f.setNmTom(" ");
+        f.setTxMensagem(null);
+        service.enviarCifra(f);
+        verify(repository).enviarCifra(EU, 3L, "Música", "", null, "G   D\nLevanta a parede\nEm", "");
+    }
+
+    @Test
+    void compartilharRecusaListaVaziaGrandeOuComInativos() {
+        assertThrows(EntradaInvalidaException.class, () -> service.enviarCifra(envio((Long[]) null)));
+        assertThrows(EntradaInvalidaException.class, () -> service.enviarCifra(envio(EU)));
+        Long[] muitos = new Long[RepertorioServiceImpl.MAX_DESTINOS + 1];
+        for (int i = 0; i < muitos.length; i++) muitos[i] = 100L + i;
+        assertThrows(EntradaInvalidaException.class, () -> service.enviarCifra(envio(muitos)));
+        when(pessoas.contarUsuariosAtivos(any())).thenReturn(0);
+        assertThrows(EntradaInvalidaException.class, () -> service.enviarCifra(envio(3L)));
+        verify(repository, never()).enviarCifra(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void compartilharRecusaCifraVaziaOuGrande() {
+        RepertorioCifraEnvioForm vazia = envio(3L);
+        vazia.setTxCifra("  \n ");
+        assertThrows(EntradaInvalidaException.class, () -> service.enviarCifra(vazia));
+        vazia.setTxCifra(null);
+        assertThrows(EntradaInvalidaException.class, () -> service.enviarCifra(vazia));
+        RepertorioCifraEnvioForm grande = envio(3L);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i <= RepertorioServiceImpl.MAX_CIFRA; i++) sb.append('a');
+        grande.setTxCifra(sb.toString());
+        assertThrows(EntradaInvalidaException.class, () -> service.enviarCifra(grande));
+    }
+
+    @Test
+    void compartilharRespeitaOLimiteDoDia() {
+        when(pessoas.contarUsuariosAtivos(any())).thenReturn(2);
+        when(repository.contarCifrasEnviadasDesde(eq(EU), any())).thenReturn(RepertorioServiceImpl.MAX_ENVIOS_DIA - 1);
+        assertThrows(NegocioException.class, () -> service.enviarCifra(envio(3L, 4L)));
+        verify(repository, never()).enviarCifra(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void listaAsRecebidas() {
+        List<RepertorioCifraDto> lista = Collections.singletonList(new RepertorioCifraDto());
+        when(repository.listarCifrasRecebidas(EU)).thenReturn(lista);
+        assertSame(lista, service.cifrasRecebidas());
+    }
+
+    @Test
+    void abrirMarcaComoLidaSoNaPrimeiraVez() {
+        RepertorioCifraDto nova = new RepertorioCifraDto();
+        nova.setTxCifra("G");
+        when(repository.buscarCifraRecebida(EU, 9L)).thenReturn(Optional.of(nova));
+        assertEquals(LocalDateTime.of(2026, 11, 14, 12, 0), service.abrirCifraRecebida(9L).getDhLeitura());
+        verify(repository).marcarCifraLida(EU, 9L);
+        RepertorioCifraDto lida = new RepertorioCifraDto();
+        lida.setDhLeitura(LocalDateTime.of(2026, 1, 1, 0, 0));
+        when(repository.buscarCifraRecebida(EU, 10L)).thenReturn(Optional.of(lida));
+        service.abrirCifraRecebida(10L);
+        verify(repository, never()).marcarCifraLida(EU, 10L);
+        assertThrows(NaoEncontradoException.class, () -> service.abrirCifraRecebida(11L));
+    }
+
+    @Test
+    void excluiSoADaPropriaPessoa() {
+        service.excluirCifraRecebida(9L);
+        verify(repository).excluirCifraRecebida(EU, 9L);
     }
 }

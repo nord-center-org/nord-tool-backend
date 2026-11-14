@@ -33,4 +33,19 @@ public interface RepertorioRepository {
     void salvarProjeto(Long idUsuario, String chave, String titulo, String dados);
 
     int excluirProjeto(Long idUsuario, String chave);
+
+    // v12: cifras compartilhadas
+
+    void enviarCifra(Long origem, Long destino, String titulo, String artista, String tom, String cifra, String mensagem);
+
+    /** Quantas cópias a pessoa enviou desde `desde`. */
+    int contarCifrasEnviadasDesde(Long origem, java.time.LocalDateTime desde);
+
+    List<br.com.nord_tool_backend.dto.RepertorioCifraDto> listarCifrasRecebidas(Long idUsuario);
+
+    Optional<br.com.nord_tool_backend.dto.RepertorioCifraDto> buscarCifraRecebida(Long idUsuario, Long id);
+
+    void marcarCifraLida(Long idUsuario, Long id);
+
+    int excluirCifraRecebida(Long idUsuario, Long id);
 }

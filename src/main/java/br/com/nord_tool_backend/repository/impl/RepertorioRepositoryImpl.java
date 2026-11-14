@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.repository.impl;
 
+import br.com.nord_tool_backend.dto.RepertorioCifraDto;
 import br.com.nord_tool_backend.dto.RepertorioMusicaDto;
 import br.com.nord_tool_backend.dto.RepertorioProjetoDto;
 import br.com.nord_tool_backend.repository.RepertorioRepository;
@@ -22,6 +23,7 @@ public class RepertorioRepositoryImpl implements RepertorioRepository {
 
     private static final BeanPropertyRowMapper<RepertorioMusicaDto> MUSICA = BeanPropertyRowMapper.newInstance(RepertorioMusicaDto.class);
     private static final BeanPropertyRowMapper<RepertorioProjetoDto> PROJETO = BeanPropertyRowMapper.newInstance(RepertorioProjetoDto.class);
+    private static final BeanPropertyRowMapper<RepertorioCifraDto> CIFRA = BeanPropertyRowMapper.newInstance(RepertorioCifraDto.class);
     private static final String USUARIO = "idUsuario";
     private static final String CHAVE = "chave";
 
@@ -35,7 +37,9 @@ public class RepertorioRepositoryImpl implements RepertorioRepository {
         this.queries = queries;
         for (String q : new String[]{"SPS.REPERTORIO.MUSICAS", "SPS.REPERTORIO.MUSICA", "SPS.REPERTORIO.MUSICAS.CONTAR", "SPS.REPERTORIO.BYTES",
                 "SPI.REPERTORIO.MUSICA", "SPU.REPERTORIO.AUDIO", "SPD.REPERTORIO.MUSICA", "SPS.REPERTORIO.PROJETOS", "SPS.REPERTORIO.PROJETO",
-                "SPS.REPERTORIO.PROJETOS.CONTAR", "SPI.REPERTORIO.PROJETO", "SPD.REPERTORIO.PROJETO"}) {
+                "SPS.REPERTORIO.PROJETOS.CONTAR", "SPI.REPERTORIO.PROJETO", "SPD.REPERTORIO.PROJETO", "SPI.REPERTORIO.CIFRA_ENVIADA",
+                "SPS.REPERTORIO.CIFRAS_ENVIADAS.CONTAR_DESDE", "SPS.REPERTORIO.CIFRAS_RECEBIDAS", "SPS.REPERTORIO.CIFRA_RECEBIDA",
+                "SPU.REPERTORIO.CIFRA_LIDA", "SPD.REPERTORIO.CIFRA_RECEBIDA"}) {
             queries.get(q);
         }
     }
@@ -124,5 +128,50 @@ public class RepertorioRepositoryImpl implements RepertorioRepository {
     @Override
     public int excluirProjeto(Long idUsuario, String chave) {
         return executor.executar("Erro ao excluir a criação", () -> jdbc.update(queries.get("SPD.REPERTORIO.PROJETO"), dono(idUsuario, chave)));
+    }
+
+    // ---------------------------------------------------------------- v12: cifras compartilhadas
+
+    private static MapSqlParameterSource recebida(Long idUsuario, Long id) {
+        return new MapSqlParameterSource(USUARIO, idUsuario).addValue("id", id);
+    }
+
+    @Override
+    public void enviarCifra(Long origem, Long destino, String titulo, String artista, String tom, String cifra, String mensagem) {
+        executor.executar("Erro ao compartilhar a cifra", () ->
+                jdbc.update(queries.get("SPI.REPERTORIO.CIFRA_ENVIADA"), new MapSqlParameterSource("origem", origem).addValue("destino", destino)
+                        .addValue("titulo", titulo).addValue("artista", artista).addValue("tom", tom, Types.VARCHAR)
+                        .addValue("cifra", cifra).addValue("mensagem", mensagem)));
+    }
+
+    @Override
+    public int contarCifrasEnviadasDesde(Long origem, java.time.LocalDateTime desde) {
+        return executor.executar("Erro ao contar as cifras compartilhadas", () -> {
+            Integer n = jdbc.queryForObject(queries.get("SPS.REPERTORIO.CIFRAS_ENVIADAS.CONTAR_DESDE"),
+                    new MapSqlParameterSource(USUARIO, origem).addValue("desde", desde), Integer.class);
+            return n == null ? 0 : n;
+        });
+    }
+
+    @Override
+    public List<RepertorioCifraDto> listarCifrasRecebidas(Long idUsuario) {
+        return executor.executar("Erro ao listar as cifras recebidas", () ->
+                jdbc.query(queries.get("SPS.REPERTORIO.CIFRAS_RECEBIDAS"), new MapSqlParameterSource(USUARIO, idUsuario), CIFRA));
+    }
+
+    @Override
+    public Optional<RepertorioCifraDto> buscarCifraRecebida(Long idUsuario, Long id) {
+        return executor.executar("Erro ao abrir a cifra", () ->
+                jdbc.query(queries.get("SPS.REPERTORIO.CIFRA_RECEBIDA"), recebida(idUsuario, id), CIFRA).stream().findFirst());
+    }
+
+    @Override
+    public void marcarCifraLida(Long idUsuario, Long id) {
+        executor.executar("Erro ao marcar a cifra como lida", () -> jdbc.update(queries.get("SPU.REPERTORIO.CIFRA_LIDA"), recebida(idUsuario, id)));
+    }
+
+    @Override
+    public int excluirCifraRecebida(Long idUsuario, Long id) {
+        return executor.executar("Erro ao excluir a cifra", () -> jdbc.update(queries.get("SPD.REPERTORIO.CIFRA_RECEBIDA"), recebida(idUsuario, id)));
     }
 }
