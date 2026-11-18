@@ -69,7 +69,7 @@ public class BlocoAssistenteServiceImpl implements BlocoAssistenteService {
 
     @Override
     public String contexto(String pergunta, String tipoAberto, Long idAberto) {
-        UsuarioAutenticado u = autorizacao.exigirAutenticado();
+        UsuarioAutenticado u = autorizacao.exigir(br.com.nord_tool_backend.security.Modulo.BLOCO_NOTAS, br.com.nord_tool_backend.security.Acao.LEITURA);
         List<BlocoTrechoDto> catalogo = repository.catalogo(u.getId(), MAX_CATALOGO);
         List<Trecho> trechos = new ArrayList<>();
         for (BlocoTrechoDto t : repository.trechos(u.getId(), MAX_TRECHOS_LIDOS)) {

@@ -36,12 +36,13 @@ class BlocoArquivoServiceImplTest {
     private static final Long EU = 7L;
     private BlocoArquivoRepository repository;
     private BlocoArquivoServiceImpl service;
+    private AutorizacaoService autorizacao;
 
     @BeforeEach
     void setUp() {
         repository = mock(BlocoArquivoRepository.class);
-        AutorizacaoService autorizacao = mock(AutorizacaoService.class);
-        when(autorizacao.exigirAutenticado()).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO",
+        autorizacao = mock(AutorizacaoService.class);
+        when(autorizacao.exigir(org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Modulo.class), org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Acao.class))).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO",
                 Collections.emptyMap(), 0, Instant.now()));
         service = new BlocoArquivoServiceImpl(repository, autorizacao, new ObjectMapper());
         when(repository.buscar(1L, EU)).thenReturn(Optional.of(arquivo(1L, "PLANILHA")));
@@ -141,5 +142,16 @@ class BlocoArquivoServiceImplTest {
     void excluiSoODoDono() {
         service.excluir(2L);
         verify(repository).excluir(2L, EU);
+    }
+
+    @Test
+    void verExigeOModuloBlocoNotasComLeitura() {
+        try {
+            service.listar();
+        } catch (RuntimeException ignorado) {
+            // só interessa o acesso pedido
+        }
+        org.mockito.Mockito.verify(autorizacao, org.mockito.Mockito.atLeastOnce())
+                .exigir(br.com.nord_tool_backend.security.Modulo.BLOCO_NOTAS, br.com.nord_tool_backend.security.Acao.LEITURA);
     }
 }

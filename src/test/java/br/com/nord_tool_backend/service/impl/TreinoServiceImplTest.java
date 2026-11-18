@@ -54,7 +54,7 @@ class TreinoServiceImplTest {
         autorizacao = mock(AutorizacaoService.class);
         UsuarioAutenticado u = mock(UsuarioAutenticado.class);
         when(u.getId()).thenReturn(EU);
-        when(autorizacao.exigirAutenticado()).thenReturn(u);
+        when(autorizacao.exigir(org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Modulo.class), org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Acao.class))).thenReturn(u);
         service = new TreinoServiceImpl(repository, autorizacao);
     }
 
@@ -90,7 +90,7 @@ class TreinoServiceImplTest {
 
     @Test
     void semLoginNaoAcessaNada() {
-        when(autorizacao.exigirAutenticado()).thenThrow(new NaoAutenticadoException("login"));
+        when(autorizacao.exigir(org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Modulo.class), org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Acao.class))).thenThrow(new NaoAutenticadoException("login"));
         assertThrows(NaoAutenticadoException.class, () -> service.listar());
         verifyNoInteractions(repository);
     }
@@ -202,5 +202,23 @@ class TreinoServiceImplTest {
         i.setVlCarga(new BigDecimal(carga));
         i.setInFeito(feito);
         return i;
+    }
+
+    @Test
+    void verExigeOModuloTreinosComLeitura() {
+        try {
+            service.listar();
+        } catch (RuntimeException ignorado) {
+            // só interessa o acesso pedido
+        }
+        org.mockito.Mockito.verify(autorizacao, org.mockito.Mockito.atLeastOnce())
+                .exigir(br.com.nord_tool_backend.security.Modulo.TREINOS, br.com.nord_tool_backend.security.Acao.LEITURA);
+    }
+
+    @Test
+    void semEditarNaoExcluiSessao() {
+        org.mockito.Mockito.when(autorizacao.exigir(br.com.nord_tool_backend.security.Modulo.TREINOS, br.com.nord_tool_backend.security.Acao.ESCRITA))
+                .thenThrow(new br.com.nord_tool_backend.exception.AcessoNegadoException("sem acesso"));
+        org.junit.jupiter.api.Assertions.assertThrows(br.com.nord_tool_backend.exception.AcessoNegadoException.class, () -> service.excluirSessao(1L));
     }
 }

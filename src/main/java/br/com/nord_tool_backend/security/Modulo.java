@@ -38,6 +38,18 @@ public enum Modulo {
     SAC,
     /** Placas de obra: LEITURA vê e baixa, ESCRITA cria e altera placas, ADMIN mantém os modelos. */
     PLACAS,
+    /** Bloco de notas: cadernos, planilhas, documentos, conversor e o chat dos cadernos (LEITURA vê, ESCRITA cria e altera). */
+    BLOCO_NOTAS,
+    /** Cubicagem (Mapeamentos): LEITURA vê, ESCRITA cria e altera. */
+    CUBICAGEM,
+    /** Treinos (Gestão individual): LEITURA vê, ESCRITA registra. */
+    TREINOS,
+    /** Repertório: LEITURA vê e toca, ESCRITA cria, altera e compartilha. */
+    REPERTORIO,
+    /** Telas ainda em construção (RTE, Diário de obras, FVs, Projetos...): qualquer nível mostra no menu. */
+    TELAS_EM_CONSTRUCAO,
+    /** App Android: manter conectado (a sessão não cai); sem este acesso o app pede a senha como o navegador. */
+    SESSAO_CONTINUA,
     ADMINISTRACAO;
 
     public static final String CURINGA = "*";

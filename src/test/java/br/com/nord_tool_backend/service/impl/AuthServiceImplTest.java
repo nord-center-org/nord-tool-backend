@@ -436,7 +436,7 @@ class AuthServiceImplTest {
 
     @Test
     void registrarAparelhoGuardaSoOHashELimitaOsAparelhos() {
-        when(autorizacao.exigirAutenticado()).thenReturn(sessao(3, AGORA));
+        when(autorizacao.exigir(Modulo.SESSAO_CONTINUA, Acao.LEITURA)).thenReturn(sessao(3, AGORA));
         when(repository.buscarPorId(1L)).thenReturn(Optional.of(usuario(true, null, 3)));
         br.com.nord_tool_backend.form.AppAparelhoForm f = new br.com.nord_tool_backend.form.AppAparelhoForm();
         f.setNmAparelho("  Galaxy S23  ");
@@ -503,5 +503,27 @@ class AuthServiceImplTest {
         service.sairDoAparelho(token(" tok "));
         verify(aparelhos).revogar(AuthServiceImpl.hash("tok"));
         assertEquals(64, AuthServiceImpl.hash("tok").length());
+    }
+
+    @Test
+    void registrarAparelhoExigeManterConectado() {
+        when(autorizacao.exigir(Modulo.SESSAO_CONTINUA, Acao.LEITURA)).thenThrow(new br.com.nord_tool_backend.exception.AcessoNegadoException("sem acesso"));
+        assertThrows(br.com.nord_tool_backend.exception.AcessoNegadoException.class, () -> service.registrarAparelho(null));
+        verify(aparelhos, never()).criar(anyLong(), anyString(), any(), anyInt());
+    }
+
+    @Test
+    void semManterConectadoOAparelhoCaiERevoga() {
+        when(aparelhos.porHash(anyString(), anyInt())).thenReturn(Optional.of(aparelho(0)));
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(usuario(true, null, 0)));
+        // perfil sem o curinga e sem SESSAO_CONTINUA
+        when(repository.listarPermissoes(7L)).thenReturn(List.of(new PerfilPermissao("BLOCO_NOTAS", "ESCRITA")));
+        NaoAutenticadoException e = assertThrows(NaoAutenticadoException.class, () -> service.entrarComAparelho(token("tok"), IP));
+        assertEquals(AuthServiceImpl.MSG_SEM_SESSAO_CONTINUA, e.getMessage());
+        verify(aparelhos).revogar(AuthServiceImpl.hash("tok"));
+        verify(aparelhos, never()).marcarUso(anyLong());
+
+        when(repository.listarPermissoes(7L)).thenReturn(List.of(new PerfilPermissao("SESSAO_CONTINUA", "LEITURA")));
+        assertNotNull(service.entrarComAparelho(token("tok"), IP).getToken());
     }
 }

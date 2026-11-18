@@ -54,6 +54,7 @@ class RepertorioServiceImplTest {
     private RepertorioRepository repository;
     private ArmazenamentoService armazenamento;
     private RepertorioServiceImpl service;
+    private AutorizacaoService autorizacao;
     private CronogramaSemanalRepository pessoas;
     private static final Instant AGORA = Instant.parse("2026-11-14T12:00:00Z");
 
@@ -61,8 +62,8 @@ class RepertorioServiceImplTest {
     void setUp() {
         repository = mock(RepertorioRepository.class);
         armazenamento = mock(ArmazenamentoService.class);
-        AutorizacaoService autorizacao = mock(AutorizacaoService.class);
-        when(autorizacao.exigirAutenticado()).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO", Collections.emptyMap(), 0, Instant.now()));
+        autorizacao = mock(AutorizacaoService.class);
+        when(autorizacao.exigir(org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Modulo.class), org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Acao.class))).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO", Collections.emptyMap(), 0, Instant.now()));
         pessoas = mock(CronogramaSemanalRepository.class);
         service = new RepertorioServiceImpl(repository, autorizacao, armazenamento, new ObjectMapper(), pessoas, Clock.fixed(AGORA, ZoneOffset.UTC), 1);
         when(repository.buscarMusica(EU, "m1")).thenReturn(Optional.of(musica("m1", null)));
@@ -298,7 +299,7 @@ class RepertorioServiceImplTest {
     @Test
     void cotaNegativaViraZeroETextoSemControle() {
         AutorizacaoService autorizacao = mock(AutorizacaoService.class);
-        when(autorizacao.exigirAutenticado()).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO", Collections.emptyMap(), 0, Instant.now()));
+        when(autorizacao.exigir(org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Modulo.class), org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Acao.class))).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO", Collections.emptyMap(), 0, Instant.now()));
         RepertorioServiceImpl s = new RepertorioServiceImpl(repository, autorizacao, armazenamento, new ObjectMapper(), pessoas, -5);
         assertEquals(0L, s.uso().getBytesCota());
         assertEquals("x", RepertorioServiceImpl.texto("\u0001x\u0002", 10, "p"));
@@ -405,5 +406,23 @@ class RepertorioServiceImplTest {
     void excluiSoADaPropriaPessoa() {
         service.excluirCifraRecebida(9L);
         verify(repository).excluirCifraRecebida(EU, 9L);
+    }
+
+    @Test
+    void verExigeOModuloRepertorioComLeitura() {
+        try {
+            service.listarMusicas();
+        } catch (RuntimeException ignorado) {
+            // só interessa o acesso pedido
+        }
+        org.mockito.Mockito.verify(autorizacao, org.mockito.Mockito.atLeastOnce())
+                .exigir(br.com.nord_tool_backend.security.Modulo.REPERTORIO, br.com.nord_tool_backend.security.Acao.LEITURA);
+    }
+
+    @Test
+    void semEditarNaoExcluiMusica() {
+        org.mockito.Mockito.when(autorizacao.exigir(br.com.nord_tool_backend.security.Modulo.REPERTORIO, br.com.nord_tool_backend.security.Acao.ESCRITA))
+                .thenThrow(new br.com.nord_tool_backend.exception.AcessoNegadoException("sem acesso"));
+        org.junit.jupiter.api.Assertions.assertThrows(br.com.nord_tool_backend.exception.AcessoNegadoException.class, () -> service.excluirMusica("abc"));
     }
 }

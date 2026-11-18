@@ -40,13 +40,14 @@ class CubicagemServiceImplTest {
 
     private CubicagemRepository repository;
     private CubicagemServiceImpl service;
+    private AutorizacaoService autorizacao;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         repository = mock(CubicagemRepository.class);
-        AutorizacaoService autorizacao = mock(AutorizacaoService.class);
-        when(autorizacao.exigirAutenticado()).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO",
+        autorizacao = mock(AutorizacaoService.class);
+        when(autorizacao.exigir(org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Modulo.class), org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Acao.class))).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO",
                 Collections.emptyMap(), 0, Instant.now()));
         service = new CubicagemServiceImpl(repository, autorizacao, mapper);
         when(repository.buscar(1L, EU)).thenReturn(Optional.of(linha(1L, "[{\"codigo\":\"V12\"}]")));
@@ -158,5 +159,23 @@ class CubicagemServiceImplTest {
         verify(repository).excluir(1L, EU);
         when(repository.buscar(9L, EU)).thenReturn(Optional.empty());
         assertThrows(NaoEncontradoException.class, () -> service.excluir(9L));
+    }
+
+    @Test
+    void verExigeOModuloCubicagemComLeitura() {
+        try {
+            service.listar();
+        } catch (RuntimeException ignorado) {
+            // só interessa o acesso pedido
+        }
+        org.mockito.Mockito.verify(autorizacao, org.mockito.Mockito.atLeastOnce())
+                .exigir(br.com.nord_tool_backend.security.Modulo.CUBICAGEM, br.com.nord_tool_backend.security.Acao.LEITURA);
+    }
+
+    @Test
+    void semEditarNaoExclui() {
+        org.mockito.Mockito.when(autorizacao.exigir(br.com.nord_tool_backend.security.Modulo.CUBICAGEM, br.com.nord_tool_backend.security.Acao.ESCRITA))
+                .thenThrow(new br.com.nord_tool_backend.exception.AcessoNegadoException("sem acesso"));
+        org.junit.jupiter.api.Assertions.assertThrows(br.com.nord_tool_backend.exception.AcessoNegadoException.class, () -> service.excluir(1L));
     }
 }

@@ -15,6 +15,8 @@ import br.com.nord_tool_backend.form.RepertorioProjetoForm;
 import br.com.nord_tool_backend.repository.CronogramaSemanalRepository;
 import br.com.nord_tool_backend.repository.RepertorioRepository;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
 import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.service.RepertorioService;
 import br.com.nord_tool_backend.storage.ArmazenamentoService;
@@ -104,7 +106,7 @@ public class RepertorioServiceImpl implements RepertorioService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RepertorioMusicaDto salvarMusica(String chave, RepertorioMusicaForm form) {
-        Long u = eu().getId();
+        Long u = euEditando().getId();
         String c = chave(chave);
         if (repository.buscarMusica(u, c).isEmpty() && repository.contarMusicas(u) >= MAX_MUSICAS) {
             throw new NegocioException("Você chegou ao limite de " + MAX_MUSICAS + " músicas na conta. Exclua alguma para guardar outra.");
@@ -128,7 +130,7 @@ public class RepertorioServiceImpl implements RepertorioService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RepertorioMusicaDto enviarAudio(String chave, String nome, byte[] bytes) {
-        Long u = eu().getId();
+        Long u = euEditando().getId();
         String c = chave(chave);
         RepertorioMusicaDto atual = musica(u, c);
         Long dono = atual.getIdUsuario() == null ? u : atual.getIdUsuario();
@@ -161,7 +163,7 @@ public class RepertorioServiceImpl implements RepertorioService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluirMusica(String chave) {
-        Long u = eu().getId();
+        Long u = euEditando().getId();
         String c = chave(chave);
         RepertorioMusicaDto m = repository.buscarMusica(u, c).orElse(null);
         if (m == null) return;
@@ -194,7 +196,7 @@ public class RepertorioServiceImpl implements RepertorioService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RepertorioProjetoDto salvarProjeto(String chave, RepertorioProjetoForm form) {
-        Long u = eu().getId();
+        Long u = euEditando().getId();
         String c = chave(chave);
         if (repository.buscarProjeto(u, c).isEmpty() && repository.contarProjetos(u) >= MAX_PROJETOS) {
             throw new NegocioException("Você chegou ao limite de " + MAX_PROJETOS + " criações na conta. Exclua alguma para guardar outra.");
@@ -209,7 +211,7 @@ public class RepertorioServiceImpl implements RepertorioService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluirProjeto(String chave) {
-        Long u = eu().getId();
+        Long u = euEditando().getId();
         String c = chave(chave);
         RepertorioProjetoDto p = repository.buscarProjeto(u, c).orElse(null);
         if (p == null) return;
@@ -229,7 +231,7 @@ public class RepertorioServiceImpl implements RepertorioService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RepertorioEnvioDto enviarCifra(RepertorioCifraEnvioForm form) {
-        Long u = eu().getId();
+        Long u = euEditando().getId();
         Set<Long> destinos = new LinkedHashSet<>();
         for (Long d : form.getIdsUsuarios() == null ? new ArrayList<Long>() : form.getIdsUsuarios()) {
             if (d != null && !d.equals(u)) destinos.add(d);
@@ -275,13 +277,19 @@ public class RepertorioServiceImpl implements RepertorioService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluirCifraRecebida(Long id) {
-        repository.excluirCifraRecebida(eu().getId(), id);
+        repository.excluirCifraRecebida(euEditando().getId(), id);
     }
 
     // ---------------------------------------------------------------- apoio
 
+    /** Ver: o módulo REPERTORIO com LEITURA. */
     private UsuarioAutenticado eu() {
-        return autorizacao.exigirAutenticado();
+        return autorizacao.exigir(Modulo.REPERTORIO, Acao.LEITURA);
+    }
+
+    /** Criar, alterar e excluir: o módulo REPERTORIO com ESCRITA. */
+    private UsuarioAutenticado euEditando() {
+        return autorizacao.exigir(Modulo.REPERTORIO, Acao.ESCRITA);
     }
 
     private RepertorioMusicaDto musica(Long u, String c) {

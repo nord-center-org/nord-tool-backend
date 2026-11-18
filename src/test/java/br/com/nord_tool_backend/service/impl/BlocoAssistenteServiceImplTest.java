@@ -34,7 +34,7 @@ class BlocoAssistenteServiceImplTest {
     void setUp() {
         repository = mock(BlocoAssistenteRepository.class);
         AutorizacaoService autorizacao = mock(AutorizacaoService.class);
-        when(autorizacao.exigirAutenticado()).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO",
+        when(autorizacao.exigir(org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Modulo.class), org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Acao.class))).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO",
                 Collections.emptyMap(), 0, Instant.now()));
         service = new BlocoAssistenteServiceImpl(repository, autorizacao, new ObjectMapper());
         when(repository.catalogo(eq(EU), anyInt())).thenReturn(Collections.emptyList());
