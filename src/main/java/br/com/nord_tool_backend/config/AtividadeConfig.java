@@ -2,6 +2,7 @@ package br.com.nord_tool_backend.config;
 
 import br.com.nord_tool_backend.security.UsuarioAtualProvider;
 import br.com.nord_tool_backend.service.NotificacaoService;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -16,6 +17,7 @@ import java.util.Set;
  * Registra cada alteração bem-sucedida (POST, PUT, PATCH, DELETE com resposta 2xx) de quem está logado, para avisar
  * os administradores de quem alterou o quê. O aviso roda fora da requisição e nunca a atrasa nem a derruba.
  */
+@Log4j2
 @Configuration
 public class AtividadeConfig implements WebMvcConfigurer {
 
@@ -45,6 +47,7 @@ public class AtividadeConfig implements WebMvcConfigurer {
                     atual.atual().ifPresent(u -> servico.atividade(u, request.getMethod(), request.getRequestURI()));
                 } catch (RuntimeException e) {
                     // aviso nunca derruba a requisição
+                    log.warn("Alterações: não registrada: {}", e.getMessage());
                 }
             }
         }).addPathPatterns("/api/v1/nord-tool/**");
