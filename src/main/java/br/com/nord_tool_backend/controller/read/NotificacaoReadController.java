@@ -2,6 +2,7 @@ package br.com.nord_tool_backend.controller.read;
 
 import br.com.nord_tool_backend.controller.response.ApiResponseBody;
 import br.com.nord_tool_backend.controller.response.BaseResponse;
+import br.com.nord_tool_backend.dto.NotificacaoCaixaDto;
 import br.com.nord_tool_backend.dto.NotificacaoConfigDto;
 import br.com.nord_tool_backend.dto.NotificacaoPreferenciaDto;
 import br.com.nord_tool_backend.dto.PushInscricaoDto;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -40,5 +42,11 @@ public class NotificacaoReadController implements BaseResponse {
     @GetMapping("/preferencias")
     public ResponseEntity<ApiResponseBody<NotificacaoPreferenciaDto>> preferencias() {
         return ok(service.preferencias());
+    }
+
+    @Operation(summary = "Caixa de notificações: avisos depois de um número de sequência (o app Android lê em segundo plano)")
+    @GetMapping("/caixa")
+    public ResponseEntity<ApiResponseBody<NotificacaoCaixaDto>> caixa(@RequestParam(required = false) Long depois) {
+        return ok(service.caixa(depois));
     }
 }

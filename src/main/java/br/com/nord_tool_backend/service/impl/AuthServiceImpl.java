@@ -53,6 +53,12 @@ public class AuthServiceImpl implements AuthService {
     static final String CD_PROVISORIA_VENCIDA = "SENHA_PROVISORIA_VENCIDA";
     static final String MSG_PROVISORIA_VENCIDA = "A senha provisória venceu. Peça ao administrador uma nova.";
     static final int MAX_TENTATIVAS_EMAIL_CONTA = 5;
+    /** App Android: o aparelho vale enquanto for usado (60 dias sem abrir, pede a senha de novo). */
+    static final int DIAS_APARELHO = 60;
+    static final int MAX_APARELHOS = 10;
+    static final int MAX_TENTATIVAS_APARELHO_IP = 30;
+    static final String MSG_APARELHO = "Este aparelho foi desconectado. Entre de novo com a sua senha.";
+    private static final java.security.SecureRandom ALEATORIO = new java.security.SecureRandom();
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -61,6 +67,7 @@ public class AuthServiceImpl implements AuthService {
     private final LimiteTentativasService limiteTentativas;
     private final AutorizacaoService autorizacao;
     private final Clock clock;
+    private final br.com.nord_tool_backend.repository.AppAparelhoRepository aparelhos;
 
     // Hash descartável para igualar o tempo de resposta quando a senha não é comparada com um hash real.
     private String hashFalso;
@@ -212,6 +219,59 @@ public class AuthServiceImpl implements AuthService {
         sessaoService.invalidar(usuario.getId());
         // A troca incrementa a versão da sessão: os outros tokens param de valer e esta sessão recebe um novo.
         return responder(buscarAtivo(usuario.getId()), clock.instant(), atual.getInicioSessao());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public br.com.nord_tool_backend.dto.AppAparelhoTokenDto registrarAparelho(br.com.nord_tool_backend.form.AppAparelhoForm form) {
+        UsuarioAutenticado atual = autorizacao.exigirAutenticado();
+        Usuario usuario = buscarAtivo(atual.getId());
+        byte[] bytes = new byte[32];
+        ALEATORIO.nextBytes(bytes);
+        String token = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        String nome = form == null || form.getNmAparelho() == null || form.getNmAparelho().isBlank() ? null : form.getNmAparelho().trim();
+        aparelhos.criar(usuario.getId(), hash(token), nome, SessaoServiceImpl.versao(usuario));
+        aparelhos.limitar(usuario.getId(), MAX_APARELHOS);
+        return new br.com.nord_tool_backend.dto.AppAparelhoTokenDto(token);
+    }
+
+    /**
+     * Abre uma sessão nova (o limite absoluto conta a partir daqui) para o dono do aparelho, se a conta continua ativa
+     * e a versão da sessão é a mesma de quando o aparelho foi registrado: trocar a senha ou o administrador encerrar as
+     * sessões desconecta o aparelho.
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = NordException.class)
+    public LoginResponseDto entrarComAparelho(br.com.nord_tool_backend.form.AppAparelhoEntrarForm form, String ip) {
+        limiteTentativas.registrar("aparelho-ip:" + ip, MAX_TENTATIVAS_APARELHO_IP);
+        br.com.nord_tool_backend.dto.AppAparelhoDto aparelho = aparelhos.porHash(hash(form.getTxToken().trim()), DIAS_APARELHO)
+                .orElseThrow(() -> new NaoAutenticadoException("APARELHO_DESCONECTADO", MSG_APARELHO));
+        Usuario usuario = usuarioRepository.buscarPorId(aparelho.getIdUsuario())
+                .filter(u -> Boolean.TRUE.equals(u.getInAtivo()))
+                .filter(u -> "APROVADO".equals(u.getCdSituacaoCadastro()) || u.getCdSituacaoCadastro() == null)
+                .filter(u -> !Boolean.TRUE.equals(u.getInTrocarSenha()))
+                .filter(u -> SessaoServiceImpl.versao(u) == (aparelho.getNrVersaoSessao() == null ? 0 : aparelho.getNrVersaoSessao()))
+                .orElseThrow(() -> new NaoAutenticadoException("APARELHO_DESCONECTADO", MSG_APARELHO));
+        aparelhos.marcarUso(aparelho.getId());
+        Instant agora = clock.instant();
+        return responder(usuario, agora, agora);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void sairDoAparelho(br.com.nord_tool_backend.form.AppAparelhoEntrarForm form) {
+        aparelhos.revogar(hash(form.getTxToken().trim()));
+    }
+
+    static String hash(String token) {
+        try {
+            byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(64);
+            for (byte b : d) hex.append(String.format("%02x", b));
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 indisponível", e);
+        }
     }
 
     /** Bloqueio progressivo a partir da 5ª falha: 1, 2, 4, 8 e no máximo 15 minutos. */

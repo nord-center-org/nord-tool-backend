@@ -15,4 +15,6 @@ public class NotificacaoPreferenciaDto {
     private boolean inSac = true;
     /** Avisar também do que a própria pessoa fez (ex.: criou no computador e quer no celular). */
     private boolean inMinhasAcoes = true;
+    /** Administrador: avisar das alterações que as outras pessoas fazem no NordTool. */
+    private boolean inAtividade = true;
 }

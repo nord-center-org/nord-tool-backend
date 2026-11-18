@@ -425,4 +425,13 @@ class AcessoServiceImplTest {
         assertEquals("NENHUM", salvo.get("CRONOGRAMA_EXCLUIR"));
         assertFalse(salvo.containsKey("CRONOGRAMA_ROTINA"));
     }
+
+    @Test
+    void administradoresAtivosConsideraPerfilExcecoesESituacao() {
+        usuarios.add(usuario(30, "Bia", USER, "USER", true));
+        usuarios.add(usuario(40, "Caio", ADMIN, "ADMIN", false));
+        // Bia é USER mas ganhou ADMIN em Administração; o Admin perdeu por exceção não.
+        excecoes.put(30L, Collections.singletonList(new PerfilPermissao("ADMINISTRACAO", "ADMIN")));
+        assertEquals(new java.util.LinkedHashSet<>(Arrays.asList(10L, 30L)), service.administradoresAtivos());
+    }
 }

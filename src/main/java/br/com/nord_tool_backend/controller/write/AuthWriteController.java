@@ -70,6 +70,27 @@ public class AuthWriteController implements BaseResponse {
         return ok(authService.alterarEmail(form));
     }
 
+    @PostMapping("/aparelho")
+    @Operation(summary = "App Android: registra o aparelho para a sessão não cair (devolve o token uma única vez)")
+    public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.AppAparelhoTokenDto>> registrarAparelho(
+            @Valid @RequestBody(required = false) br.com.nord_tool_backend.form.AppAparelhoForm form) {
+        return created(authService.registrarAparelho(form));
+    }
+
+    @PostMapping("/aparelho/entrar")
+    @Operation(summary = "App Android: abre uma sessão nova com o token do aparelho, sem senha")
+    public ResponseEntity<ApiResponseBody<LoginResponseDto>> entrarComAparelho(
+            @Valid @RequestBody br.com.nord_tool_backend.form.AppAparelhoEntrarForm form, HttpServletRequest request) {
+        return ok(authService.entrarComAparelho(form, request.getRemoteAddr()));
+    }
+
+    @PostMapping("/aparelho/sair")
+    @Operation(summary = "App Android: desconecta o aparelho (o token deixa de valer)")
+    public ResponseEntity<ApiResponseBody<Void>> sairDoAparelho(@Valid @RequestBody br.com.nord_tool_backend.form.AppAparelhoEntrarForm form) {
+        authService.sairDoAparelho(form);
+        return ok(null);
+    }
+
     @PostMapping("/refresh")
     @Operation(summary = "Renova o token (versão de sessão e limite absoluto desde o login)")
     public ResponseEntity<ApiResponseBody<LoginResponseDto>> refresh() {

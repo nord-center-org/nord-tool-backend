@@ -1,6 +1,7 @@
 package br.com.nord_tool_backend.repository.impl;
 
 import br.com.nord_tool_backend.dto.DemandaAvisoDto;
+import br.com.nord_tool_backend.dto.NotificacaoCaixaItemDto;
 import br.com.nord_tool_backend.dto.NotificacaoPreferenciaDto;
 import br.com.nord_tool_backend.dto.PushInscricaoDto;
 import br.com.nord_tool_backend.repository.NotificacaoRepository;
@@ -31,6 +32,7 @@ public class NotificacaoRepositoryImpl implements NotificacaoRepository {
 
     private static final BeanPropertyRowMapper<PushInscricaoDto> INSCRICAO = BeanPropertyRowMapper.newInstance(PushInscricaoDto.class);
     private static final BeanPropertyRowMapper<NotificacaoPreferenciaDto> PREFERENCIA = BeanPropertyRowMapper.newInstance(NotificacaoPreferenciaDto.class);
+    private static final BeanPropertyRowMapper<NotificacaoCaixaItemDto> CAIXA = BeanPropertyRowMapper.newInstance(NotificacaoCaixaItemDto.class);
     private static final BeanPropertyRowMapper<DemandaAvisoDto> DEMANDA = BeanPropertyRowMapper.newInstance(DemandaAvisoDto.class);
 
     public NotificacaoRepositoryImpl(NamedParameterJdbcTemplate jdbc, JdbcExecutor executor, SqlQueries queries) {
@@ -38,7 +40,7 @@ public class NotificacaoRepositoryImpl implements NotificacaoRepository {
         this.executor = executor;
         this.queries = queries;
         // Falha cedo se alguma query faltar no catálogo.
-        for (String chave : new String[]{"SPS.PUSH.CHAVES", "SPI.PUSH.INSCREVER", "SPS.NOTIFICACAO.DEMANDA", "SPI.NOTIFICACAO.ENVIADA"}) {
+        for (String chave : new String[]{"SPS.PUSH.CHAVES", "SPI.PUSH.INSCREVER", "SPS.NOTIFICACAO.DEMANDA", "SPI.NOTIFICACAO.ENVIADA", "SPS.NOTIFICACAO.CAIXA", "SPI.ATIVIDADE"}) {
             queries.get(chave);
         }
     }
@@ -108,7 +110,7 @@ public class NotificacaoRepositoryImpl implements NotificacaoRepository {
                 jdbc.update(q("SPI.NOTIFICACAO.PREFERENCIA"), new MapSqlParameterSource("idUsuario", p.getIdUsuario())
                         .addValue("nova", p.isInDemandaNova()).addValue("alterada", p.isInDemandaAlterada()).addValue("horario", p.isInHorario())
                         .addValue("antecedencia", p.getNrAntecedenciaMin()).addValue("prazo", p.isInPrazo()).addValue("sac", p.isInSac())
-                        .addValue("minhas", p.isInMinhasAcoes())));
+                        .addValue("minhas", p.isInMinhasAcoes()).addValue("atividade", p.isInAtividade())));
     }
 
     @Override
@@ -145,5 +147,48 @@ public class NotificacaoRepositoryImpl implements NotificacaoRepository {
     public String nomeDoUsuario(Long id) {
         return executor.executar("Erro ao buscar o nome", () ->
                 jdbc.query(q("SPS.NOTIFICACAO.NOME"), new MapSqlParameterSource("id", id), (rs, i) -> rs.getString(1)).stream().findFirst().orElse("Alguém"));
+    }
+
+    @Override
+    public void inserirCaixa(Long idUsuario, String tipo, String agrupar, String titulo, String corpo, String url) {
+        executor.executar("Erro ao guardar o aviso", () -> jdbc.update(q("SPI.NOTIFICACAO.CAIXA"), new MapSqlParameterSource("idUsuario", idUsuario)
+                .addValue("tipo", tipo).addValue("agrupar", agrupar).addValue("titulo", titulo).addValue("corpo", corpo).addValue("url", url)));
+    }
+
+    @Override
+    public Optional<Integer> agruparCaixa(Long idUsuario, String agrupar, LocalDateTime desde, String titulo, String corpo, String url) {
+        return executor.executar("Erro ao juntar o aviso", () -> jdbc.query(q("SPU.NOTIFICACAO.CAIXA_AGRUPAR"), new MapSqlParameterSource("idUsuario", idUsuario)
+                .addValue("agrupar", agrupar).addValue("desde", desde).addValue("titulo", titulo).addValue("corpo", corpo).addValue("url", url),
+                (rs, i) -> rs.getInt(1)).stream().findFirst());
+    }
+
+    @Override
+    public List<NotificacaoCaixaItemDto> caixa(Long idUsuario, long depois, int limite) {
+        return executor.executar("Erro ao ler os avisos", () -> jdbc.query(q("SPS.NOTIFICACAO.CAIXA"),
+                new MapSqlParameterSource("idUsuario", idUsuario).addValue("depois", depois).addValue("limite", limite), CAIXA));
+    }
+
+    @Override
+    public long ultimoDaCaixa(Long idUsuario) {
+        return executor.executar("Erro ao ler os avisos", () -> {
+            Long n = jdbc.queryForObject(q("SPS.NOTIFICACAO.CAIXA_ULTIMO"), new MapSqlParameterSource("idUsuario", idUsuario), Long.class);
+            return n == null ? 0L : n;
+        });
+    }
+
+    @Override
+    public int limparCaixa(LocalDateTime antesDe) {
+        return executor.executar("Erro ao limpar avisos antigos", () -> jdbc.update(q("SPD.NOTIFICACAO.CAIXA_ANTIGAS"), new MapSqlParameterSource("antes", antesDe)));
+    }
+
+    @Override
+    public void registrarAtividade(Long idUsuario, String metodo, String caminho, String area) {
+        executor.executar("Erro ao registrar a alteração", () -> jdbc.update(q("SPI.ATIVIDADE"), new MapSqlParameterSource("idUsuario", idUsuario)
+                .addValue("metodo", metodo).addValue("caminho", caminho).addValue("area", area)));
+    }
+
+    @Override
+    public int limparAtividades(LocalDateTime antesDe) {
+        return executor.executar("Erro ao limpar alterações antigas", () -> jdbc.update(q("SPD.ATIVIDADE.ANTIGAS"), new MapSqlParameterSource("antes", antesDe)));
     }
 }

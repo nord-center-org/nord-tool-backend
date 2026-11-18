@@ -1,5 +1,6 @@
 package br.com.nord_tool_backend.service;
 
+import br.com.nord_tool_backend.dto.NotificacaoCaixaDto;
 import br.com.nord_tool_backend.dto.NotificacaoConfigDto;
 import br.com.nord_tool_backend.dto.NotificacaoPreferenciaDto;
 import br.com.nord_tool_backend.dto.PushInscricaoDto;
@@ -34,6 +35,15 @@ public interface NotificacaoService {
     void demandaCompartilhada(Long idDemanda, UsuarioAutenticado ator, Collection<Long> novos);
 
     void sacRespondido(Long idDono, Long idChamado, String titulo, String status, UsuarioAutenticado ator);
+
+    /**
+     * Caixa de notificações da pessoa (lida pelo app Android em segundo plano): os avisos depois de {@code depois}.
+     * Sem {@code depois}, só diz de onde começar (o app não mostra avisos antigos ao instalar).
+     */
+    NotificacaoCaixaDto caixa(Long depois);
+
+    /** Alguém alterou algo no NordTool: avisa os administradores (nunca lança, roda fora da requisição). */
+    void atividade(UsuarioAutenticado autor, String metodo, String caminho);
 
     /** Lembretes do horário agendado e do prazo do dia (chamado a cada minuto). */
     void lembretes();

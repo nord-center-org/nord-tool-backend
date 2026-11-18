@@ -1,6 +1,7 @@
 package br.com.nord_tool_backend.repository;
 
 import br.com.nord_tool_backend.dto.DemandaAvisoDto;
+import br.com.nord_tool_backend.dto.NotificacaoCaixaItemDto;
 import br.com.nord_tool_backend.dto.NotificacaoPreferenciaDto;
 import br.com.nord_tool_backend.dto.PushInscricaoDto;
 
@@ -45,4 +46,23 @@ public interface NotificacaoRepository {
     List<DemandaAvisoDto> demandasComPrazo(LocalDate dia);
 
     String nomeDoUsuario(Long id);
+
+    // ---- caixa de notificações (app Android)
+
+    void inserirCaixa(Long idUsuario, String tipo, String agrupar, String titulo, String corpo, String url);
+
+    /** Junta ao aviso com o mesmo {@code agrupar} desde {@code desde} ({n} no corpo vira a quantidade); devolve a nova quantidade (vazio se não havia). */
+    Optional<Integer> agruparCaixa(Long idUsuario, String agrupar, LocalDateTime desde, String titulo, String corpo, String url);
+
+    List<NotificacaoCaixaItemDto> caixa(Long idUsuario, long depois, int limite);
+
+    long ultimoDaCaixa(Long idUsuario);
+
+    int limparCaixa(LocalDateTime antesDe);
+
+    // ---- alterações feitas no NordTool
+
+    void registrarAtividade(Long idUsuario, String metodo, String caminho, String area);
+
+    int limparAtividades(LocalDateTime antesDe);
 }

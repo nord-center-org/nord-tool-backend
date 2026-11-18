@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,12 +52,14 @@ class NotificacaoServiceImplTest {
     private static final ZoneId SP = ZoneId.of("America/Sao_Paulo");
     private NotificacaoRepository repository;
     private PushEnviador enviador;
+    private br.com.nord_tool_backend.service.AcessoService acessos;
     private final UsuarioAutenticado nick = new UsuarioAutenticado(1L, "n@obra.com", "ADMIN", Collections.emptyMap(), 0, java.time.Instant.now());
 
     @BeforeEach
     void preparar() {
         repository = mock(NotificacaoRepository.class);
         enviador = mock(PushEnviador.class);
+        acessos = mock(br.com.nord_tool_backend.service.AcessoService.class);
         doAnswer(inv -> { ((Runnable) inv.getArgument(0)).run(); return null; }).when(enviador).emSegundoPlano(any());
         when(repository.nomeDoUsuario(anyLong())).thenReturn("Nick Silva");
         // Cada pessoa tem um aparelho com o id dela.
@@ -70,7 +73,7 @@ class NotificacaoServiceImplTest {
 
     private NotificacaoServiceImpl servico(LocalDateTime agora) {
         Clock c = Clock.fixed(agora.atZone(SP).toInstant(), SP);
-        return new NotificacaoServiceImpl(repository, mock(AutorizacaoService.class), enviador, new ObjectMapper(), c);
+        return new NotificacaoServiceImpl(repository, mock(AutorizacaoService.class), enviador, new ObjectMapper(), acessos, c);
     }
 
     private static NotificacaoPreferenciaDto pref(long id) {
@@ -176,7 +179,7 @@ class NotificacaoServiceImplTest {
     private NotificacaoServiceImpl servicoLogado() {
         AutorizacaoService aut = mock(AutorizacaoService.class);
         when(aut.exigirAutenticado()).thenReturn(nick);
-        return new NotificacaoServiceImpl(repository, aut, enviador, new ObjectMapper(), Clock.fixed(java.time.Instant.now(), SP));
+        return new NotificacaoServiceImpl(repository, aut, enviador, new ObjectMapper(), acessos, Clock.fixed(java.time.Instant.now(), SP));
     }
 
     @Test
@@ -356,5 +359,164 @@ class NotificacaoServiceImplTest {
     void webPushOrigemDoEndpoint() {
         assertEquals("https://updates.push.services.mozilla.com", WebPushCripto.origem("https://updates.push.services.mozilla.com/wpush/v2/gAAA"));
         assertEquals("https://web.push.apple.com", WebPushCripto.origem("https://web.push.apple.com/QGuQ"));
+    }
+
+    // ---------------------------------------------------------------- caixa (app Android) e alterações
+
+    @Test
+    void caixaSemPontoDePartidaSoDizDeOndeComecar() {
+        when(repository.ultimoDaCaixa(1L)).thenReturn(42L);
+        br.com.nord_tool_backend.dto.NotificacaoCaixaDto c = servicoLogado().caixa(null);
+        assertEquals(42L, c.getNrUltimo());
+        assertTrue(c.getItens().isEmpty());
+        assertTrue(servicoLogado().caixa(-1L).getItens().isEmpty());
+        // caixa recriada (o app tinha um número maior): recomeça do fim
+        assertTrue(servicoLogado().caixa(99L).getItens().isEmpty());
+        verify(repository, never()).caixa(anyLong(), anyLong(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void caixaDevolveOsAvisosDepoisDoNumero() {
+        br.com.nord_tool_backend.dto.NotificacaoCaixaItemDto item = new br.com.nord_tool_backend.dto.NotificacaoCaixaItemDto();
+        item.setNrSeq(41L);
+        when(repository.ultimoDaCaixa(1L)).thenReturn(41L);
+        when(repository.caixa(1L, 40L, NotificacaoServiceImpl.LIMITE_CAIXA)).thenReturn(List.of(item));
+        br.com.nord_tool_backend.dto.NotificacaoCaixaDto c = servicoLogado().caixa(40L);
+        assertEquals(1, c.getItens().size());
+        assertEquals(41L, c.getNrUltimo());
+    }
+
+    @Test
+    void avisosDoCronogramaVaoTambemParaACaixa() {
+        DemandaAvisoDto d = new DemandaAvisoDto();
+        d.setId(5L);
+        d.setNmCronogramaSemanal("Concretagem");
+        d.setTxEnvolvidos("1,2");
+        when(repository.demanda(5L)).thenReturn(Optional.of(d));
+        when(repository.preferencias(any())).thenReturn(List.of(pref(2)));
+        servico(LocalDateTime.of(2026, 11, 18, 10, 0)).demandaCriada(5L, nick);
+        verify(repository).inserirCaixa(eq(2L), eq("demanda"), eq(null), eq("Nova demanda"), org.mockito.ArgumentMatchers.contains("Concretagem"), eq(NotificacaoServiceImpl.TELA_CRONOGRAMA));
+    }
+
+    @Test
+    void testeTambemChegaNaCaixa() {
+        servicoLogado().testar();
+        verify(repository).inserirCaixa(eq(1L), eq("teste"), eq(null), eq("NordTool"), anyString(), eq(NotificacaoServiceImpl.TELA_NOTIFICACOES));
+    }
+
+    @Test
+    void areaDoCaminhoIgnoraOQueNaoEAlteracaoDeDados() {
+        assertEquals(Optional.of("Bloco de notas"), NotificacaoServiceImpl.areaDoCaminho("/api/v1/nord-tool/blocos-notas/3/documento"));
+        assertEquals(Optional.of("Termo de reprova"), NotificacaoServiceImpl.areaDoCaminho("/api/v1/nord-tool/apartamentoVistoria/termos-reprova/1/situacao"));
+        assertEquals(Optional.of("Vistorias"), NotificacaoServiceImpl.areaDoCaminho("/api/v1/nord-tool/apartamentoVistoria/importar"));
+        assertEquals(Optional.of("Equipes do cronograma"), NotificacaoServiceImpl.areaDoCaminho("/api/v1/nord-tool/cronogramaSemanal/equipes/2"));
+        assertEquals(Optional.of("Cronograma"), NotificacaoServiceImpl.areaDoCaminho("/api/v1/nord-tool/cronogramaSemanal"));
+        assertEquals(Optional.of("Acessos e usuários"), NotificacaoServiceImpl.areaDoCaminho("/api/v1/nord-tool/administracao/acessos/4"));
+        assertEquals(Optional.of("novidade"), NotificacaoServiceImpl.areaDoCaminho("/api/v1/nord-tool/novidade/1"));
+        for (String ignorado : new String[]{"/api/v1/nord-tool/auth/login", "/api/v1/nord-tool/notificacoes/aparelhos", "/api/v1/nord-tool/lugia/conversas/1",
+                "/api/v1/nord-tool/cronogramaSemanal/interpretar", "/api/v1/nord-tool/sac/chamados/vistos", "/api/v1/nord-tool/menu-favoritos",
+                "/api/v1/nord-tool/", "/outra/coisa", null}) {
+            assertEquals(Optional.empty(), NotificacaoServiceImpl.areaDoCaminho(ignorado), String.valueOf(ignorado));
+        }
+        assertEquals("Criou", NotificacaoServiceImpl.verbo("post"));
+        assertEquals("Alterou", NotificacaoServiceImpl.verbo("PUT"));
+        assertEquals("Alterou", NotificacaoServiceImpl.verbo("PATCH"));
+        assertEquals("Excluiu", NotificacaoServiceImpl.verbo("DELETE"));
+        assertEquals(null, NotificacaoServiceImpl.verbo("GET"));
+        assertEquals(null, NotificacaoServiceImpl.verbo(null));
+    }
+
+    private final UsuarioAutenticado ana = new UsuarioAutenticado(2L, "a@obra.com", "USER", Collections.emptyMap(), 0, java.time.Instant.now());
+
+    @Test
+    void alteracaoAvisaOsAdministradoresMenosQuemFezEQuemDesligou() {
+        when(acessos.administradoresAtivos()).thenReturn(new java.util.LinkedHashSet<>(List.of(1L, 2L, 3L)));
+        NotificacaoPreferenciaDto desligou = pref(3);
+        desligou.setInAtividade(false);
+        when(repository.preferencias(any())).thenAnswer(i -> ((Collection<Long>) i.getArgument(0)).stream()
+                .map(id -> id == 3L ? desligou : pref(id)).collect(Collectors.toList()));
+        when(repository.nomeDoUsuario(2L)).thenReturn("Ana Souza");
+        when(repository.agruparCaixa(anyLong(), anyString(), any(), anyString(), anyString(), any())).thenReturn(Optional.empty());
+
+        servico(LocalDateTime.of(2026, 11, 18, 10, 0)).atividade(ana, "PUT", "/api/v1/nord-tool/blocos-notas/3");
+
+        verify(repository).registrarAtividade(2L, "PUT", "/api/v1/nord-tool/blocos-notas/3", "Bloco de notas");
+        ArgumentCaptor<Collection<Long>> pedidos = ArgumentCaptor.forClass(Collection.class);
+        verify(repository).preferencias(pedidos.capture());
+        assertEquals(List.of(1L, 3L), List.copyOf(pedidos.getValue()), "quem fez não recebe");
+        verify(repository).inserirCaixa(1L, "atividade", "atividade:2:Bloco de notas", "Ana Souza · Bloco de notas", "Alterou um registro", null);
+        verify(repository, never()).inserirCaixa(eq(3L), anyString(), any(), anyString(), anyString(), any());
+        ArgumentCaptor<String> json = ArgumentCaptor.forClass(String.class);
+        verify(enviador).enviar(any(), json.capture());
+        assertTrue(json.getValue().contains("Ana Souza · Bloco de notas"));
+    }
+
+    @Test
+    void alteracoesSeguidasViramUmAvisoSo() {
+        when(acessos.administradoresAtivos()).thenReturn(Set.of(1L));
+        when(repository.preferencias(any())).thenReturn(List.of(pref(1)));
+        when(repository.agruparCaixa(eq(1L), eq("atividade:2:Financeiro"), eq(LocalDateTime.of(2026, 11, 18, 9, 50)), anyString(),
+                eq("{n} alterações seguidas · a última: excluiu"), eq(null))).thenReturn(Optional.of(4));
+
+        servico(LocalDateTime.of(2026, 11, 18, 10, 0)).atividade(ana, "DELETE", "/api/v1/nord-tool/financeiro/lancamentos/9");
+
+        verify(repository, never()).inserirCaixa(anyLong(), anyString(), any(), anyString(), anyString(), any());
+        ArgumentCaptor<String> json = ArgumentCaptor.forClass(String.class);
+        verify(enviador).enviar(any(), json.capture());
+        assertTrue(json.getValue().contains("4 alterações seguidas"), json.getValue());
+    }
+
+    @Test
+    void alteracaoSemInteresseOuSemAdminNaoAvisa() {
+        NotificacaoServiceImpl s = servico(LocalDateTime.of(2026, 11, 18, 10, 0));
+        s.atividade(ana, "POST", "/api/v1/nord-tool/auth/refresh");
+        s.atividade(ana, "GET", "/api/v1/nord-tool/blocos-notas");
+        s.atividade(null, "POST", "/api/v1/nord-tool/blocos-notas");
+        s.atividade(ana, null, "/api/v1/nord-tool/blocos-notas");
+        s.atividade(ana, "POST", null);
+        s.atividade(new UsuarioAutenticado(null, "x", "USER", Collections.emptyMap(), 0, java.time.Instant.now()), "POST", "/api/v1/nord-tool/blocos-notas");
+        verify(repository, never()).registrarAtividade(any(), any(), any(), any());
+
+        // só o próprio admin alterou: ninguém para avisar (e a lista de admins fica guardada por 1 min)
+        when(acessos.administradoresAtivos()).thenReturn(Set.of(2L));
+        s.atividade(ana, "POST", "/api/v1/nord-tool/treinos/sessoes");
+        s.atividade(ana, "POST", "/api/v1/nord-tool/treinos/sessoes");
+        verify(repository, times(2)).registrarAtividade(2L, "POST", "/api/v1/nord-tool/treinos/sessoes", "Treinos");
+        verify(acessos, times(1)).administradoresAtivos();
+        verify(enviador, never()).enviar(any(), anyString());
+
+        // admin com o aviso desligado
+        when(acessos.administradoresAtivos()).thenReturn(Set.of(1L));
+        NotificacaoPreferenciaDto desligou = pref(1);
+        desligou.setInAtividade(false);
+        when(repository.preferencias(any())).thenReturn(List.of(desligou));
+        NotificacaoServiceImpl outro = servico(LocalDateTime.of(2026, 11, 18, 10, 0));
+        outro.atividade(ana, "POST", "/api/v1/nord-tool/treinos/sessoes");
+        verify(enviador, never()).enviar(any(), anyString());
+    }
+
+    @Test
+    void falhaAoAvisarAlteracaoNaoSobe() {
+        when(acessos.administradoresAtivos()).thenThrow(new IllegalStateException("banco fora"));
+        servico(LocalDateTime.of(2026, 11, 18, 10, 0)).atividade(ana, "POST", "/api/v1/nord-tool/treinos/sessoes");
+        verify(enviador, never()).enviar(any(), anyString());
+    }
+
+    @Test
+    void preferenciaDeAlteracoesFicaLigadaQuandoOAppAntigoNaoManda() {
+        br.com.nord_tool_backend.form.NotificacaoPreferenciaForm f = new br.com.nord_tool_backend.form.NotificacaoPreferenciaForm();
+        NotificacaoServiceImpl s = servicoLogado();
+        assertTrue(s.salvarPreferencias(f).isInAtividade());
+        f.setInAtividade(false);
+        assertTrue(!s.salvarPreferencias(f).isInAtividade());
+    }
+
+    @Test
+    void naHoraCheiaLimpaCaixaEAlteracoesAntigas() {
+        when(repository.demandasAgendadas(any(), any())).thenReturn(List.of());
+        when(repository.demandasComPrazo(any())).thenReturn(List.of());
+        servico(LocalDateTime.of(2026, 11, 18, 10, 0)).lembretes();
+        verify(repository).limparCaixa(LocalDateTime.of(2026, 10, 19, 10, 0));
+        verify(repository).limparAtividades(LocalDateTime.of(2026, 8, 20, 10, 0));
     }
 }
