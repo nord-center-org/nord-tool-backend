@@ -16,4 +16,6 @@ public class NotificacaoPreferenciaForm {
     private boolean inPrazo;
     private boolean inSac;
     private boolean inMinhasAcoes;
+    /** Ausente (app antigo) = continua ligado. */
+    private Boolean inAtividade;
 }

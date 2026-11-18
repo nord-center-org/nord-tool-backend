@@ -343,6 +343,22 @@ public class AcessoServiceImpl implements AcessoService {
         return PermissaoCalculator.resolver(doPerfil, doUsuario);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Set<Long> administradoresAtivos() {
+        Map<Long, List<PerfilPermissao>> doPerfil = repository.permissoesPorPerfil();
+        Map<Integer, List<PerfilPermissao>> doCargo = repository.permissoesPorCargo();
+        Map<Long, List<PerfilPermissao>> doUsuario = repository.excecoesPorUsuario();
+        java.util.Set<Long> ids = new java.util.LinkedHashSet<>();
+        for (Usuario u : repository.listarUsuarios()) {
+            if (Boolean.TRUE.equals(u.getInAtivo())
+                    && ehAdmin(efetivas(base(doPerfil, doCargo, u.getIdPerfil(), u.getIdCargo()), doUsuario.get(u.getId())))) {
+                ids.add(u.getId());
+            }
+        }
+        return ids;
+    }
+
     private static boolean ehAdmin(Map<Modulo, Acao> acessos) {
         return acessos.getOrDefault(Modulo.ADMINISTRACAO, Acao.NENHUM).atende(Acao.ADMIN);
     }

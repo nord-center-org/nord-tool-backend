@@ -65,7 +65,8 @@ public class SecurityConfig {
         http.authorizeRequests()
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .antMatchers(HttpMethod.POST, API + "/auth/login", API + "/auth/cadastro",
-                        API + "/auth/esqueci-senha", API + "/auth/redefinir-senha", API + "/auth/definir-senha").permitAll()
+                        API + "/auth/esqueci-senha", API + "/auth/redefinir-senha", API + "/auth/definir-senha",
+                        API + "/auth/aparelho/entrar", API + "/auth/aparelho/sair").permitAll()
                 .antMatchers(HttpMethod.GET, API + "/health", "/nord-tool/health").permitAll()
                 // Link de integração (Gemini etc.): a chave secreta na URL é a credencial, só leitura do cronograma.
                 .antMatchers(HttpMethod.GET, API + "/publico/cronograma/*").permitAll();

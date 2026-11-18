@@ -60,6 +60,7 @@ class AuthServiceImplTest {
     private AutorizacaoService autorizacao;
     private AuthServiceImpl service;
     private String hashSenha;
+    private br.com.nord_tool_backend.repository.AppAparelhoRepository aparelhos;
 
     @BeforeEach
     void setUp() {
@@ -70,7 +71,8 @@ class AuthServiceImplTest {
         sessaoService = mock(SessaoService.class);
         limite = mock(LimiteTentativasService.class);
         autorizacao = mock(AutorizacaoService.class);
-        service = new AuthServiceImpl(repository, encoder, jwtService, sessaoService, limite, autorizacao, RELOGIO);
+        aparelhos = mock(br.com.nord_tool_backend.repository.AppAparelhoRepository.class);
+        service = new AuthServiceImpl(repository, encoder, jwtService, sessaoService, limite, autorizacao, RELOGIO, aparelhos);
         when(repository.listarPermissoes(7L)).thenReturn(List.of(new PerfilPermissao("*", "ADMIN")));
         when(repository.listarPermissoesUsuario(1L)).thenReturn(Collections.emptyList());
     }
@@ -414,5 +416,92 @@ class AuthServiceImplTest {
         LoginResponseDto r = service.alterarEmail(novoEmail(" novo@nord.com ", SENHA));
         verify(repository).alterarEmail(1L, "novo@nord.com");
         assertNotNull(r.getToken());
+    }
+
+    // ---------------------------------------------------------------- app Android: aparelho que renova a sessão
+
+    private static br.com.nord_tool_backend.form.AppAparelhoEntrarForm token(String t) {
+        br.com.nord_tool_backend.form.AppAparelhoEntrarForm f = new br.com.nord_tool_backend.form.AppAparelhoEntrarForm();
+        f.setTxToken(t);
+        return f;
+    }
+
+    private static br.com.nord_tool_backend.dto.AppAparelhoDto aparelho(int versao) {
+        br.com.nord_tool_backend.dto.AppAparelhoDto a = new br.com.nord_tool_backend.dto.AppAparelhoDto();
+        a.setId(9L);
+        a.setIdUsuario(1L);
+        a.setNrVersaoSessao(versao);
+        return a;
+    }
+
+    @Test
+    void registrarAparelhoGuardaSoOHashELimitaOsAparelhos() {
+        when(autorizacao.exigirAutenticado()).thenReturn(sessao(3, AGORA));
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(usuario(true, null, 3)));
+        br.com.nord_tool_backend.form.AppAparelhoForm f = new br.com.nord_tool_backend.form.AppAparelhoForm();
+        f.setNmAparelho("  Galaxy S23  ");
+
+        String t = service.registrarAparelho(f).getTxToken();
+
+        assertTrue(t.length() >= 43, "token com 256 bits");
+        verify(aparelhos).criar(1L, AuthServiceImpl.hash(t), "Galaxy S23", 3);
+        verify(aparelhos, never()).criar(anyLong(), eq(t), any(), anyInt());
+        verify(aparelhos).limitar(1L, AuthServiceImpl.MAX_APARELHOS);
+        assertNotEquals(t, service.registrarAparelho(null).getTxToken(), "cada aparelho tem o seu token");
+        verify(aparelhos).criar(eq(1L), anyString(), eq(null), eq(3));
+    }
+
+    @Test
+    void entrarComAparelhoAbreSessaoNovaSemSenha() {
+        when(aparelhos.porHash(AuthServiceImpl.hash("tok"), AuthServiceImpl.DIAS_APARELHO)).thenReturn(Optional.of(aparelho(2)));
+        Usuario u = usuario(true, null, 2);
+        u.setCdSituacaoCadastro("APROVADO");
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(u));
+
+        LoginResponseDto r = service.entrarComAparelho(token(" tok "), IP);
+
+        assertNotNull(r.getToken());
+        assertEquals(AGORA.plus(Duration.ofHours(12)).toString(), r.getSessaoExpiraEm(), "o limite conta a partir de agora");
+        verify(aparelhos).marcarUso(9L);
+        verify(limite).registrar("aparelho-ip:" + IP, AuthServiceImpl.MAX_TENTATIVAS_APARELHO_IP);
+        verify(encoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    void aparelhoDesconectadoPedeASenhaDeNovo() {
+        // token desconhecido, revogado ou parado há mais de 60 dias
+        when(aparelhos.porHash(anyString(), anyInt())).thenReturn(Optional.empty());
+        NaoAutenticadoException e = assertThrows(NaoAutenticadoException.class, () -> service.entrarComAparelho(token("x"), IP));
+        assertEquals(AuthServiceImpl.MSG_APARELHO, e.getMessage());
+
+        // a senha mudou (versão da sessão subiu), a conta foi desativada ou a senha foi resetada pelo admin
+        when(aparelhos.porHash(anyString(), anyInt())).thenReturn(Optional.of(aparelho(1)));
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(usuario(true, null, 2)));
+        assertThrows(NaoAutenticadoException.class, () -> service.entrarComAparelho(token("x"), IP));
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(usuario(false, null, 1)));
+        assertThrows(NaoAutenticadoException.class, () -> service.entrarComAparelho(token("x"), IP));
+        Usuario reset = usuario(true, null, 1);
+        reset.setInTrocarSenha(true);
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(reset));
+        assertThrows(NaoAutenticadoException.class, () -> service.entrarComAparelho(token("x"), IP));
+        Usuario pendente = usuario(true, null, 1);
+        pendente.setCdSituacaoCadastro("PENDENTE");
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(pendente));
+        assertThrows(NaoAutenticadoException.class, () -> service.entrarComAparelho(token("x"), IP));
+        verify(aparelhos, never()).marcarUso(anyLong());
+
+        // versão nula no aparelho vale como 0
+        br.com.nord_tool_backend.dto.AppAparelhoDto semVersao = aparelho(0);
+        semVersao.setNrVersaoSessao(null);
+        when(aparelhos.porHash(anyString(), anyInt())).thenReturn(Optional.of(semVersao));
+        when(repository.buscarPorId(1L)).thenReturn(Optional.of(usuario(true, null, 0)));
+        assertNotNull(service.entrarComAparelho(token("x"), IP).getToken());
+    }
+
+    @Test
+    void sairDoAparelhoRevogaOToken() {
+        service.sairDoAparelho(token(" tok "));
+        verify(aparelhos).revogar(AuthServiceImpl.hash("tok"));
+        assertEquals(64, AuthServiceImpl.hash("tok").length());
     }
 }

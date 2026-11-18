@@ -21,4 +21,13 @@ public interface AuthService {
     LoginResponseDto definirSenha(br.com.nord_tool_backend.form.DefinirSenhaForm form, String ip);
     /** Troca o próprio e-mail (com a senha atual) e devolve um token novo. */
     LoginResponseDto alterarEmail(br.com.nord_tool_backend.form.AlterarEmailForm form);
+
+    /** App Android: registra este aparelho para a sessão não cair; devolve o token (só desta vez). */
+    br.com.nord_tool_backend.dto.AppAparelhoTokenDto registrarAparelho(br.com.nord_tool_backend.form.AppAparelhoForm form);
+
+    /** App Android: abre uma sessão nova com o token do aparelho, sem pedir a senha. */
+    LoginResponseDto entrarComAparelho(br.com.nord_tool_backend.form.AppAparelhoEntrarForm form, String ip);
+
+    /** App Android: saiu da conta no aparelho; o token deixa de valer. */
+    void sairDoAparelho(br.com.nord_tool_backend.form.AppAparelhoEntrarForm form);
 }

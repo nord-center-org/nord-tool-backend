@@ -1,6 +1,7 @@
 package br.com.nord_tool_backend.service.impl;
 
 import br.com.nord_tool_backend.dto.DemandaAvisoDto;
+import br.com.nord_tool_backend.dto.NotificacaoCaixaDto;
 import br.com.nord_tool_backend.dto.NotificacaoConfigDto;
 import br.com.nord_tool_backend.dto.NotificacaoPreferenciaDto;
 import br.com.nord_tool_backend.dto.PushInscricaoDto;
@@ -8,6 +9,7 @@ import br.com.nord_tool_backend.form.NotificacaoPreferenciaForm;
 import br.com.nord_tool_backend.form.PushInscricaoForm;
 import br.com.nord_tool_backend.repository.NotificacaoRepository;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
+import br.com.nord_tool_backend.service.AcessoService;
 import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.service.NotificacaoService;
 import br.com.nord_tool_backend.service.push.PushEnviador;
@@ -24,6 +26,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,6 +51,11 @@ public class NotificacaoServiceImpl implements NotificacaoService {
     static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
     static final int HORA_PRAZO = 8;
     static final String TELA_CRONOGRAMA = "/organizacional/cronograma";
+    static final String TELA_NOTIFICACOES = "/configuracoes#notificacoes";
+    /** Alterações seguidas da mesma pessoa na mesma área, dentro deste tempo, viram um aviso só. */
+    static final int MINUTOS_AGRUPAR = 10;
+    static final int LIMITE_CAIXA = 50;
+    static final long CACHE_ADMINS_MS = 60_000;
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter DIA_HORA = DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm");
     private static final Map<String, String> ETAPA = Map.of("pendentes", "Pendentes", "executar", "Executar", "aguardar", "Aguardar",
@@ -56,17 +66,24 @@ public class NotificacaoServiceImpl implements NotificacaoService {
     private final PushEnviador enviador;
     private final ObjectMapper mapper;
     private final Clock relogio;
+    private final AcessoService acessos;
+    /** Administradores lidos há pouco (a lista muda raramente e cada alteração no sistema consultaria). */
+    private volatile Set<Long> administradores = Collections.emptySet();
+    private volatile long administradoresLidosEm = Long.MIN_VALUE;
 
     @Autowired
-    public NotificacaoServiceImpl(NotificacaoRepository repository, AutorizacaoService autorizacao, PushEnviador enviador, ObjectMapper mapper) {
-        this(repository, autorizacao, enviador, mapper, Clock.system(FUSO));
+    public NotificacaoServiceImpl(NotificacaoRepository repository, AutorizacaoService autorizacao, PushEnviador enviador, ObjectMapper mapper,
+                                  AcessoService acessos) {
+        this(repository, autorizacao, enviador, mapper, acessos, Clock.system(FUSO));
     }
 
-    NotificacaoServiceImpl(NotificacaoRepository repository, AutorizacaoService autorizacao, PushEnviador enviador, ObjectMapper mapper, Clock relogio) {
+    NotificacaoServiceImpl(NotificacaoRepository repository, AutorizacaoService autorizacao, PushEnviador enviador, ObjectMapper mapper,
+                           AcessoService acessos, Clock relogio) {
         this.repository = repository;
         this.autorizacao = autorizacao;
         this.enviador = enviador;
         this.mapper = mapper;
+        this.acessos = acessos;
         this.relogio = relogio;
     }
 
@@ -122,6 +139,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
         p.setInPrazo(f.isInPrazo());
         p.setInSac(f.isInSac());
         p.setInMinhasAcoes(f.isInMinhasAcoes());
+        p.setInAtividade(f.getInAtividade() == null || f.getInAtividade());
         repository.salvarPreferencia(p);
         return p;
     }
@@ -130,7 +148,9 @@ public class NotificacaoServiceImpl implements NotificacaoService {
     public int testar() {
         UsuarioAutenticado u = autorizacao.exigirAutenticado();
         List<PushInscricaoDto> aparelhos = repository.inscricoes(List.of(u.getId()));
-        enviador.enviar(aparelhos, conteudo("NordTool", "Pronto! As notificações estão chegando neste aparelho.", "/configuracoes#notificacoes", "teste"));
+        String texto = "Pronto! As notificações estão chegando neste aparelho.";
+        repository.inserirCaixa(u.getId(), "teste", null, "NordTool", texto, TELA_NOTIFICACOES);
+        enviador.enviar(aparelhos, conteudo("NordTool", texto, TELA_NOTIFICACOES, "teste"));
         return aparelhos.size();
     }
 
@@ -141,7 +161,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
         emSegundoPlano(() -> repository.demanda(idDemanda).ifPresent(d -> {
             String nome = repository.nomeDoUsuario(ator.getId());
             avisar(envolvidos(d), ator, NotificacaoPreferenciaDto::isInDemandaNova,
-                    conteudo("Nova demanda", primeiroNome(nome) + " criou: " + d.getNmCronogramaSemanal() + quando(d), TELA_CRONOGRAMA, "demanda-" + d.getId()));
+                    new Aviso("demanda", "Nova demanda", primeiroNome(nome) + " criou: " + d.getNmCronogramaSemanal() + quando(d), TELA_CRONOGRAMA, "demanda-" + d.getId()));
         }));
     }
 
@@ -153,7 +173,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                     ? nome + " moveu “" + d.getNmCronogramaSemanal() + "” para " + ETAPA.getOrDefault(oQue.substring(6), oQue.substring(6))
                     : nome + " alterou: " + d.getNmCronogramaSemanal() + quando(d);
             avisar(envolvidos(d), ator, NotificacaoPreferenciaDto::isInDemandaAlterada,
-                    conteudo("Demanda alterada", texto, TELA_CRONOGRAMA, "demanda-" + d.getId()));
+                    new Aviso("demanda", "Demanda alterada", texto, TELA_CRONOGRAMA, "demanda-" + d.getId()));
         }));
     }
 
@@ -163,7 +183,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
         emSegundoPlano(() -> repository.demanda(idDemanda).ifPresent(d -> {
             String nome = primeiroNome(repository.nomeDoUsuario(ator.getId()));
             avisar(new LinkedHashSet<>(novos), ator, NotificacaoPreferenciaDto::isInDemandaNova,
-                    conteudo("Demanda compartilhada com você", nome + " compartilhou: " + d.getNmCronogramaSemanal() + quando(d), TELA_CRONOGRAMA, "demanda-" + d.getId()));
+                    new Aviso("demanda", "Demanda compartilhada com você", nome + " compartilhou: " + d.getNmCronogramaSemanal() + quando(d), TELA_CRONOGRAMA, "demanda-" + d.getId()));
         }));
     }
 
@@ -172,8 +192,103 @@ public class NotificacaoServiceImpl implements NotificacaoService {
         emSegundoPlano(() -> {
             String nome = primeiroNome(repository.nomeDoUsuario(ator.getId()));
             avisar(Set.of(idDono), ator, NotificacaoPreferenciaDto::isInSac,
-                    conteudo("Seu chamado foi respondido", nome + " · " + rotuloSac(status) + " · " + titulo, "/sac?chamado=" + idChamado, "sac-" + idChamado));
+                    new Aviso("sac", "Seu chamado foi respondido", nome + " · " + rotuloSac(status) + " · " + titulo, "/sac?chamado=" + idChamado, "sac-" + idChamado));
         });
+    }
+
+    // ---------------------------------------------------------------- caixa (app Android) e alterações
+
+    @Override
+    public NotificacaoCaixaDto caixa(Long depois) {
+        UsuarioAutenticado u = autorizacao.exigirAutenticado();
+        long ultimo = repository.ultimoDaCaixa(u.getId());
+        if (depois == null || depois < 0) return new NotificacaoCaixaDto(ultimo, Collections.emptyList());
+        // Caixa mais nova que o app (banco recriado): recomeça do fim sem repetir avisos.
+        if (depois > ultimo) return new NotificacaoCaixaDto(ultimo, Collections.emptyList());
+        return new NotificacaoCaixaDto(ultimo, repository.caixa(u.getId(), depois, LIMITE_CAIXA));
+    }
+
+    @Override
+    public void atividade(UsuarioAutenticado autor, String metodo, String caminho) {
+        if (autor == null || autor.getId() == null || metodo == null || caminho == null) return;
+        Optional<String> area = areaDoCaminho(caminho);
+        if (area.isEmpty()) return;
+        String verbo = verbo(metodo);
+        if (verbo == null) return;
+        emSegundoPlano(() -> avisarAtividade(autor, metodo.toUpperCase(Locale.ROOT), caminho, area.get(), verbo));
+    }
+
+    private void avisarAtividade(UsuarioAutenticado autor, String metodo, String caminho, String area, String verbo) {
+        repository.registrarAtividade(autor.getId(), metodo, corte(caminho, 300), area);
+        Set<Long> admins = new LinkedHashSet<>(administradores());
+        admins.remove(autor.getId());
+        if (admins.isEmpty()) return;
+        List<Long> destino = repository.preferencias(admins).stream()
+                .filter(NotificacaoPreferenciaDto::isInAtividade)
+                .map(NotificacaoPreferenciaDto::getIdUsuario)
+                .collect(Collectors.toList());
+        if (destino.isEmpty()) return;
+        String nome = repository.nomeDoUsuario(autor.getId());
+        String quem = nome == null || nome.isBlank() ? "Alguém" : nome.trim();
+        String titulo = corte(quem + " · " + area, 120);
+        String agrupar = "atividade:" + autor.getId() + ":" + area;
+        String tag = "atividade-" + autor.getId() + "-" + area.hashCode();
+        LocalDateTime desde = LocalDateTime.now(relogio).minusMinutes(MINUTOS_AGRUPAR);
+        String uma = verbo + " um registro";
+        String varias = "{n} alterações seguidas · a última: " + verbo.toLowerCase(Locale.ROOT);
+        for (Long id : destino) {
+            seguro(() -> {
+                Optional<Integer> juntou = repository.agruparCaixa(id, agrupar, desde, titulo, varias, null);
+                if (juntou.isEmpty()) repository.inserirCaixa(id, "atividade", agrupar, titulo, uma, null);
+                String corpo = juntou.map(n -> varias.replace("{n}", String.valueOf(n))).orElse(uma);
+                enviador.enviar(repository.inscricoes(List.of(id)), conteudo(titulo, corpo, "/", tag));
+            });
+        }
+    }
+
+    private Set<Long> administradores() {
+        long agora = relogio.millis();
+        if (administradoresLidosEm == Long.MIN_VALUE || agora - administradoresLidosEm > CACHE_ADMINS_MS) {
+            administradores = acessos.administradoresAtivos();
+            administradoresLidosEm = agora;
+        }
+        return administradores;
+    }
+
+    static String verbo(String metodo) {
+        switch (metodo == null ? "" : metodo.toUpperCase(Locale.ROOT)) {
+            case "POST": return "Criou";
+            case "PUT":
+            case "PATCH": return "Alterou";
+            case "DELETE": return "Excluiu";
+            default: return null;
+        }
+    }
+
+    private static final String API = "/api/v1/nord-tool/";
+    /** Do mais específico ao mais geral; área vazia = não é alteração que interessa (login, avisos, IA, preferências de tela). */
+    private static final String[][] AREAS = {
+            {"auth", ""}, {"notificacoes", ""}, {"app", ""}, {"menu-favoritos", ""}, {"lugia", ""}, {"cache", ""}, {"davi-job", ""},
+            {"cronogramaSemanal/interpretar", ""}, {"sac/chamados/vistos", ""}, {"repertorio/cifras-recebidas", ""},
+            {"administracao/acessos", "Acessos e usuários"}, {"administracao", "Obras e fases"},
+            {"apartamentoVistoria/termos-reprova", "Termo de reprova"}, {"apartamentoVistoria", "Vistorias"},
+            {"avatares", "Avatar"}, {"blocos-notas", "Bloco de notas"}, {"caixinha", "Caixinha"}, {"cargos", "Cargos"},
+            {"casamento", "Casamento"}, {"colaboradores", "Colaboradores"}, {"controleChaves", "Controle de chaves"},
+            {"cronogramaSemanal/equipes", "Equipes do cronograma"}, {"cronogramaSemanal", "Cronograma"}, {"cubicagens", "Cubicagem"},
+            {"empresas", "Empresas"}, {"escadinha", "Escadinha"}, {"ferramentas", "Ferramentas"}, {"financeiro", "Financeiro"},
+            {"integracoes", "Integrações"}, {"mapeamentos", "Conferências"}, {"medicoes", "Medições"}, {"conta/dados", "Meus dados"},
+            {"permissoes", "Permissões"}, {"placas", "Placas"}, {"relatorios-fotograficos", "Relatório fotográfico"},
+            {"repertorio", "Repertório"}, {"sac", "SAC"}, {"treinos", "Treinos"},
+    };
+
+    static Optional<String> areaDoCaminho(String caminho) {
+        if (caminho == null || !caminho.startsWith(API)) return Optional.empty();
+        String resto = caminho.substring(API.length());
+        for (String[] a : AREAS) {
+            if (resto.equals(a[0]) || resto.startsWith(a[0] + "/")) return a[1].isEmpty() ? Optional.empty() : Optional.of(a[1]);
+        }
+        String primeiro = resto.split("/", 2)[0];
+        return primeiro.isEmpty() ? Optional.empty() : Optional.of(primeiro);
     }
 
     // ---------------------------------------------------------------- lembretes
@@ -191,7 +306,11 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                 seguro(() -> lembrarPrazo(d, hoje));
             }
         }
-        if (agora.getMinute() == 0) seguro(() -> repository.limparEnviadas(agora.minusDays(30)));
+        if (agora.getMinute() == 0) {
+            seguro(() -> repository.limparEnviadas(agora.minusDays(30)));
+            seguro(() -> repository.limparCaixa(agora.minusDays(30)));
+            seguro(() -> repository.limparAtividades(agora.minusDays(90)));
+        }
     }
 
     private void lembrarHorario(DemandaAvisoDto d, LocalDateTime agora) {
@@ -202,31 +321,53 @@ public class NotificacaoServiceImpl implements NotificacaoService {
             if (!repository.registrarEnvio(p.getIdUsuario(), "horario:" + d.getId() + ":" + hora)) continue;
             long faltam = java.time.Duration.between(agora, hora).toMinutes();
             String titulo = faltam <= 0 ? "Agora: " + d.getNmCronogramaSemanal() : "Daqui a " + faltam + " min: " + d.getNmCronogramaSemanal();
-            enviador.enviar(repository.inscricoes(List.of(p.getIdUsuario())),
-                    conteudo(titulo, "Agendado para " + hora.format(HORA), TELA_CRONOGRAMA, "horario-" + d.getId()));
+            entregar(List.of(p.getIdUsuario()), new Aviso("horario", titulo, "Agendado para " + hora.format(HORA), TELA_CRONOGRAMA, "horario-" + d.getId()));
         }
     }
 
     private void lembrarPrazo(DemandaAvisoDto d, LocalDate hoje) {
         for (NotificacaoPreferenciaDto p : repository.preferencias(envolvidos(d))) {
             if (!p.isInPrazo() || !repository.registrarEnvio(p.getIdUsuario(), "prazo:" + d.getId() + ":" + hoje)) continue;
-            enviador.enviar(repository.inscricoes(List.of(p.getIdUsuario())),
-                    conteudo("Prazo hoje", d.getNmCronogramaSemanal() + " vence hoje", TELA_CRONOGRAMA, "prazo-" + d.getId()));
+            entregar(List.of(p.getIdUsuario()), new Aviso("prazo", "Prazo hoje", d.getNmCronogramaSemanal() + " vence hoje", TELA_CRONOGRAMA, "prazo-" + d.getId()));
         }
     }
 
     // ---------------------------------------------------------------- apoio
 
     /** Manda para quem tem aparelho e quer este tipo de aviso; quem fez a ação só se pediu "o que eu mesmo fiz". */
-    void avisar(Set<Long> pessoas, UsuarioAutenticado ator, Predicate<NotificacaoPreferenciaDto> quer, String conteudo) {
+    void avisar(Set<Long> pessoas, UsuarioAutenticado ator, Predicate<NotificacaoPreferenciaDto> quer, Aviso aviso) {
         if (pessoas.isEmpty()) return;
         List<Long> destino = repository.preferencias(pessoas).stream()
                 .filter(quer)
                 .filter(p -> !Objects.equals(p.getIdUsuario(), ator.getId()) || p.isInMinhasAcoes())
                 .map(NotificacaoPreferenciaDto::getIdUsuario)
                 .collect(Collectors.toList());
+        entregar(destino, aviso);
+    }
+
+    /** Um aviso: vai para a caixa de cada pessoa (app Android) e para os aparelhos com Web Push. */
+    static final class Aviso {
+        final String tipo;
+        final String titulo;
+        final String corpo;
+        final String url;
+        final String tag;
+
+        Aviso(String tipo, String titulo, String corpo, String url, String tag) {
+            this.tipo = tipo;
+            this.titulo = corte(titulo, 120);
+            this.corpo = corte(corpo, 300);
+            this.url = url;
+            this.tag = tag;
+        }
+    }
+
+    void entregar(List<Long> destino, Aviso aviso) {
         if (destino.isEmpty()) return;
-        enviador.enviar(repository.inscricoes(destino), conteudo);
+        for (Long id : destino) {
+            seguro(() -> repository.inserirCaixa(id, aviso.tipo, null, aviso.titulo, aviso.corpo, aviso.url));
+        }
+        enviador.enviar(repository.inscricoes(destino), conteudo(aviso.titulo, aviso.corpo, aviso.url, aviso.tag));
     }
 
     static Set<Long> envolvidos(DemandaAvisoDto d) {

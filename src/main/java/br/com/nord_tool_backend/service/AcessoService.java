@@ -17,4 +17,6 @@ public interface AcessoService {
     java.util.List<br.com.nord_tool_backend.dto.ColaboradorLegadoDto> listarColaboradoresLegados();
     /** Vincula o colaborador antigo ao usuário (null desfaz) e completa o histórico de chaves. */
     br.com.nord_tool_backend.dto.ColaboradorLegadoDto vincularColaborador(Long idUserLegado, Long idUsuario);
+    /** Ids das pessoas ativas com acesso de administrador (uso interno: avisos de alterações, sem checar quem chama). */
+    java.util.Set<Long> administradoresAtivos();
 }
