@@ -58,6 +58,7 @@ public class AuthServiceImpl implements AuthService {
     static final int MAX_APARELHOS = 10;
     static final int MAX_TENTATIVAS_APARELHO_IP = 30;
     static final String MSG_APARELHO = "Este aparelho foi desconectado. Entre de novo com a sua senha.";
+    static final String MSG_SEM_SESSAO_CONTINUA = "O acesso \"Manter conectado no app\" não está liberado para você. Entre com a sua senha.";
     private static final java.security.SecureRandom ALEATORIO = new java.security.SecureRandom();
 
     private final UsuarioRepository usuarioRepository;
@@ -224,7 +225,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public br.com.nord_tool_backend.dto.AppAparelhoTokenDto registrarAparelho(br.com.nord_tool_backend.form.AppAparelhoForm form) {
-        UsuarioAutenticado atual = autorizacao.exigirAutenticado();
+        UsuarioAutenticado atual = autorizacao.exigir(Modulo.SESSAO_CONTINUA, Acao.LEITURA);
         Usuario usuario = buscarAtivo(atual.getId());
         byte[] bytes = new byte[32];
         ALEATORIO.nextBytes(bytes);
@@ -252,6 +253,11 @@ public class AuthServiceImpl implements AuthService {
                 .filter(u -> !Boolean.TRUE.equals(u.getInTrocarSenha()))
                 .filter(u -> SessaoServiceImpl.versao(u) == (aparelho.getNrVersaoSessao() == null ? 0 : aparelho.getNrVersaoSessao()))
                 .orElseThrow(() -> new NaoAutenticadoException("APARELHO_DESCONECTADO", MSG_APARELHO));
+        // O administrador pode tirar o "Manter conectado" (Acessos): o aparelho cai e o app volta a pedir a senha.
+        if (!permissoes(usuario).getOrDefault(Modulo.SESSAO_CONTINUA, Acao.NENHUM).atende(Acao.LEITURA)) {
+            aparelhos.revogar(hash(form.getTxToken().trim()));
+            throw new NaoAutenticadoException("APARELHO_DESCONECTADO", MSG_SEM_SESSAO_CONTINUA);
+        }
         aparelhos.marcarUso(aparelho.getId());
         Instant agora = clock.instant();
         return responder(usuario, agora, agora);

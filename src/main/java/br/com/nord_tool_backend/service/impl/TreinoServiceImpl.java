@@ -1,5 +1,7 @@
 package br.com.nord_tool_backend.service.impl;
 
+import br.com.nord_tool_backend.security.Acao;
+import br.com.nord_tool_backend.security.Modulo;
 import br.com.nord_tool_backend.dto.TreinoDto;
 import br.com.nord_tool_backend.dto.TreinoExercicioDto;
 import br.com.nord_tool_backend.dto.TreinoSessaoDto;
@@ -42,8 +44,14 @@ public class TreinoServiceImpl implements TreinoService {
         this.autorizacao = autorizacao;
     }
 
+    /** Ver: o módulo TREINOS com LEITURA. */
     private Long dono() {
-        return autorizacao.exigirAutenticado().getId();
+        return autorizacao.exigir(Modulo.TREINOS, Acao.LEITURA).getId();
+    }
+
+    /** Registrar, alterar e excluir: o módulo TREINOS com ESCRITA. */
+    private Long donoEditando() {
+        return autorizacao.exigir(Modulo.TREINOS, Acao.ESCRITA).getId();
     }
 
     @Override
@@ -60,7 +68,7 @@ public class TreinoServiceImpl implements TreinoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TreinoDto criar(TreinoForm form) {
-        Long dono = dono();
+        Long dono = donoEditando();
         TreinoDto t = cabecalho(form);
         if (t.getNrOrdem() == null) t.setNrOrdem(repository.listar(dono).size() + 1);
         Long id = repository.inserir(dono, t);
@@ -71,7 +79,7 @@ public class TreinoServiceImpl implements TreinoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TreinoDto alterar(Long id, TreinoForm form) {
-        Long dono = dono();
+        Long dono = donoEditando();
         if (form.getNrVersao() == null) throw new EntradaInvalidaException("Informe a versão (nrVersao)");
         TreinoDto atual = treino(dono, id);
         TreinoDto t = cabecalho(form);
@@ -87,7 +95,7 @@ public class TreinoServiceImpl implements TreinoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluir(Long id, Integer nrVersao) {
-        Long dono = dono();
+        Long dono = donoEditando();
         if (nrVersao == null) throw new EntradaInvalidaException("Informe a versão (nrVersao)");
         treino(dono, id);
         if (repository.deletar(dono, id, nrVersao) == 0) throw new ConflitoException(MSG_CONFLITO);
@@ -109,7 +117,7 @@ public class TreinoServiceImpl implements TreinoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TreinoSessaoDto registrarSessao(TreinoSessaoForm form) {
-        Long dono = dono();
+        Long dono = donoEditando();
         TreinoDto treino = treino(dono, form.getIdTreino());
         Set<Long> doTreino = repository.listarExercicios(dono).stream()
                 .filter(e -> treino.getId().equals(e.getIdTreino())).map(TreinoExercicioDto::getId).collect(Collectors.toSet());
@@ -148,7 +156,7 @@ public class TreinoServiceImpl implements TreinoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluirSessao(Long id) {
-        if (repository.deletarSessao(dono(), id) == 0) throw new NaoEncontradoException("Sessão não encontrada");
+        if (repository.deletarSessao(donoEditando(), id) == 0) throw new NaoEncontradoException("Sessão não encontrada");
     }
 
     // ---------- apoio ----------

@@ -47,14 +47,15 @@ class BlocoNotasServiceImplTest {
     private BlocoNotasRepository repository;
     private ArmazenamentoService armazenamento;
     private BlocoNotasServiceImpl service;
+    private AutorizacaoService autorizacao;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         repository = mock(BlocoNotasRepository.class);
         armazenamento = mock(ArmazenamentoService.class);
-        AutorizacaoService autorizacao = mock(AutorizacaoService.class);
-        when(autorizacao.exigirAutenticado()).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO",
+        autorizacao = mock(AutorizacaoService.class);
+        when(autorizacao.exigir(org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Modulo.class), org.mockito.ArgumentMatchers.any(br.com.nord_tool_backend.security.Acao.class))).thenReturn(new UsuarioAutenticado(EU, "eu@obra.com", "USUARIO",
                 Collections.emptyMap(), 0, java.time.Instant.now()));
         service = new BlocoNotasServiceImpl(repository, autorizacao, armazenamento, mapper);
         when(repository.caderno(1L, EU)).thenReturn(Optional.of(caderno(1L)));
@@ -444,5 +445,25 @@ class BlocoNotasServiceImplTest {
         f.setIdCopiarDe(10L);
         service.novaPagina(1L, f);
         verify(repository).ligarPdf(11L, 4L, 2);
+    }
+
+    @Test
+    void verExigeOModuloBlocoNotasComLeitura() {
+        try {
+            service.cadernos();
+        } catch (RuntimeException ignorado) {
+            // só interessa o acesso pedido
+        }
+        org.mockito.Mockito.verify(autorizacao, org.mockito.Mockito.atLeastOnce())
+                .exigir(br.com.nord_tool_backend.security.Modulo.BLOCO_NOTAS, br.com.nord_tool_backend.security.Acao.LEITURA);
+    }
+
+    @Test
+    void semEditarNaoCriaCaderno() {
+        org.mockito.Mockito.when(autorizacao.exigir(br.com.nord_tool_backend.security.Modulo.BLOCO_NOTAS, br.com.nord_tool_backend.security.Acao.ESCRITA))
+                .thenThrow(new br.com.nord_tool_backend.exception.AcessoNegadoException("sem acesso"));
+        org.junit.jupiter.api.Assertions.assertThrows(br.com.nord_tool_backend.exception.AcessoNegadoException.class,
+                () -> service.criar(new br.com.nord_tool_backend.form.BlocoCadernoForm()));
+        org.junit.jupiter.api.Assertions.assertThrows(br.com.nord_tool_backend.exception.AcessoNegadoException.class, () -> service.excluir(1L));
     }
 }

@@ -11,6 +11,8 @@ import br.com.nord_tool_backend.form.BlocoConteudoForm;
 import br.com.nord_tool_backend.form.BlocoPaginaForm;
 import br.com.nord_tool_backend.repository.BlocoNotasRepository;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
 import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.service.BlocoNotasService;
 import br.com.nord_tool_backend.storage.ArmazenamentoService;
@@ -70,7 +72,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BlocoCadernoDto criar(BlocoCadernoForm form) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         if (repository.contarCadernos(u.getId()) >= MAX_CADERNOS) {
             throw new NegocioException("Você chegou ao limite de " + MAX_CADERNOS + " cadernos. Exclua algum para criar outro.");
         }
@@ -82,7 +84,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BlocoCadernoDto alterar(Long id, BlocoCadernoForm form) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         if (form.getNrVersao() == null) throw new EntradaInvalidaException("Informe a versão (nrVersao)");
         caderno(id, u);
         if (repository.alterarCaderno(id, u.getId(), form.getNmTitulo().trim(), cor(form.getCdCor()), form.getNrVersao()) == 0) {
@@ -94,7 +96,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluir(Long id) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         caderno(id, u);
         List<Long> arquivos = repository.arquivosDoCaderno(id);
         repository.excluirCaderno(id, u.getId());
@@ -115,7 +117,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BlocoPaginaDto novaPagina(Long idCaderno, BlocoPaginaForm form) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         caderno(idCaderno, u);
         List<BlocoPaginaDto> paginas = cabeNaoMais(idCaderno, u);
         int ordem = posicao(form.getNrPosicao(), paginas.size());
@@ -152,7 +154,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BlocoPaginaDto paginaDePdf(Long idCaderno, Integer posicao, int largura, int altura, String nome, byte[] bytes, Long idPdf, Integer nrPagina) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         if (idPdf != null) {
             repository.arquivoDoPdf(idPdf, u.getId(), idCaderno).orElseThrow(() -> new EntradaInvalidaException("O PDF não é deste caderno"));
             if (nrPagina == null || nrPagina < 1) throw new EntradaInvalidaException("Informe a página do PDF");
@@ -171,7 +173,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BlocoPaginaDto salvar(Long idPagina, BlocoConteudoForm form) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         BlocoPaginaDto p = paginaDoDono(idPagina, u);
         JsonNode c = form.getConteudo();
         if (c == null || !c.isObject() || !c.path("itens").isArray()) throw new EntradaInvalidaException("Conteúdo da página inválido");
@@ -196,7 +198,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BlocoCadernoDto reordenar(Long idCaderno, List<Long> ids) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         BlocoCadernoDto c = caderno(idCaderno, u);
         Set<Long> atuais = repository.paginas(idCaderno, u.getId()).stream().map(BlocoPaginaDto::getId).collect(Collectors.toSet());
         if (ids.size() != atuais.size() || !new HashSet<>(ids).equals(atuais)) {
@@ -210,7 +212,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BlocoCadernoDto excluirPagina(Long idPagina) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         BlocoPaginaDto p = paginaDoDono(idPagina, u);
         List<BlocoPaginaDto> paginas = repository.paginas(p.getIdCaderno(), u.getId());
         if (paginas.size() <= 1) throw new NegocioException("O caderno precisa de pelo menos uma página");
@@ -240,7 +242,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public br.com.nord_tool_backend.dto.BlocoDocumentoDto salvarDocumento(Long idCaderno, br.com.nord_tool_backend.form.BlocoDocumentoForm form) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         caderno(idCaderno, u);
         String html = form.getHtml();
         if (html.length() > MAX_DOCUMENTO) throw new NegocioException("O documento ficou grande demais (até 2 MB de texto).");
@@ -256,7 +258,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long enviarPdf(Long idCaderno, String nome, byte[] bytes) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         caderno(idCaderno, u);
         String tipo = ArquivoValidador.validarPdf(nome, bytes);
         return repository.inserirPdf(idCaderno, armazenamento.salvar(nome, tipo, bytes));
@@ -274,7 +276,7 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long imagem(Long idCaderno, String nome, byte[] bytes) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         caderno(idCaderno, u);
         String tipo = ArquivoValidador.validarImagem(nome, bytes);
         return repository.inserirImagem(idCaderno, armazenamento.salvar(nome, tipo, bytes));
@@ -307,8 +309,14 @@ public class BlocoNotasServiceImpl implements BlocoNotasService {
         repository.girarPagina(p.getId(), nova, troca ? p.getNrAltura() : p.getNrLargura(), troca ? p.getNrLargura() : p.getNrAltura());
     }
 
+    /** Ver: o módulo BLOCO_NOTAS com LEITURA. */
     private UsuarioAutenticado eu() {
-        return autorizacao.exigirAutenticado();
+        return autorizacao.exigir(Modulo.BLOCO_NOTAS, Acao.LEITURA);
+    }
+
+    /** Criar, alterar e excluir: o módulo BLOCO_NOTAS com ESCRITA. */
+    private UsuarioAutenticado euEditando() {
+        return autorizacao.exigir(Modulo.BLOCO_NOTAS, Acao.ESCRITA);
     }
 
     private BlocoCadernoDto caderno(Long id, UsuarioAutenticado u) {

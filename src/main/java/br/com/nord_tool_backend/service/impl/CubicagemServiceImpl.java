@@ -8,6 +8,8 @@ import br.com.nord_tool_backend.exception.NegocioException;
 import br.com.nord_tool_backend.form.CubicagemForm;
 import br.com.nord_tool_backend.repository.CubicagemRepository;
 import br.com.nord_tool_backend.security.UsuarioAutenticado;
+import br.com.nord_tool_backend.security.Modulo;
+import br.com.nord_tool_backend.security.Acao;
 import br.com.nord_tool_backend.service.AutorizacaoService;
 import br.com.nord_tool_backend.service.CubicagemService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -53,7 +55,7 @@ public class CubicagemServiceImpl implements CubicagemService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CubicagemDto criar(CubicagemForm form) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         if (repository.contar(u.getId()) >= MAX_CUBICAGENS) {
             throw new NegocioException("Você chegou ao limite de " + MAX_CUBICAGENS + " cubicagens. Exclua alguma para criar outra.");
         }
@@ -64,7 +66,7 @@ public class CubicagemServiceImpl implements CubicagemService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CubicagemDto salvar(Long id, CubicagemForm form) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         if (form.getNrVersao() == null) throw new EntradaInvalidaException("Informe a versão (nrVersao)");
         buscar(id, u);
         String pecas = pecas(form.getPecas());
@@ -77,13 +79,19 @@ public class CubicagemServiceImpl implements CubicagemService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void excluir(Long id) {
-        UsuarioAutenticado u = eu();
+        UsuarioAutenticado u = euEditando();
         buscar(id, u);
         repository.excluir(id, u.getId());
     }
 
+    /** Ver: o módulo CUBICAGEM com LEITURA. */
     private UsuarioAutenticado eu() {
-        return autorizacao.exigirAutenticado();
+        return autorizacao.exigir(Modulo.CUBICAGEM, Acao.LEITURA);
+    }
+
+    /** Criar, alterar e excluir: o módulo CUBICAGEM com ESCRITA. */
+    private UsuarioAutenticado euEditando() {
+        return autorizacao.exigir(Modulo.CUBICAGEM, Acao.ESCRITA);
     }
 
     private CubicagemDto buscar(Long id, UsuarioAutenticado u) {
