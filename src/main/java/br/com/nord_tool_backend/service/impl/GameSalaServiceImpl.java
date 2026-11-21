@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -123,6 +124,7 @@ public class GameSalaServiceImpl implements GameSalaService {
     private final Clock clock;
     private final SecureRandom aleatorio;
 
+    @Autowired
     public GameSalaServiceImpl(AutorizacaoService autorizacao, AvatarRepository avatares, ObjectMapper mapper, Clock clock) {
         this(autorizacao, avatares, mapper, clock, new SecureRandom());
     }
