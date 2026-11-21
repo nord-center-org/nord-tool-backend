@@ -272,7 +272,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
             {"cronogramaSemanal/interpretar", ""}, {"sac/chamados/vistos", ""}, {"repertorio/cifras-recebidas", ""},
             {"administracao/acessos", "Acessos e usuários"}, {"administracao", "Obras e fases"},
             {"apartamentoVistoria/termos-reprova", "Termo de reprova"}, {"apartamentoVistoria", "Vistorias"},
-            {"avatares", "Avatar"}, {"blocos-notas", "Bloco de notas"}, {"caixinha", "Caixinha"}, {"cargos", "Cargos"},
+            {"games", ""}, {"avatares", "Avatar"}, {"blocos-notas", "Bloco de notas"}, {"caixinha", "Caixinha"}, {"cargos", "Cargos"},
             {"casamento", "Casamento"}, {"colaboradores", "Colaboradores"}, {"controleChaves", "Controle de chaves"},
             {"cronogramaSemanal/equipes", "Equipes do cronograma"}, {"cronogramaSemanal", "Cronograma"}, {"cubicagens", "Cubicagem"},
             {"empresas", "Empresas"}, {"escadinha", "Escadinha"}, {"ferramentas", "Ferramentas"}, {"financeiro", "Financeiro"},
