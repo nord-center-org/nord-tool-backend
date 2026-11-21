@@ -69,7 +69,10 @@ public class SecurityConfig {
                         API + "/auth/aparelho/entrar", API + "/auth/aparelho/sair").permitAll()
                 .antMatchers(HttpMethod.GET, API + "/health", "/nord-tool/health").permitAll()
                 // Link de integração (Gemini etc.): a chave secreta na URL é a credencial, só leitura do cronograma.
-                .antMatchers(HttpMethod.GET, API + "/publico/cronograma/*").permitAll();
+                .antMatchers(HttpMethod.GET, API + "/publico/cronograma/*").permitAll()
+                // WebSocket das salas de Games: o navegador não manda o token no handshake; o bilhete de uso único
+                // (emitido em POST /games/salas, que exige login) autentica a conexão no GameSalaService.
+                .antMatchers(HttpMethod.GET, API + "/games/ws").permitAll();
         if (local) {
             http.authorizeRequests().antMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
         }
