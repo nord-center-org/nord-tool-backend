@@ -50,6 +50,8 @@ public enum Modulo {
     TELAS_EM_CONSTRUCAO,
     /** App Android: manter conectado (a sessão não cai); sem este acesso o app pede a senha como o navegador. */
     SESSAO_CONTINUA,
+    /** Games (Individual): a Central de jogos e as partidas. */
+    GAMES,
     ADMINISTRACAO;
 
     public static final String CURINGA = "*";
