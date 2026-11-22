@@ -46,8 +46,12 @@ public class GameSalaServiceImpl implements GameSalaService {
 
     static final int MAX_VAGAS = 8;
     static final int MAX_SALAS = 500;
-    static final int MAX_MENSAGEM = 2048;
+    /** Tamanho máximo de uma mensagem de celular (entrada e sinal da conexão direta). */
+    static final int MAX_MENSAGEM = 8 * 1024;
+    /** A tela manda os quadros do jogo para quem não tem conexão direta: mensagens maiores e mais frequentes. */
+    static final int MAX_MENSAGEM_TELA = 48 * 1024;
     static final int MAX_POR_SEGUNDO = 90;
+    static final int MAX_POR_SEGUNDO_TELA = 400;
     static final Duration VALIDADE_BILHETE = Duration.ofSeconds(60);
     static final Duration SALA_OCIOSA = Duration.ofMinutes(10);
     static final Duration SALA_MAXIMA = Duration.ofHours(6);
@@ -198,11 +202,12 @@ public class GameSalaServiceImpl implements GameSalaService {
         Sala sala = l == null ? null : salas.get(l.codigo);
         Vaga vaga = sala == null ? null : sala.vagas.get(l.vaga);
         if (vaga == null || mensagem == null) return;
-        if (mensagem.length() > MAX_MENSAGEM) {
+        boolean daTela = l.vaga == 0;
+        if (mensagem.length() > (daTela ? MAX_MENSAGEM_TELA : MAX_MENSAGEM)) {
             canal.enviar(erro("Mensagem grande demais"));
             return;
         }
-        if (!dentroDoLimite(vaga)) return;
+        if (!dentroDoLimite(vaga, daTela ? MAX_POR_SEGUNDO_TELA : MAX_POR_SEGUNDO)) return;
         JsonNode no;
         try {
             no = mapper.readTree(mensagem);
@@ -251,10 +256,11 @@ public class GameSalaServiceImpl implements GameSalaService {
     }
 
     private void doControle(Sala sala, int vaga, String tipo, JsonNode no) {
-        if ("entrada".equals(tipo)) {
+        if ("entrada".equals(tipo) || "sinal".equals(tipo)) {
+            // "sinal": a negociação da conexão direta (celular ↔ tela) também passa só para a tela.
             Vaga anfitriao = sala.anfitriao();
             if (anfitriao != null && anfitriao.canal != null) {
-                ObjectNode entrada = mapper.createObjectNode().put(TIPO, "entrada").put(VAGA, vaga);
+                ObjectNode entrada = mapper.createObjectNode().put(TIPO, tipo).put(VAGA, vaga);
                 entrada.set(DADOS, no.path(DADOS));
                 anfitriao.canal.enviar(entrada.toString());
             }
@@ -308,14 +314,14 @@ public class GameSalaServiceImpl implements GameSalaService {
         log.info("Sala de games {} fechada: {}", sala.codigo, motivo);
     }
 
-    private boolean dentroDoLimite(Vaga vaga) {
+    private boolean dentroDoLimite(Vaga vaga, int limite) {
         long segundo = clock.millis() / 1000;
         if (vaga.janela != segundo) {
             vaga.janela = segundo;
             vaga.mensagens = 0;
         }
         vaga.mensagens++;
-        return vaga.mensagens <= MAX_POR_SEGUNDO;
+        return vaga.mensagens <= limite;
     }
 
     private Sala sala(String codigo) {

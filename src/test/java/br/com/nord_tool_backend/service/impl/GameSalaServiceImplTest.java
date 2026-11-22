@@ -276,6 +276,41 @@ class GameSalaServiceImplTest {
     }
 
     @Test
+    void telaPodeMandarMensagensMaioresEMaisFrequentesQueOCelular() throws Exception {
+        GameSalaDto sala = como(1, () -> service.criar("bombas"));
+        Canal tela = conectar(sala, "t");
+        Canal p2 = conectar(como(2, () -> service.entrar(sala.getCodigo())), "p2");
+        String recheio = "a".repeat(GameSalaServiceImpl.MAX_MENSAGEM + 100);
+        int antes = p2.recebidas.size();
+        service.receber(tela, "{\"t\":\"todos\",\"d\":{\"q\":\"" + recheio + "\"}}");
+        assertEquals(antes + 1, p2.recebidas.size());
+        assertEquals(recheio, ultima(p2).path("d").path("q").asText());
+        char[] grande = new char[GameSalaServiceImpl.MAX_MENSAGEM_TELA + 1];
+        java.util.Arrays.fill(grande, 'a');
+        service.receber(tela, new String(grande));
+        assertEquals("Mensagem grande demais", ultima(tela).path("m").asText());
+        relogio.andar(Duration.ofSeconds(1));
+        antes = p2.recebidas.size();
+        for (int i = 0; i < GameSalaServiceImpl.MAX_POR_SEGUNDO_TELA + 10; i++) service.receber(tela, "{\"t\":\"para\",\"vaga\":1,\"d\":{}}");
+        assertEquals(antes + GameSalaServiceImpl.MAX_POR_SEGUNDO_TELA, p2.recebidas.size());
+    }
+
+    @Test
+    void sinalDaConexaoDiretaVaiDoCelularSoParaATela() throws Exception {
+        GameSalaDto sala = como(1, () -> service.criar("bombas"));
+        Canal tela = conectar(sala, "t");
+        Canal p2 = conectar(como(2, () -> service.entrar(sala.getCodigo())), "p2");
+        Canal p3 = conectar(como(3, () -> service.entrar(sala.getCodigo())), "p3");
+        int antes = p3.recebidas.size();
+        service.receber(p2, "{\"t\":\"sinal\",\"d\":{\"tipo\":\"resposta\",\"sdp\":\"v=0\"}}");
+        JsonNode u = ultima(tela);
+        assertEquals("sinal", u.path("t").asText());
+        assertEquals(1, u.path("vaga").asInt());
+        assertEquals("resposta", u.path("d").path("tipo").asText());
+        assertEquals(antes, p3.recebidas.size());
+    }
+
+    @Test
     void entradaSemTelaConectadaSePerdeSemErro() {
         GameSalaDto sala = como(1, () -> service.criar("bombas"));
         Canal p2 = conectar(como(2, () -> service.entrar(sala.getCodigo())), "p2");
