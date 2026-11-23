@@ -72,7 +72,8 @@ public class SecurityConfig {
                 .antMatchers(HttpMethod.GET, API + "/publico/cronograma/*").permitAll()
                 // WebSocket das salas de Games: o navegador não manda o token no handshake; o bilhete de uso único
                 // (emitido em POST /games/salas, que exige login) autentica a conexão no GameSalaService.
-                .antMatchers(HttpMethod.GET, API + "/games/ws").permitAll();
+                .antMatchers(HttpMethod.GET, API + "/games/ws").permitAll()
+                .antMatchers(HttpMethod.GET, API + "/drumcam/ws").permitAll();
         if (local) {
             http.authorizeRequests().antMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
         }
