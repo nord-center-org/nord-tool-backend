@@ -230,4 +230,64 @@ class DrumcamServiceImplTest {
         for (int i = 0; i < DrumcamServiceImpl.MAX_BILHETES; i++) service.bilhete("controle", "x".repeat(80));
         assertThrows(EntradaInvalidaException.class, () -> service.bilhete("controle", null));
     }
+
+    @Test
+    void sinalDoWebrtcSoEntreAMesmaPessoa() throws Exception {
+        Canal camera = conectar(1, "camera", "Palco", "cam");
+        Canal controle = conectar(1, "controle", null, "ctl");
+        Canal outro = conectar(1, "controle", null, "ctl-b");
+        Canal intruso = conectar(2, "controle", null, "ctl2");
+        // Controle → câmera.
+        service.receber(controle, "{\"t\":\"sinal\",\"camera\":\"cam\",\"dados\":{\"tipo\":\"quero\"}}");
+        JsonNode recebido = ultima(camera);
+        assertEquals("sinal", recebido.path("t").asText());
+        assertEquals("ctl", recebido.path("de").asText());
+        assertEquals("quero", recebido.path("dados").path("tipo").asText());
+        assertTrue(recebido.path("camera").isMissingNode());
+        // Câmera → um controle.
+        int doOutro = outro.recebidas.size();
+        service.receber(camera, "{\"t\":\"sinal\",\"para\":\"ctl\",\"dados\":{\"tipo\":\"oferta\",\"sdp\":\"v=0\"}}");
+        JsonNode oferta = ultima(controle);
+        assertEquals("cam", oferta.path("camera").asText());
+        assertEquals("oferta", oferta.path("dados").path("tipo").asText());
+        assertTrue(oferta.path("para").isMissingNode());
+        assertEquals(doOutro, outro.recebidas.size());
+        // Câmera → todos os controles da pessoa ("*"), nunca o de outra pessoa.
+        int doIntruso = intruso.recebidas.size();
+        service.receber(camera, "{\"t\":\"sinal\",\"para\":\"*\",\"dados\":{\"tipo\":\"movimento\"}}");
+        assertEquals("movimento", ultima(controle).path("dados").path("tipo").asText());
+        assertEquals("movimento", ultima(outro).path("dados").path("tipo").asText());
+        assertEquals(doIntruso, intruso.recebidas.size());
+        // O intruso não alcança a câmera; câmera sumida não quebra.
+        int daCamera = camera.recebidas.size();
+        service.receber(intruso, "{\"t\":\"sinal\",\"camera\":\"cam\",\"dados\":{}}");
+        service.receber(controle, "{\"t\":\"sinal\",\"camera\":\"sumiu\",\"dados\":{}}");
+        assertEquals(daCamera, camera.recebidas.size());
+        // Sinal grande demais é ignorado (mas não derruba a conexão).
+        StringBuilder grande = new StringBuilder("{\"t\":\"sinal\",\"camera\":\"cam\",\"dados\":\"");
+        while (grande.length() <= DrumcamServiceImpl.MAX_SINAL) grande.append("xxxxxxxxxx");
+        grande.append("\"}");
+        service.receber(controle, grande.toString());
+        assertEquals(daCamera, camera.recebidas.size());
+        assertNull(controle.fechadoPor);
+    }
+
+    @Test
+    void cameraTrocaNomeETipoEAListaAtualiza() throws Exception {
+        Canal controle = conectar(1, "controle", null, "ctl");
+        Canal camera = conectar(1, "camera", "Celular", "cam");
+        assertEquals("app", ultima(controle).path("lista").get(0).path("tipo").asText());
+        service.receber(camera, "{\"t\":\"info\",\"nome\":\"Bateria <lado>\",\"tipo\":\"aovivo\"}");
+        JsonNode lista = ultima(controle);
+        assertEquals("Bateria lado", lista.path("lista").get(0).path("nome").asText());
+        assertEquals("aovivo", lista.path("lista").get(0).path("tipo").asText());
+        // Tipo desconhecido é ignorado; sem nome, o nome fica.
+        service.receber(camera, "{\"t\":\"info\",\"tipo\":\"hacker\"}");
+        assertEquals("aovivo", ultima(controle).path("lista").get(0).path("tipo").asText());
+        assertEquals("Bateria lado", ultima(controle).path("lista").get(0).path("nome").asText());
+        // Controle não manda "info".
+        int k = controle.recebidas.size();
+        service.receber(controle, "{\"t\":\"info\",\"nome\":\"x\"}");
+        assertEquals(k, controle.recebidas.size());
+    }
 }

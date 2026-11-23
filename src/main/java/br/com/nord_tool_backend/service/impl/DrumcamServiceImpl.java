@@ -32,6 +32,8 @@ import java.util.Map;
  * Drumcam) abrem o mesmo WebSocket com um bilhete de uso único. O servidor não entende o conteúdo: repassa os pedidos
  * de um controle para uma câmera da mesma pessoa e as respostas de volta para quem pediu. Os vídeos não passam por
  * aqui (vão direto da câmera para o YouTube); só os comandos, o estado, a prévia e as miniaturas.
+ * Desde a v3 também passa o "sinal" do WebRTC (oferta, resposta e candidatos), para a imagem ao vivo ir direto da
+ * câmera para o painel, e a câmera pode trocar o próprio nome e dizer o tipo (app ou câmera ao vivo).
  * Tudo vive em memória: num reinício, a câmera e o painel se reconectam sozinhos.
  */
 @Slf4j
@@ -42,8 +44,11 @@ public class DrumcamServiceImpl implements DrumcamService {
     static final String CONTROLE = "controle";
     /** Maior mensagem aceita (a prévia JPEG em base64 com folga). */
     static final int MAX_MENSAGEM = 1_400_000;
-    static final int MAX_POR_SEGUNDO = 60;
-    static final int MAX_CAMERAS_POR_PESSOA = 5;
+    static final int MAX_POR_SEGUNDO = 120;
+    static final int MAX_CAMERAS_POR_PESSOA = 9;
+    /** Maior "sinal" do WebRTC (uma oferta SDP tem poucos KB). */
+    static final int MAX_SINAL = 64_000;
+    static final String TODOS = "*";
     static final int MAX_CONTROLES_POR_PESSOA = 10;
     static final int MAX_BILHETES = 2_000;
     static final Duration VALIDADE_BILHETE = Duration.ofSeconds(60);
@@ -68,7 +73,8 @@ public class DrumcamServiceImpl implements DrumcamService {
         private final CanalSala canal;
         private final Long idUsuario;
         private final String papel;
-        private final String nome;
+        private String nome;
+        private String tipo = "app";
         private long janela;
         private int mensagens;
 
@@ -153,6 +159,8 @@ public class DrumcamServiceImpl implements DrumcamService {
         String tipo = m.path(TIPO).asText("");
         if (CONTROLE.equals(c.papel) && "req".equals(tipo)) repassarPedido(c, (ObjectNode) m);
         else if (CAMERA.equals(c.papel) && "resp".equals(tipo)) repassarResposta(c, (ObjectNode) m);
+        else if ("sinal".equals(tipo) && mensagem.length() <= MAX_SINAL) repassarSinal(c, (ObjectNode) m);
+        else if (CAMERA.equals(c.papel) && "info".equals(tipo)) atualizarInfo(c, m);
         // "ping" e o resto: só mantêm a conexão viva.
     }
 
@@ -181,6 +189,37 @@ public class DrumcamServiceImpl implements DrumcamService {
         para.canal.enviar(m.toString());
     }
 
+    /**
+     * Sinal do WebRTC. Controle → câmera ({@code camera}) e câmera → controle ({@code para}, ou "*" para todos os
+     * painéis da pessoa). Sempre só entre conexões da mesma pessoa; quem recebe vê de onde veio.
+     */
+    private void repassarSinal(Conexao de, ObjectNode m) {
+        if (CONTROLE.equals(de.papel)) {
+            Conexao camera = conexoes.get(m.path(CAMERA).asText(""));
+            if (camera == null || !CAMERA.equals(camera.papel) || !camera.idUsuario.equals(de.idUsuario)) return;
+            m.remove(CAMERA);
+            m.put("de", de.canal.id());
+            camera.canal.enviar(m.toString());
+            return;
+        }
+        String para = m.path("para").asText("");
+        m.remove("para");
+        m.put(CAMERA, de.canal.id());
+        String texto = m.toString();
+        for (Conexao c : new ArrayList<>(conexoes.values())) {
+            boolean alvo = TODOS.equals(para) || c.canal.id().equals(para);
+            if (alvo && CONTROLE.equals(c.papel) && c.idUsuario.equals(de.idUsuario)) c.canal.enviar(texto);
+        }
+    }
+
+    /** A câmera troca o nome (renomear pelo painel) e diz o tipo; os painéis recebem a lista nova. */
+    private void atualizarInfo(Conexao camera, JsonNode m) {
+        if (m.hasNonNull("nome")) camera.nome = nomeLimpo(m.path("nome").asText(""));
+        String tipo = m.path("tipo").asText("");
+        if ("app".equals(tipo) || "aovivo".equals(tipo)) camera.tipo = tipo;
+        avisarCameras(camera.idUsuario);
+    }
+
     @Override
     public synchronized void desconectar(CanalSala canal) {
         Conexao c = conexoes.remove(canal.id());
@@ -207,7 +246,7 @@ public class DrumcamServiceImpl implements DrumcamService {
         List<Conexao> minhas = new ArrayList<>();
         for (Conexao c : conexoes.values()) if (c.idUsuario.equals(idUsuario) && CAMERA.equals(c.papel)) minhas.add(c);
         minhas.sort((a, b) -> a.nome.compareToIgnoreCase(b.nome));
-        for (Conexao c : minhas) lista.addObject().put(ID, c.canal.id()).put("nome", c.nome);
+        for (Conexao c : minhas) lista.addObject().put(ID, c.canal.id()).put("nome", c.nome).put("tipo", c.tipo);
         return msg;
     }
 
