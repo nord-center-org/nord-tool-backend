@@ -34,6 +34,7 @@ public class CasamentoReadController implements CasamentoResponse {
     private final CasamentoFornecedorService fornecedorService;
     private final CasamentoConvidadoService convidadoService;
     private final CasamentoMarcoService marcoService;
+    private final br.com.nord_tool_backend.service.CasamentoArteService arteService;
 
     @Operation(summary = "Casal e data do casamento")
     @GetMapping("/configuracao")
@@ -71,6 +72,20 @@ public class CasamentoReadController implements CasamentoResponse {
     @GetMapping("/fornecedores/anexos/{idAnexo}/arquivo")
     public ResponseEntity<byte[]> arquivoAnexo(@PathVariable Long idAnexo) {
         return ArquivoResponse.semCache(fornecedorService.baixarAnexo(idAnexo));
+    }
+
+    // ---------- artes ----------
+
+    @Operation(summary = "Lista as artes do casamento (convite, save the date…)")
+    @GetMapping("/artes")
+    public ResponseEntity<ApiResponseBody<List<br.com.nord_tool_backend.dto.CasamentoArteDto>>> artes() {
+        return ok(arteService.listar());
+    }
+
+    @Operation(summary = "Arquivo da arte (sem cache)")
+    @GetMapping("/artes/{id}/arquivo")
+    public ResponseEntity<byte[]> arquivoArte(@PathVariable Long id) {
+        return ArquivoResponse.semCache(arteService.baixar(id));
     }
 
     // ---------- convidados ----------

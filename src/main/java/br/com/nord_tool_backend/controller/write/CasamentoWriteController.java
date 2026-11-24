@@ -4,6 +4,9 @@ import br.com.nord_tool_backend.exception.EntradaInvalidaException;
 import br.com.nord_tool_backend.controller.response.ApiResponseBody;
 import br.com.nord_tool_backend.controller.response.CasamentoResponse;
 import br.com.nord_tool_backend.dto.CasamentoAnexoDto;
+import br.com.nord_tool_backend.dto.CasamentoArteDto;
+import br.com.nord_tool_backend.form.CasamentoArteForm;
+import br.com.nord_tool_backend.service.CasamentoArteService;
 import br.com.nord_tool_backend.dto.CasamentoConfiguracaoDto;
 import br.com.nord_tool_backend.dto.CasamentoConvidadoDto;
 import br.com.nord_tool_backend.dto.CasamentoFornecedorDto;
@@ -47,6 +50,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     private final CasamentoFornecedorService fornecedorService;
     private final CasamentoConvidadoService convidadoService;
     private final CasamentoMarcoService marcoService;
+    private final CasamentoArteService arteService;
 
     @Operation(summary = "Salva casal e data do casamento")
     @PutMapping("/configuracao")
@@ -149,6 +153,30 @@ public class CasamentoWriteController implements CasamentoResponse {
     @PostMapping("/marcos/padrao")
     public ResponseEntity<ApiResponseBody<List<CasamentoMarcoDto>>> marcosPadrao() {
         return created(marcoService.criarPadrao());
+    }
+
+    // ---------- artes ----------
+
+    @Operation(summary = "Guarda uma arte do casamento (PDF ou imagem JPEG/PNG, até 15 MB)")
+    @PostMapping(value = "/artes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponseBody<CasamentoArteDto>> enviarArte(
+            @RequestParam("arquivo") MultipartFile arquivo,
+            @RequestParam(value = "titulo", required = false) String titulo,
+            @RequestParam(value = "categoria", required = false) String categoria) {
+        return created(arteService.enviar(nome(arquivo), bytes(arquivo), titulo, categoria));
+    }
+
+    @Operation(summary = "Renomeia a arte ou troca a categoria")
+    @PutMapping("/artes/{id}")
+    public ResponseEntity<ApiResponseBody<CasamentoArteDto>> atualizarArte(@PathVariable Long id, @Valid @RequestBody CasamentoArteForm form) {
+        return ok(arteService.atualizar(id, form));
+    }
+
+    @Operation(summary = "Exclui a arte e o arquivo")
+    @DeleteMapping("/artes/{id}")
+    public ResponseEntity<ApiResponseBody<Void>> excluirArte(@PathVariable Long id) {
+        arteService.excluir(id);
+        return noContent();
     }
 
     private static String nome(MultipartFile arquivo) {
