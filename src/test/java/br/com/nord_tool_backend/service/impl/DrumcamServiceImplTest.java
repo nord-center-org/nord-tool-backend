@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -91,7 +93,7 @@ class DrumcamServiceImplTest {
         when(autorizacao.exigir(Modulo.REPERTORIO, Acao.LEITURA)).thenAnswer(i -> new UsuarioAutenticado(usuarioAtual, "u@obra.com", "USUARIO",
             Collections.emptyMap(), 0, Instant.now()));
         relogio = new Relogio();
-        service = new DrumcamServiceImpl(autorizacao, mapper, relogio, new SecureRandom());
+        service = new DrumcamServiceImpl(autorizacao, mapper, relogio, new SecureRandom(), DrumcamServiceImpl.chave("", "segredo-jwt-de-teste"));
     }
 
     private Canal conectar(long usuario, String papel, String nome, String id) {
@@ -289,5 +291,56 @@ class DrumcamServiceImplTest {
         int k = controle.recebidas.size();
         service.receber(controle, "{\"t\":\"info\",\"nome\":\"x\"}");
         assertEquals(k, controle.recebidas.size());
+    }
+
+    @Test
+    void cameraVoltaDepoisDoDeployComOPasseDeRetomadaSemLogin() throws Exception {
+        Canal cam = conectar(5L, "camera", "Bateria", "cam1");
+        JsonNode ok = mapper.readTree(cam.recebidas.get(0));
+        assertEquals("ok", ok.path("t").asText());
+        String passe = ok.path("retomar").asText();
+        assertTrue(passe.startsWith("r1.5."), "a câmera recebe o passe de retomada");
+        Canal painel = conectar(5L, "controle", null, "painel");
+        assertTrue(painel.recebidas.isEmpty() || !mapper.readTree(painel.recebidas.get(0)).has("retomar"), "painel não recebe passe");
+
+        // Deploy: o servidor reinicia (memória vazia) com as mesmas chaves JWT.
+        AutorizacaoService semLogin = mock(AutorizacaoService.class);
+        DrumcamServiceImpl novo = new DrumcamServiceImpl(semLogin, mapper, relogio, new SecureRandom(), DrumcamServiceImpl.chave("", "segredo-jwt-de-teste"));
+        Canal volta = new Canal("cam2");
+        novo.conectar(passe, volta);
+        assertNull(volta.fechadoPor, "o passe reconecta sem bilhete nem login");
+        JsonNode ok2 = mapper.readTree(volta.recebidas.get(0));
+        assertEquals("camera", ok2.path("papel").asText());
+        assertNotEquals(passe, ok2.path("retomar").asText(), "um passe novo a cada conexão");
+        // O passe serve de novo (várias quedas) enquanto vale.
+        Canal denovo = new Canal("cam3");
+        novo.conectar(passe, denovo);
+        assertNull(denovo.fechadoPor);
+
+        // Outra chave (outro ambiente), adulterado, malformado ou vencido: recusa.
+        DrumcamServiceImpl outraChave = new DrumcamServiceImpl(semLogin, mapper, relogio, new SecureRandom(), DrumcamServiceImpl.chave("", "outra"));
+        Canal x = new Canal("x");
+        outraChave.conectar(passe, x);
+        assertNotNull(x.fechadoPor);
+        for (String ruim : new String[]{"r1.", "r1.6" + passe.substring(4), passe + "a", "r1.5.1.2.@@@", "r1.a.b", "r1.x.1.n." + passe.substring(passe.lastIndexOf('.') + 1)}) {
+            Canal r = new Canal("r");
+            novo.conectar(ruim, r);
+            assertNotNull(r.fechadoPor, "recusa " + ruim);
+        }
+        String semNumero = "r1.zz.99999999999999.abc";
+        Canal sn = new Canal("sn");
+        novo.conectar(semNumero + "." + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(new byte[32]), sn);
+        assertNotNull(sn.fechadoPor);
+        relogio.andar(Duration.ofHours(25));
+        Canal vencido = new Canal("v");
+        novo.conectar(passe, vencido);
+        assertNotNull(vencido.fechadoPor, "o passe vence em 24 horas");
+    }
+
+    @Test
+    void chaveSemJwtEAleatoria() {
+        assertEquals(32, DrumcamServiceImpl.chave(null, null).length);
+        assertFalse(java.util.Arrays.equals(DrumcamServiceImpl.chave("", ""), DrumcamServiceImpl.chave("", "")));
+        assertTrue(java.util.Arrays.equals(DrumcamServiceImpl.chave("k1:abc", ""), DrumcamServiceImpl.chave("k1:abc", "")));
     }
 }
