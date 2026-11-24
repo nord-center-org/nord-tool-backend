@@ -70,6 +70,9 @@ public class SecurityConfig {
                 .antMatchers(HttpMethod.GET, API + "/health", "/nord-tool/health").permitAll()
                 // Link de integração (Gemini etc.): a chave secreta na URL é a credencial, só leitura do cronograma.
                 .antMatchers(HttpMethod.GET, API + "/publico/cronograma/*").permitAll()
+                // Marketing: o Instagram busca o vídeo a publicar por um link com código aleatório de uso temporário
+                // (vence em 2 horas ou ao terminar de publicar); só o arquivo, sem dado nenhum da conta.
+                .antMatchers(HttpMethod.GET, API + "/publico/marketing/midia/*").permitAll()
                 // WebSocket das salas de Games: o navegador não manda o token no handshake; o bilhete de uso único
                 // (emitido em POST /games/salas, que exige login) autentica a conexão no GameSalaService.
                 .antMatchers(HttpMethod.GET, API + "/games/ws").permitAll()

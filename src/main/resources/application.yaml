@@ -73,6 +73,23 @@ nord-tool:
   storage:
     # Provedor de arquivos: POSTGRES (provisório). Definitivo ainda a decidir (Drive/S3).
     provider: ${NORD_STORAGE_PROVIDER:POSTGRES}
+  marketing:
+    # Marketing: apps de cada rede (criados pela pessoa no console de desenvolvedor da rede). Sem as chaves, a rede
+    # aparece como "não configurada". As chaves nunca vão para o cliente nem para o log.
+    youtube:
+      client-id: ${NORD_MARKETING_YOUTUBE_CLIENT_ID:}
+      client-secret: ${NORD_MARKETING_YOUTUBE_CLIENT_SECRET:}
+    instagram:
+      app-id: ${NORD_MARKETING_INSTAGRAM_APP_ID:}
+      app-secret: ${NORD_MARKETING_INSTAGRAM_APP_SECRET:}
+      versao: ${NORD_MARKETING_INSTAGRAM_VERSAO:v24.0}
+    tiktok:
+      client-key: ${NORD_MARKETING_TIKTOK_CLIENT_KEY:}
+      client-secret: ${NORD_MARKETING_TIKTOK_CLIENT_SECRET:}
+    # Chave (base64 de 32 bytes) que cifra os tokens das redes no banco. Vazia: derivada das chaves JWT.
+    chave: ${NORD_MARKETING_CHAVE:}
+    # Endereço público desta API (o Instagram busca o vídeo por ele). Vazio: o endereço da própria requisição.
+    url-api: ${NORD_MARKETING_URL_API:}
   repertorio:
     # Espaço de áudio do Repertório por pessoa, em MB (as músicas ficam no banco, junto dos outros arquivos).
     cota-mb: ${NORD_REPERTORIO_COTA_MB:300}

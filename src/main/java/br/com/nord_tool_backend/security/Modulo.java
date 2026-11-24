@@ -52,6 +52,8 @@ public enum Modulo {
     SESSAO_CONTINUA,
     /** Games (Individual): a Central de jogos e as partidas. */
     GAMES,
+    /** Marketing: contas de redes sociais conectadas, publicar vídeos e ver as views (cada pessoa só as próprias contas). */
+    MARKETING,
     ADMINISTRACAO;
 
     public static final String CURINGA = "*";
