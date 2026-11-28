@@ -14,7 +14,6 @@ public class LembretesAgendador {
 
     private final NotificacaoService notificacoes;
 
-    @Scheduled(fixedDelay = 60_000, initialDelay = 30_000)
     public void rodar() {
         notificacoes.lembretes();
     }

@@ -1,4 +1,4 @@
-# Regras padrão do gitleaks; fixtures de teste e o modelo .env.example não são segredos reais.
+# Regras padrão do gitleaks; fixtures de teste
 [extend]
 useDefault = true
 
