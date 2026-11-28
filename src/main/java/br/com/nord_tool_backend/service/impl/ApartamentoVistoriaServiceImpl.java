@@ -43,7 +43,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
 
     private final XlsxExtractorHandlerApartamento xlsxExtractorHandlerApartamento;
 
-    private final TermoReprovaService termoReprovaService;
+    private final TermoReprovaService termoReprovaService;
 
     private final AutorizacaoService autorizacao;
 
@@ -119,6 +119,7 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
     public void importarPlanilha(MultipartFile arquivo) throws Exception {
         autorizacao.exigir(Modulo.VISTORIA, Acao.ESCRITA);
         log.info("Iniciando método para importar planilha de Apartamentos Vistoria");
+        exigirXlsx(arquivo);
         xlsxExtractorHandlerApartamento.init(arquivo);
         log.info("Iniciando método limpar o cache após importar");
         cacheService.limparTodos();
@@ -147,4 +148,16 @@ public class ApartamentoVistoriaServiceImpl implements ApartamentoVistoriaServic
         return lsInfoGeralApartamentoVistoriaDto;
     }
 
+    /**
+     * O .xlsx é um arquivo ZIP: sem a assinatura "PK" o leitor de planilha estoura fora do tratamento de linhas e a
+     * resposta virava 500. Recusa antes, com 400 e mensagem para a pessoa.
+     */
+    static void exigirXlsx(MultipartFile arquivo) throws java.io.IOException {
+        byte[] bytes = arquivo == null ? new byte[0] : arquivo.getBytes();
+        if (bytes.length < 4 || bytes[0] != 'P' || bytes[1] != 'K' || bytes[2] != 3 || bytes[3] != 4) {
+            throw new EntradaInvalidaException(MSG_PLANILHA_INVALIDA);
+        }
+    }
+
+    static final String MSG_PLANILHA_INVALIDA = "Envie uma planilha .xlsx válida";
 }

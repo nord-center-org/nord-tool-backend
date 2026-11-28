@@ -10,6 +10,7 @@ import br.com.nord_tool_backend.service.FinanceiroInvestimentoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -32,6 +34,7 @@ public class FinanceiroInvestimentoWriteController implements FinanceiroResponse
     private final FinanceiroInvestimentoService service;
 
     @Operation(summary = "Adiciona um fundo à carteira de uma pessoa (ticker e pessoa obrigatórios)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/ativos")
     public ResponseEntity<ApiResponseBody<FinanceiroAtivoDto>> criar(@Valid @RequestBody FinanceiroAtivoForm form) {
         return created(service.criarAtivo(form));
@@ -44,6 +47,7 @@ public class FinanceiroInvestimentoWriteController implements FinanceiroResponse
     }
 
     @Operation(summary = "Registra uma compra ou venda de cotas. cdRequisicao UUID obrigatório; repetido não duplica")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/ativos/{id}/operacoes")
     public ResponseEntity<ApiResponseBody<FinanceiroAtivoDto>> operacao(@PathVariable Long id, @Valid @RequestBody FinanceiroOperacaoForm form) {
         return created(service.registrarOperacao(id, form));
@@ -56,6 +60,7 @@ public class FinanceiroInvestimentoWriteController implements FinanceiroResponse
     }
 
     @Operation(summary = "Registra (ou corrige, pela data-com) um provento por cota")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/ativos/{id}/proventos")
     public ResponseEntity<ApiResponseBody<FinanceiroAtivoDto>> provento(@PathVariable Long id, @Valid @RequestBody FinanceiroProventoForm form) {
         return created(service.registrarProvento(id, form));

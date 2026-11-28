@@ -11,6 +11,7 @@ import br.com.nord_tool_backend.service.PlacaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,6 +37,7 @@ public class PlacaWriteController implements BaseResponse {
     private final PlacaService service;
 
     @Operation(summary = "Cria um modelo de placa (ADMIN de Placas)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/modelos")
     public ResponseEntity<ApiResponseBody<PlacaModeloDto>> criarModelo(@Valid @RequestBody PlacaModeloForm form) {
         return created(service.criarModelo(form));
@@ -47,6 +50,7 @@ public class PlacaWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui o modelo; com placas, só desativa (ADMIN de Placas)")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/modelos/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluirModelo(@PathVariable Long id) {
         service.excluirModelo(id);
@@ -72,6 +76,7 @@ public class PlacaWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Cria uma placa na obra escolhida")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public ResponseEntity<ApiResponseBody<PlacaDto>> criar(@Valid @RequestBody PlacaForm form) {
         return created(service.criar(form));
@@ -84,6 +89,7 @@ public class PlacaWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui a placa")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluir(@PathVariable Long id) {
         service.excluir(id);
@@ -91,6 +97,7 @@ public class PlacaWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Envia uma imagem para pôr na folha (JPEG/PNG até 5 MB); devolve o id")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(value = "/imagens", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<Long>> imagemSolta(@RequestParam("arquivo") MultipartFile arquivo) {
         String nome = arquivo.getOriginalFilename() == null ? "imagem.png" : arquivo.getOriginalFilename();

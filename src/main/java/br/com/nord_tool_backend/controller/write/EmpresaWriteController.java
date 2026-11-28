@@ -6,6 +6,7 @@ import br.com.nord_tool_backend.dto.EmpresaDto;
 import br.com.nord_tool_backend.form.EmpresaForm;
 import br.com.nord_tool_backend.service.EmpresaService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -23,6 +25,7 @@ import javax.validation.Valid;
 public class EmpresaWriteController implements BaseResponse {
     private final EmpresaService empresaService;
 
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public ResponseEntity<ApiResponseBody<EmpresaDto>> criarEmpresa(@Valid @RequestBody EmpresaForm empresaForm) {
         return created(empresaService.salvarEmpresa(empresaForm));
@@ -34,6 +37,7 @@ public class EmpresaWriteController implements BaseResponse {
         return ok(empresaService.alterarEmpresa(id, empresaForm));
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponseBody<Void>> deletarEmpresa(@PathVariable Long id) {
         empresaService.deletarEmpresa(id);

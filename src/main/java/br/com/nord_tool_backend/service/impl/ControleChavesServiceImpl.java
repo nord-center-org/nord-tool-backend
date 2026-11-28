@@ -126,7 +126,8 @@ public class ControleChavesServiceImpl implements ControleChavesService {
         if (novaRetiradaControleChavesForm == null || !idValido(novaRetiradaControleChavesForm.getIdUserRetirada())) {
             throw erroValidacao("Informe quem está retirando");
         }
-        validarItemRetirada(novaRetiradaControleChavesForm);
+        // Grava o tipo normalizado (APARTAMENTO/FERRAMENTA): o front só conhece esses valores.
+        novaRetiradaControleChavesForm.setNmTipoItem(validarItemRetirada(novaRetiradaControleChavesForm).name());
         if (!controleChavesRepository.itemNoEscopo(
                 novaRetiradaControleChavesForm.getIdApartamentoVistoria(), novaRetiradaControleChavesForm.getIdFerramenta())) {
             throw erroValidacao("O item escolhido não pertence às suas fases");
@@ -203,7 +204,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
         return RetiradaControleChavesDto.converterToDto(requisicaoChaveConsulta);
     }
 
-    private void validarItemRetirada(NovaRetiradaControleChavesForm novaRetiradaControleChavesForm) {
+    private TipoItemControleChavesEnum validarItemRetirada(NovaRetiradaControleChavesForm novaRetiradaControleChavesForm) {
         TipoItemControleChavesEnum tipoItem;
         try {
             tipoItem = TipoItemControleChavesEnum.from(novaRetiradaControleChavesForm.getNmTipoItem());
@@ -220,6 +221,7 @@ public class ControleChavesServiceImpl implements ControleChavesService {
         if (tipoItem == TipoItemControleChavesEnum.FERRAMENTA && (!temFerramenta || temApartamento)) {
             throw erroValidacao("Informe apenas a ferramenta para uma retirada do tipo Ferramenta");
         }
+        return tipoItem;
     }
 
     private StatusRequisicaoChaveEnum validarStatus(String nmStatusRequisicao) {

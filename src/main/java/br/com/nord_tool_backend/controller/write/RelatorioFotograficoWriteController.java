@@ -15,6 +15,7 @@ import br.com.nord_tool_backend.service.RelatorioFotograficoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -39,6 +41,7 @@ public class RelatorioFotograficoWriteController implements BaseResponse {
     private final RelatorioFotograficoService service;
 
     @Operation(summary = "Cria um modelo (ADMIN do módulo)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/modelos")
     public ResponseEntity<ApiResponseBody<RelatorioModeloDto>> criarModelo(@Valid @RequestBody RelatorioModeloForm form) {
         return created(service.criarModelo(form));
@@ -51,6 +54,7 @@ public class RelatorioFotograficoWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Cria um relatório; com idModelo e sem itens, copia os itens do modelo")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public ResponseEntity<ApiResponseBody<RelatorioFotograficoDto>> criar(@Valid @RequestBody RelatorioFotograficoForm form) {
         return created(service.criar(form));
@@ -75,6 +79,7 @@ public class RelatorioFotograficoWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui o relatório com as fotos (nrVersao divergente → 409)")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluir(@PathVariable Long id,
             @RequestParam(value = "nrVersao", required = false) Integer nrVersao) {
@@ -83,6 +88,7 @@ public class RelatorioFotograficoWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Adiciona uma foto JPEG/PNG (até 5 MB) ao item")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(value = "/itens/{idItem}/fotos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<RelatorioFotoDto>> adicionarFoto(@PathVariable Long idItem,
             @RequestParam("arquivo") MultipartFile arquivo,
@@ -120,6 +126,7 @@ public class RelatorioFotograficoWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui a foto e o arquivo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/fotos/{idFoto}")
     public ResponseEntity<ApiResponseBody<Void>> excluirFoto(@PathVariable Long idFoto) {
         service.excluirFoto(idFoto);

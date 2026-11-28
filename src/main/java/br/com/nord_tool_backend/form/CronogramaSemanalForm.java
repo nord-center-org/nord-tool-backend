@@ -3,6 +3,7 @@ package br.com.nord_tool_backend.form;
 import br.com.nord_tool_backend.domain.CronogramaSemanal;
 import br.com.nord_tool_backend.utils.FormatDateTimeDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
 import lombok.Builder;
 import lombok.Data;
@@ -24,14 +25,22 @@ public class CronogramaSemanalForm {
     private String nmCategoria;
     private String nmStatusCronograma;
     private String txObservacao;
+    @Schema(implementation = String.class, pattern = "^\\d{2}/\\d{2}/\\d{4}( \\d{2}:\\d{2}(:\\d{2})?)?$", example = "27/11/2026 09:00:00",
+            description = "Data e hora em dd/MM/yyyy HH:mm:ss (também aceita dd/MM/yyyy e dd/MM/yyyy HH:mm)")
     @JsonDeserialize(using = FormatDateTimeDeserializer.class)
     private LocalDateTime dtPrazo;
+    @Schema(implementation = String.class, pattern = "^\\d{2}/\\d{2}/\\d{4}( \\d{2}:\\d{2}(:\\d{2})?)?$", example = "27/11/2026 09:00:00",
+            description = "Data e hora em dd/MM/yyyy HH:mm:ss (também aceita dd/MM/yyyy e dd/MM/yyyy HH:mm)")
     @JsonDeserialize(using = FormatDateTimeDeserializer.class)
     private LocalDateTime dtFinalizacao;
     private String nmTag;
+    @Schema(implementation = String.class, pattern = "^\\d{2}/\\d{2}/\\d{4}( \\d{2}:\\d{2}(:\\d{2})?)?$", example = "27/11/2026 09:00:00",
+            description = "Data e hora em dd/MM/yyyy HH:mm:ss (também aceita dd/MM/yyyy e dd/MM/yyyy HH:mm)")
     @JsonDeserialize(using = FormatDateTimeDeserializer.class)
     private LocalDateTime dtAgendamento;
     /** v3: último dia da demanda pontual; precisa de dtAgendamento e não pode ser antes dele. */
+    @Schema(implementation = String.class, pattern = "^\\d{2}/\\d{2}/\\d{4}( \\d{2}:\\d{2}(:\\d{2})?)?$", example = "27/11/2026 09:00:00",
+            description = "Data e hora em dd/MM/yyyy HH:mm:ss (também aceita dd/MM/yyyy e dd/MM/yyyy HH:mm)")
     @JsonDeserialize(using = FormatDateTimeDeserializer.class)
     private LocalDateTime dtFimAgendamento;
     private Boolean flFixo;

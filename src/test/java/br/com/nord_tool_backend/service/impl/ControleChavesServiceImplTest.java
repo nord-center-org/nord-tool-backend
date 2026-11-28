@@ -196,6 +196,35 @@ class ControleChavesServiceImplTest {
     }
 
     @Test
+    void deveGravarOTipoDoItemNormalizadoEmMaiusculas() {
+        when(controleChavesRepository.criarRetirada(any())).thenReturn(17L);
+        when(controleChavesRepository.buscarPorId(17L)).thenReturn(
+                consulta(17L, "RET-17", "Obra Alfa 101", "Maria", "ABERTO", DT_RETIRADA, null, null));
+        NovaRetiradaControleChavesForm form = NovaRetiradaControleChavesForm.builder()
+                .nmTipoItem(" apartamento ")
+                .idApartamentoVistoria(101L)
+                .idUserRetirada(7L)
+                .build();
+
+        controleChavesService.criarRetirada(form);
+
+        assertEquals("APARTAMENTO", form.getNmTipoItem());
+        verify(controleChavesRepository).criarRetirada(org.mockito.ArgumentMatchers.argThat(requisicao ->
+                "APARTAMENTO".equals(requisicao.getCdTipoItemRequisicao())));
+    }
+
+    @Test
+    void deveDevolverEmMaiusculasOTipoDoItemDeRetiradaAntigaGravadaEmMinusculas() {
+        RequisicaoChaveConsulta antiga = consulta(3L, "RET-3", "Obra Alfa 103", "Maria", "ABERTO", DT_RETIRADA, null, null);
+        antiga.setCdTipoItemRequisicao(" apartamento ");
+        when(controleChavesRepository.listarHistorico()).thenReturn(List.of(antiga));
+
+        List<RetiradaControleChavesDto> historico = controleChavesService.listarHistorico(null, null, null, 20, 0);
+
+        assertEquals("APARTAMENTO", historico.get(0).getNmTipoItem());
+    }
+
+    @Test
     void deveCriarRetiradaDeFerramenta() {
         when(controleChavesRepository.criarRetirada(any())).thenReturn(16L);
         when(controleChavesRepository.buscarPorId(16L)).thenReturn(

@@ -10,6 +10,7 @@ import br.com.nord_tool_backend.service.SacService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,6 +38,7 @@ public class SacWriteController implements BaseResponse {
     private final SacService service;
 
     @Operation(summary = "Abre um chamado com título, descrição, a tela e até 6 prints JPEG/PNG (5 MB cada)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(value = "/chamados", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<SacChamadoDto>> abrir(@RequestParam("nmTitulo") String nmTitulo,
             @RequestParam("txDescricao") String txDescricao,
@@ -58,6 +61,7 @@ public class SacWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Quem abriu viu os chamados: some o aviso de novidade")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/chamados/vistos")
     public ResponseEntity<ApiResponseBody<Void>> vistos(@Valid @RequestBody SacVistosForm form) {
         service.marcarVistos(form.getIds());
@@ -65,6 +69,7 @@ public class SacWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui o chamado: quem abriu, enquanto está aberto; o ADMIN do SAC, sempre")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/chamados/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluir(@PathVariable Long id) {
         service.excluir(id);

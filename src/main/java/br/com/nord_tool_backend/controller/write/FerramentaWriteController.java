@@ -8,6 +8,7 @@ import br.com.nord_tool_backend.service.FerramentaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -27,6 +29,7 @@ public class FerramentaWriteController implements BaseResponse {
     private final FerramentaService ferramentaService;
 
     @Operation(summary = "Criar ferramenta")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public ResponseEntity<ApiResponseBody<FerramentaDto>> criarFerramenta(
             @Valid @RequestBody FerramentaForm ferramentaForm) {
@@ -41,6 +44,7 @@ public class FerramentaWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Excluir ferramenta")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponseBody<Void>> deletarFerramenta(@PathVariable Long id) {
         ferramentaService.deletarFerramenta(id);

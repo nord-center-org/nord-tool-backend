@@ -10,7 +10,9 @@ import br.com.nord_tool_backend.service.CronogramaSemanalService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,6 +34,7 @@ public class CronogramaSemanalWriteController implements BaseResponse {
     private final CronogramaSemanalService cronogramaSemanalService;
 
     @Operation(summary = "Criar um cronograma semanal")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public ResponseEntity<ApiResponseBody<CronogramaSemanalDto>> criarCronogramaSemanal(@Valid @RequestBody CronogramaSemanalForm cronogramaSemanalForm) {
         CronogramaSemanalDto cronogramaSemanalDto = cronogramaSemanalService.salvarCronogramaSemanal(cronogramaSemanalForm);
@@ -59,6 +62,7 @@ public class CronogramaSemanalWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Excluir um cronograma Semanal")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponseBody<Void>> deletarCronogramaSemanal(@PathVariable("id") Long id) {
         this.cronogramaSemanalService.deletarCronogramaSemanal(id);
@@ -66,6 +70,7 @@ public class CronogramaSemanalWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Desmarcar um compromisso fixo em um dia específico")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/{id}/excecoes/{data}")
     public ResponseEntity<ApiResponseBody<Void>> incluirExcecao(@PathVariable("id") Long id,
             @PathVariable("data") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
@@ -74,6 +79,7 @@ public class CronogramaSemanalWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Reativar um compromisso fixo em um dia específico")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}/excecoes/{data}")
     public ResponseEntity<ApiResponseBody<Void>> removerExcecao(@PathVariable("id") Long id,
             @PathVariable("data") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {

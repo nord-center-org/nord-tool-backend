@@ -2,6 +2,7 @@ package br.com.nord_tool_backend.dto;
 
 import br.com.nord_tool_backend.domain.CronogramaSemanal;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
 import lombok.Builder;
 import lombok.Data;
@@ -24,14 +25,18 @@ public class CronogramaSemanalDto {
     private String nmCategoria;
     private String nmStatusCronograma;
     private String txObservacao;
+    @Schema(implementation = String.class, example = "27/11/2026 09:00:00", description = "Data e hora em dd/MM/yyyy HH:mm:ss")
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime dtPrazo;
+    @Schema(implementation = String.class, example = "27/11/2026 09:00:00", description = "Data e hora em dd/MM/yyyy HH:mm:ss")
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime dtFinalizacao;
     private String nmTag;
+    @Schema(implementation = String.class, example = "27/11/2026 09:00:00", description = "Data e hora em dd/MM/yyyy HH:mm:ss")
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime dtAgendamento;
     /** v3: último dia da demanda pontual (nulo = um dia só). */
+    @Schema(implementation = String.class, example = "27/11/2026 09:00:00", description = "Data e hora em dd/MM/yyyy HH:mm:ss")
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime dtFimAgendamento;
     private Boolean flFixo;

@@ -11,6 +11,7 @@ import br.com.nord_tool_backend.service.RepertorioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -51,6 +53,7 @@ public class RepertorioWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui a música (e o áudio) da conta")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/musicas/{chave}")
     public ResponseEntity<ApiResponseBody<Void>> excluirMusica(@PathVariable String chave) {
         service.excluirMusica(chave);
@@ -64,6 +67,7 @@ public class RepertorioWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui a criação da conta")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/projetos/{chave}")
     public ResponseEntity<ApiResponseBody<Void>> excluirProjeto(@PathVariable String chave) {
         service.excluirProjeto(chave);
@@ -83,6 +87,7 @@ public class RepertorioWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui uma cifra recebida")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/cifras-recebidas/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluirCifra(@PathVariable Long id) {
         service.excluirCifraRecebida(id);

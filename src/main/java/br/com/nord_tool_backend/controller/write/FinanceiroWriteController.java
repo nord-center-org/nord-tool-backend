@@ -14,6 +14,7 @@ import br.com.nord_tool_backend.service.FinanceiroService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -38,6 +40,7 @@ public class FinanceiroWriteController implements FinanceiroResponse {
 
     @Operation(summary = "Cria um lançamento (ou N parcelas mensais com qtParcelas). cdRequisicao UUID obrigatório; "
             + "repetido devolve o já criado. O autor é o usuário logado")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/lancamentos")
     public ResponseEntity<ApiResponseBody<List<FinanceiroLancamentoDto>>> criar(
             @Valid @RequestBody FinanceiroLancamentoForm form, @AuthenticationPrincipal UsuarioAutenticado usuario) {
@@ -60,6 +63,7 @@ public class FinanceiroWriteController implements FinanceiroResponse {
     }
 
     @Operation(summary = "Exclui o lançamento (nrVersao divergente → 409)")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/lancamentos/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluir(
             @PathVariable Long id, @RequestParam(value = "nrVersao", required = false) Integer nrVersao) {
@@ -68,6 +72,7 @@ public class FinanceiroWriteController implements FinanceiroResponse {
     }
 
     @Operation(summary = "Cria uma pessoa")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/pessoas")
     public ResponseEntity<ApiResponseBody<FinanceiroPessoaDto>> criarPessoa(@Valid @RequestBody FinanceiroPessoaForm form) {
         return created(service.criarPessoa(form));
@@ -81,6 +86,7 @@ public class FinanceiroWriteController implements FinanceiroResponse {
     }
 
     @Operation(summary = "Cria uma categoria (nome, tipo e projeção obrigatórios)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/categorias")
     public ResponseEntity<ApiResponseBody<FinanceiroCategoriaDto>> criarCategoria(@Valid @RequestBody FinanceiroCategoriaForm form) {
         return created(service.criarCategoria(form));

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Builder
 @Data
@@ -64,7 +65,7 @@ public class RetiradaControleChavesDto {
         return RetiradaControleChavesDto.builder()
                 .idRequisicao(requisicaoChaveConsulta.getIdRequisicao())
                 .cdCodigoRetirada(requisicaoChaveConsulta.getCdRetirada())
-                .nmTipoItem(requisicaoChaveConsulta.getCdTipoItemRequisicao())
+                .nmTipoItem(tipoItem(requisicaoChaveConsulta.getCdTipoItemRequisicao()))
                 .apartamentoControleChavesDto(apartamentoControleChavesDto)
                 .ferramentaControleChavesDto(ferramentaControleChavesDto)
                 .retiranteControleChavesDto(retiranteControleChavesDto)
@@ -76,5 +77,10 @@ public class RetiradaControleChavesDto {
                         ? requisicaoChaveConsulta.getDtRecebimento().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null)
                 .nmStatusRetiradaControle(requisicaoChaveConsulta.getNmStatusRequisicao())
                 .build();
+    }
+
+    /** Retiradas antigas foram gravadas como vieram (ex.: "apartamento"); o front só conhece APARTAMENTO e FERRAMENTA. */
+    private static String tipoItem(String valor) {
+        return valor == null ? null : valor.trim().toUpperCase(Locale.ROOT);
     }
 }

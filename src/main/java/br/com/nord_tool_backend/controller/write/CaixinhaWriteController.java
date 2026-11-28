@@ -13,6 +13,7 @@ import br.com.nord_tool_backend.service.CaixinhaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,6 +39,7 @@ public class CaixinhaWriteController implements CaixinhaResponse {
     private final CaixinhaService service;
 
     @Operation(summary = "Cria um lançamento (cdRequisicao UUID obrigatório; repetido devolve o já criado)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/lancamentos")
     public ResponseEntity<ApiResponseBody<CaixinhaLancamentoDto>> criar(@Valid @RequestBody CaixinhaLancamentoForm form) {
         return created(service.criar(form));
@@ -55,6 +58,7 @@ public class CaixinhaWriteController implements CaixinhaResponse {
     }
 
     @Operation(summary = "Exclui o lançamento e apaga também os PDFs dos comprovantes (nrVersao divergente → 409)")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/lancamentos/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluir(@PathVariable Long id, @RequestParam(value = "nrVersao", required = false) Integer nrVersao) {
         service.excluir(id, nrVersao);
@@ -62,6 +66,7 @@ public class CaixinhaWriteController implements CaixinhaResponse {
     }
 
     @Operation(summary = "Cria um responsável")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/responsaveis")
     public ResponseEntity<ApiResponseBody<CaixinhaResponsavelDto>> criarResponsavel(@Valid @RequestBody CaixinhaResponsavelForm form) {
         return created(service.criarResponsavel(form));
@@ -74,6 +79,7 @@ public class CaixinhaWriteController implements CaixinhaResponse {
     }
 
     @Operation(summary = "Anexa um comprovante em PDF (até 5 MB; cdRequisicao torna o envio idempotente)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(value = "/lancamentos/{id}/comprovantes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<CaixinhaComprovanteDto>> anexar(
             @PathVariable Long id,
@@ -83,6 +89,7 @@ public class CaixinhaWriteController implements CaixinhaResponse {
     }
 
     @Operation(summary = "Exclui o comprovante e o arquivo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/comprovantes/{idComprovante}")
     public ResponseEntity<ApiResponseBody<Void>> excluirComprovante(@PathVariable Long idComprovante) {
         service.excluirComprovante(idComprovante);

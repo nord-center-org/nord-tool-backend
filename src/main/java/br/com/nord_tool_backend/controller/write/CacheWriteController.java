@@ -6,10 +6,12 @@ import br.com.nord_tool_backend.service.AdministracaoCacheService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -21,6 +23,7 @@ public class CacheWriteController implements BaseResponse {
     private final AdministracaoCacheService administracaoCacheService;
 
     @Operation(summary = "Limpar todos os caches")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/limparTodos")
     public ResponseEntity<ApiResponseBody<Void>> limparTodos() {
         administracaoCacheService.limparTodos();
@@ -28,6 +31,7 @@ public class CacheWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Limpar um cache específico")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/{cacheName}")
     public ResponseEntity<ApiResponseBody<Void>> limparCache(@PathVariable String cacheName) {
         administracaoCacheService.limparCache(cacheName);

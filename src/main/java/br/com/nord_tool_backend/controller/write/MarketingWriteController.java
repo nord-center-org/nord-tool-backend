@@ -12,6 +12,7 @@ import br.com.nord_tool_backend.service.MarketingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -36,6 +38,7 @@ public class MarketingWriteController implements BaseResponse {
     private final MarketingService service;
 
     @Operation(summary = "Conecta a conta com o código da volta do login da rede")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/contas")
     public ResponseEntity<ApiResponseBody<MarketingContaDto>> conectar(@Valid @RequestBody MarketingConectarForm form,
                                                                        @RequestHeader(value = "Origin", required = false) String origem) {
@@ -43,6 +46,7 @@ public class MarketingWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Desconecta a conta (apaga os tokens dela do NordTool)")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/contas/{id}")
     public ResponseEntity<ApiResponseBody<Void>> desconectar(@PathVariable Long id) {
         service.desconectar(id);
@@ -50,12 +54,14 @@ public class MarketingWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Começa a receber um vídeo em partes")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/midias")
     public ResponseEntity<ApiResponseBody<MarketingMidiaDto>> iniciarMidia(@Valid @RequestBody MarketingMidiaForm form) {
         return created(service.iniciarMidia(form));
     }
 
     @Operation(summary = "Recebe uma parte do vídeo (em ordem, até 8 MB cada)")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping(value = "/midias/{id}/partes/{indice}", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<ApiResponseBody<Void>> parte(@PathVariable String id, @PathVariable int indice, @RequestBody byte[] dados) {
         service.receberParte(id, indice, dados);
@@ -63,6 +69,7 @@ public class MarketingWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Publica o vídeo nas contas escolhidas (em segundo plano)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/publicacoes")
     public ResponseEntity<ApiResponseBody<List<MarketingPublicacaoDto>>> publicar(@Valid @RequestBody MarketingPublicarForm form) {
         String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
