@@ -11,12 +11,14 @@ import br.com.nord_tool_backend.service.ObraService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -30,6 +32,7 @@ public class ObraWriteController implements BaseResponse {
     private final ObraService service;
 
     @Operation(summary = "Cria uma obra (nome e código de acesso únicos)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/obras")
     public ResponseEntity<ApiResponseBody<ObraDto>> criarObra(@Valid @RequestBody ObraForm form) {
         return created(service.criarObra(form));
@@ -42,6 +45,7 @@ public class ObraWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Cria uma fase na obra")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/obras/{id}/fases")
     public ResponseEntity<ApiResponseBody<FaseDto>> criarFase(@PathVariable Long id, @Valid @RequestBody FaseForm form) {
         return created(service.criarFase(id, form));

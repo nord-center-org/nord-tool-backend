@@ -13,6 +13,7 @@ import br.com.nord_tool_backend.service.BlocoNotasService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,6 +39,7 @@ public class BlocoNotasWriteController implements BaseResponse {
     private final BlocoNotasService service;
 
     @Operation(summary = "Cria um caderno com a primeira página")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public ResponseEntity<ApiResponseBody<BlocoCadernoDto>> criar(@Valid @RequestBody BlocoCadernoForm form) {
         return created(service.criar(form));
@@ -49,6 +52,7 @@ public class BlocoNotasWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui o caderno com todas as páginas e imagens")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluir(@PathVariable Long id) {
         service.excluir(id);
@@ -56,12 +60,14 @@ public class BlocoNotasWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Página nova (em branco, pautada, quadriculada, pontilhada) ou cópia de outra")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/{id}/paginas")
     public ResponseEntity<ApiResponseBody<BlocoPaginaDto>> novaPagina(@PathVariable Long id, @Valid @RequestBody BlocoPaginaForm form) {
         return created(service.novaPagina(id, form));
     }
 
     @Operation(summary = "Página de PDF importado: a imagem da página (JPEG/PNG até 5 MB) e o tamanho dela")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(value = "/{id}/paginas/pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<BlocoPaginaDto>> paginaDePdf(@PathVariable Long id, @RequestParam("arquivo") MultipartFile arquivo,
             @RequestParam("nrLargura") int largura, @RequestParam("nrAltura") int altura,
@@ -89,6 +95,7 @@ public class BlocoNotasWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Guarda uma imagem (JPEG/PNG até 5 MB) para colar numa página; devolve o id")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(value = "/{id}/imagens", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<Long>> imagem(@PathVariable Long id, @RequestParam("arquivo") MultipartFile arquivo) {
         return created(service.imagem(id, nome(arquivo, "imagem.jpg"), bytes(arquivo)));
@@ -102,6 +109,7 @@ public class BlocoNotasWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Guarda o PDF original importado (até 15 MB) para a página manter a qualidade no zoom; devolve o id")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(value = "/{id}/pdfs", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<Long>> pdf(@PathVariable Long id, @RequestParam("arquivo") MultipartFile arquivo) {
         return created(service.enviarPdf(id, nome(arquivo, "arquivo.pdf"), bytes(arquivo)));

@@ -9,10 +9,12 @@ import br.com.nord_tool_backend.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
@@ -35,6 +37,7 @@ public class AuthWriteController implements BaseResponse {
         return ok(authService.login(form, request.getRemoteAddr()));
     }
 
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/cadastro")
     @Operation(summary = "Cria a conta (fica aguardando a aprovação do admin, sem nenhum acesso)")
     public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.MensagemDto>> cadastrar(
@@ -70,6 +73,7 @@ public class AuthWriteController implements BaseResponse {
         return ok(authService.alterarEmail(form));
     }
 
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/aparelho")
     @Operation(summary = "App Android: registra o aparelho para a sessão não cair (devolve o token uma única vez)")
     public ResponseEntity<ApiResponseBody<br.com.nord_tool_backend.dto.AppAparelhoTokenDto>> registrarAparelho(

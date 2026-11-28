@@ -10,6 +10,7 @@ import br.com.nord_tool_backend.service.TreinoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -31,6 +33,7 @@ public class TreinoWriteController implements BaseResponse {
     private final TreinoService service;
 
     @Operation(summary = "Cria uma ficha de treino com os exercícios")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public ResponseEntity<ApiResponseBody<TreinoDto>> criar(@Valid @RequestBody TreinoForm form) {
         return created(service.criar(form));
@@ -43,6 +46,7 @@ public class TreinoWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Exclui a ficha (o histórico de sessões fica, sem o vínculo)")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluir(@PathVariable Long id, @RequestParam(value = "nrVersao", required = false) Integer nrVersao) {
         service.excluir(id, nrVersao);
@@ -50,12 +54,14 @@ public class TreinoWriteController implements BaseResponse {
     }
 
     @Operation(summary = "Registra um treino feito; atualizarCargas leva a carga usada para a ficha")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/sessoes")
     public ResponseEntity<ApiResponseBody<TreinoSessaoDto>> registrar(@Valid @RequestBody TreinoSessaoForm form) {
         return created(service.registrarSessao(form));
     }
 
     @Operation(summary = "Exclui uma sessão registrada")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/sessoes/{id}")
     public ResponseEntity<ApiResponseBody<Void>> excluirSessao(@PathVariable Long id) {
         service.excluirSessao(id);

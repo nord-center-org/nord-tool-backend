@@ -21,6 +21,7 @@ import br.com.nord_tool_backend.service.CasamentoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -57,6 +59,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     // ---------- fornecedores ----------
 
     @Operation(summary = "Cria um fornecedor")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/fornecedores")
     public ResponseEntity<ApiResponseBody<CasamentoFornecedorDto>> criarFornecedor(@Valid @RequestBody CasamentoFornecedorForm form) {
         return created(fornecedorService.criar(form));
@@ -69,6 +72,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     }
 
     @Operation(summary = "Exclui o fornecedor, seus anexos e os arquivos")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/fornecedores/{id}")
     public ResponseEntity<ApiResponseBody<Void>> deletarFornecedor(@PathVariable Long id) {
         fornecedorService.deletar(id);
@@ -76,6 +80,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     }
 
     @Operation(summary = "Anexa contrato/comprovante (PDF ou imagem, até 15 MB)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(value = "/fornecedores/{id}/anexos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseBody<CasamentoAnexoDto>> anexar(
             @PathVariable Long id,
@@ -85,6 +90,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     }
 
     @Operation(summary = "Exclui um anexo e o arquivo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/fornecedores/anexos/{idAnexo}")
     public ResponseEntity<ApiResponseBody<Void>> excluirAnexo(@PathVariable Long idAnexo) {
         fornecedorService.excluirAnexo(idAnexo);
@@ -94,6 +100,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     // ---------- convidados ----------
 
     @Operation(summary = "Cria um convidado")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/convidados")
     public ResponseEntity<ApiResponseBody<CasamentoConvidadoDto>> criarConvidado(@Valid @RequestBody CasamentoConvidadoForm form) {
         return created(convidadoService.criar(form));
@@ -106,6 +113,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     }
 
     @Operation(summary = "Exclui um convidado")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/convidados/{id}")
     public ResponseEntity<ApiResponseBody<Void>> deletarConvidado(@PathVariable Long id) {
         convidadoService.deletar(id);
@@ -121,6 +129,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     // ---------- marcos ----------
 
     @Operation(summary = "Cria um marco")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/marcos")
     public ResponseEntity<ApiResponseBody<CasamentoMarcoDto>> criarMarco(@Valid @RequestBody CasamentoMarcoForm form) {
         return created(marcoService.criar(form));
@@ -139,6 +148,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     }
 
     @Operation(summary = "Exclui um marco")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/marcos/{id}")
     public ResponseEntity<ApiResponseBody<Void>> deletarMarco(@PathVariable Long id) {
         marcoService.deletar(id);
@@ -146,6 +156,7 @@ public class CasamentoWriteController implements CasamentoResponse {
     }
 
     @Operation(summary = "Cria os 10 marcos padrão (somente se não houver marcos)")
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/marcos/padrao")
     public ResponseEntity<ApiResponseBody<List<CasamentoMarcoDto>>> marcosPadrao() {
         return created(marcoService.criarPadrao());

@@ -231,13 +231,33 @@ public class ApartamentoVistoriaServiceImplTest {
     @Test
     void deveImportarApartamentoVistoria() throws Exception {
         // Arrange
-        MockMultipartFile planilhaFile = new MockMultipartFile("arquivo", "arquivo.xlsx", MediaType.MULTIPART_FORM_DATA_VALUE, "conteudo".getBytes());
+        // .xlsx é um ZIP: começa com a assinatura PK\3\4
+        MockMultipartFile planilhaFile = new MockMultipartFile("arquivo", "arquivo.xlsx", MediaType.MULTIPART_FORM_DATA_VALUE, new byte[]{'P', 'K', 3, 4, 20, 0});
         doNothing().when(xlsxExtractorHandlerApartamento).init(any());
         // Act
         apartamentoVistoriaService.importarPlanilha(planilhaFile);
         // Assert
         verify(xlsxExtractorHandlerApartamento, times(1)).init(planilhaFile);
         verify(cacheService, times(1)).limparTodos();
+    }
+
+    @Test
+    void deveRecusarImportacaoDeArquivoQueNaoEPlanilha() throws Exception {
+        MockMultipartFile texto = new MockMultipartFile("planilha", "lista.txt", MediaType.TEXT_PLAIN_VALUE, "não é planilha".getBytes());
+
+        EntradaInvalidaException erro = assertThrows(EntradaInvalidaException.class, () -> apartamentoVistoriaService.importarPlanilha(texto));
+
+        assertEquals(ApartamentoVistoriaServiceImpl.MSG_PLANILHA_INVALIDA, erro.getMessage());
+        verify(xlsxExtractorHandlerApartamento, never()).init(any());
+        verify(cacheService, never()).limparTodos();
+    }
+
+    @Test
+    void deveRecusarImportacaoDeArquivoVazio() {
+        MockMultipartFile vazio = new MockMultipartFile("planilha", "vazia.xlsx", MediaType.MULTIPART_FORM_DATA_VALUE, new byte[0]);
+
+        assertThrows(EntradaInvalidaException.class, () -> apartamentoVistoriaService.importarPlanilha(vazio));
+        verifyNoInteractions(xlsxExtractorHandlerApartamento);
     }
 
     @Test
